@@ -23,6 +23,7 @@ import { usePlanUiOptional } from "@/components/plan/PlanProvider";
 import { BentoCard } from "@/components/ui/BentoCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { StateLink } from "@/components/ui/RouteStates";
 import { ChecklistItemRow } from "@/components/shift/ChecklistItemRow";
 import { ProgressRing } from "@/components/shift/ProgressRing";
 import { TimerCard, type ActiveTimer } from "@/components/shift/TimerCard";
@@ -389,7 +390,7 @@ export function ShiftChecklist({
       : sr.shift.offline;
 
   return (
-    <div className="relative flex min-h-[calc(100dvh-7rem)] flex-col gap-5 pb-28">
+    <div className="relative flex min-h-[calc(100dvh-10rem)] flex-col gap-5">
       <header className="flex flex-col gap-2">
         <p className="text-sm text-muted">{sr.shift.subtitle}</p>
         <h1 className="text-3xl font-semibold tracking-tight text-text">
@@ -470,6 +471,7 @@ export function ShiftChecklist({
           <EmptyState
             icon={<ClipboardList className="size-7" aria-hidden="true" />}
             title={sr.shift.emptyItemsHint}
+            action={<StateLink href="/shift">Izaberi drugi šablon</StateLink>}
           />
         </BentoCard>
       ) : (
@@ -497,10 +499,9 @@ export function ShiftChecklist({
         </div>
       )}
 
-      <div
+      {items.length > 0 ? <div
         className={cn(
-          "fixed inset-x-0 bottom-[calc(var(--bottom-nav-height)+max(8px,env(safe-area-inset-bottom)))] z-30 border-t border-border bg-surface/95 p-4 backdrop-blur-sm",
-          "lg:bottom-0 lg:left-[var(--sidebar-width)] lg:pb-[max(16px,env(safe-area-inset-bottom))]"
+          "sticky bottom-[var(--mobile-nav-offset,0px)] z-30 mt-auto border-t border-border bg-surface/95 p-3 backdrop-blur-sm"
         )}
       >
         <div className="mx-auto max-w-3xl">
@@ -517,7 +518,7 @@ export function ShiftChecklist({
             {completed ? sr.shift.shiftCompleted : sr.shift.completeShift}
           </PrimaryButton>
         </div>
-      </div>
+      </div> : null}
     </div>
   );
 }

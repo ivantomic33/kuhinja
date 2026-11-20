@@ -10,6 +10,20 @@ vi.mock("@/components/schedule/ScheduleWorkspace", () => ({ ScheduleWorkspace: (
 
 const props = { searchParams: Promise.resolve({}) };
 
+it("sends failed loads to the retry boundary even for a Free account", async () => {
+  vi.mocked(getPlan).mockResolvedValue("free");
+  vi.mocked(loadSchedule).mockRejectedValue(new Error("Network unavailable"));
+  await expect(SchedulePage(props)).rejects.toThrow("Network unavailable");
+});
+
+it("offers a way back to setup when a paid account has no schedule location", async () => {
+  vi.mocked(getPlan).mockResolvedValue("starter");
+  vi.mocked(loadSchedule).mockResolvedValue(null);
+  const html = renderToStaticMarkup(await SchedulePage(props));
+  expect(html).toContain("Nema lokala za raspored");
+  expect(html).toContain('href="/dashboard"');
+});
+
 it("renders an upgrade link instead of schedule controls for a Free owner", async () => {
   vi.mocked(loadSchedule).mockResolvedValue(null);
   vi.mocked(getPlan).mockResolvedValue("free");

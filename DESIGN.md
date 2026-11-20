@@ -57,7 +57,8 @@
 ### Navigation
 
 - **Desktop (≥ lg):** left sidebar, icon + label, accent active state, profile + sign-out at bottom
-- **Mobile / tablet:** bottom bar — Tabla, Recepti, Sastojci, Podešavanja + “Više” (Premium, Odjava)
+- **Mobile:** bottom bar with Tabla, Recepti, Sastojci, Nalog and Više. Više opens Skaler serije, Priprema smene, Trebovanje, Raspored, Premium and Odjava.
+- **Sidebar workspaces:** Skaler serije (`/scaler`) opens a recipe picker, and Priprema smene (`/shift`) opens a checklist picker. Trebovanje (`/trebovanje`) and Raspored (`/raspored`) open their workspaces directly.
 - Touch targets ≥ 44px; focus ring 2px accent
 
 ## Screens delivered

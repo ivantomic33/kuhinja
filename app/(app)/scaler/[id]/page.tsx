@@ -70,11 +70,12 @@ export default async function BatchScalerPage({ params }: ScalerPageProps) {
     .eq("id", id)
     .maybeSingle();
 
-  if (recipeError || !recipe) {
+  if (recipeError && recipeError.code !== "22P02") throw recipeError;
+  if (!recipe) {
     notFound();
   }
 
-  const [{ data: itemsData }, plan] = await Promise.all([
+  const [{ data: itemsData, error: itemsError }, plan] = await Promise.all([
     supabase
       .from("recipe_items")
       .select(
@@ -83,6 +84,7 @@ export default async function BatchScalerPage({ params }: ScalerPageProps) {
       .eq("recipe_id", recipe.id),
     getPlan(),
   ]);
+  if (itemsError) throw itemsError;
 
   const ingredients: BatchScalerIngredient[] = (itemsData ?? [])
     .map((item): BatchScalerIngredient | null => {

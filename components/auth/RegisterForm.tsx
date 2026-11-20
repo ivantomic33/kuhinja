@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { AuthDivider } from "@/components/auth/AuthDivider";
 import { AuthField } from "@/components/auth/AuthField";
 import { GoogleButton } from "@/components/auth/GoogleButton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { registerAction } from "@/lib/auth/actions";
 import { registerSchema } from "@/lib/schemas/auth";
@@ -47,18 +48,22 @@ export function RegisterForm() {
     setFieldErrors({});
     setLoading(true);
 
-    const result = await registerAction(parsed.data);
+    try {
+      const result = await registerAction(parsed.data);
 
-    if (!result.success) {
-      setFieldErrors(result.fieldErrors ?? {});
-      setFormError(result.message);
+      if (!result.success) {
+        setFieldErrors(result.fieldErrors ?? {});
+        setFormError(result.message ?? sr.auth.errors.generic);
+        return;
+      }
+
+      setSuccessMessage(result.message ?? sr.auth.registerSuccess);
+      setPassword("");
+    } catch {
+      setFormError(sr.auth.errors.generic);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setSuccessMessage(result.message ?? sr.auth.registerSuccess);
-    setPassword("");
-    setLoading(false);
   }
 
   if (successMessage) {
@@ -135,22 +140,21 @@ export function RegisterForm() {
         ) : null}
 
         <PrimaryButton type="submit" fullWidth loading={loading}>
-          {sr.auth.signUp}
+          {formError ? sr.common.retry : sr.auth.signUp}
         </PrimaryButton>
       </form>
 
       <AuthDivider />
       <GoogleButton nextPath="/dashboard" />
 
-      <p className="text-center text-sm text-muted">
-        {sr.auth.hasAccount}{" "}
+      <EmptyState className="!gap-1 !p-0" title={sr.auth.hasAccount} action={
         <Link
           href="/login"
           className="font-medium text-text underline-offset-2 hover:underline"
         >
           {sr.auth.signIn}
         </Link>
-      </p>
+      } />
     </div>
   );
 }

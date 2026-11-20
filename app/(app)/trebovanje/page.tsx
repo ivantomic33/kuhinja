@@ -128,9 +128,9 @@ export default async function TrebovanjePage() {
   return (
     <>
       <OfflineCacheSeeder
-        recipes={recipeRows}
-        ingredients={ingredientRows}
-        templates={templateRows}
+        recipes={recipesRes.error ? undefined : recipeRows}
+        ingredients={ingredientsRes.error ? undefined : ingredientRows}
+        templates={templatesRes.error ? undefined : templateRows}
       />
       <StockWorkspace
         venueId={venueId}

@@ -413,6 +413,17 @@ button.stock-tinted:hover {
   }
 }
 
+@media (max-width: 719px) {
+  :root {
+    --bottom-nav-height: 56px;
+    --mobile-nav-offset: calc(var(--bottom-nav-height) + max(8px, env(safe-area-inset-bottom)));
+  }
+
+  .mise-content {
+    padding-bottom: calc(var(--mobile-nav-offset) + 24px);
+  }
+}
+
 /* Page title */
 .mise-h1 {
   font-size: var(--fs-2xl);

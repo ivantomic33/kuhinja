@@ -14,6 +14,7 @@ import type { PlanQueryResult } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 import { SidebarNav } from "./SidebarNav";
+import { BottomNav } from "./BottomNav";
 
 export type AppShellProps = {
   children: ReactNode;
@@ -129,6 +130,7 @@ export function AppShell({
           </div>
         </main>
       </div>
+      <BottomNav />
     </div>
   );
 }
