@@ -194,13 +194,13 @@ export function IngredientsWorkspace({
             <div
               ref={scrollRef}
               className={paginated
-                ? "mise-scroll -mx-6 -mb-6 max-h-[70dvh] overflow-auto"
+                ? "app-scroll -mx-6 -mb-6 max-h-[70dvh] overflow-auto"
                 : "-mx-6 -mb-6 overflow-x-auto"}
               role={paginated ? "region" : undefined}
               aria-label={paginated ? sr.ingredients.title : undefined}
               tabIndex={paginated ? 0 : undefined}
             >
-              <table className="mise-table">
+              <table className="app-table">
                 <thead className={paginated ? "sticky top-0 z-10 shadow-[0_1px_0_var(--border)]" : undefined}>
                   <tr>
                     <th>Naziv</th>

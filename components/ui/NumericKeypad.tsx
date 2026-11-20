@@ -137,10 +137,10 @@ function Key({
         "inline-flex min-h-[56px] items-center justify-center",
         "rounded-[var(--radius-input)] text-2xl font-semibold tabular-nums",
         "border border-border bg-surface-2 text-text",
-        "transition-opacity outline-none select-none",
-        "active:opacity-80",
+        "transition-colors outline-none select-none",
+        "enabled:active:bg-surface-3",
         "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        "disabled:cursor-not-allowed disabled:opacity-40",
+        "disabled:cursor-not-allowed disabled:border-dashed",
         muted && "text-muted"
       )}
     >

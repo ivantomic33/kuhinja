@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { OfflineSync } from "@/components/pwa/OfflineSync";
+import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME } from "@/lib/config/app";
+import icons from "@/lib/config/pwa-icons.json";
 import { sr } from "@/lib/i18n/sr";
 import { getSiteUrl } from "@/lib/seo/site";
 import "./globals.css";
@@ -15,40 +17,40 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: sr.app.name,
-    template: "%s · Mise",
+    default: APP_NAME,
+    template: `%s · ${APP_NAME}`,
   },
-  description: sr.marketing.metaDescription,
-  applicationName: sr.app.name,
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
   openGraph: {
     type: "website",
     locale: "sr_Latn",
-    siteName: sr.app.name,
+    siteName: APP_NAME,
     title: sr.marketing.metaTitle,
-    description: sr.marketing.metaDescription,
+    description: APP_DESCRIPTION,
     url: "/",
   },
   twitter: {
     card: "summary_large_image",
     title: sr.marketing.metaTitle,
-    description: sr.marketing.metaDescription,
+    description: APP_DESCRIPTION,
   },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: sr.app.name,
+    title: APP_SHORT_NAME,
   },
   formatDetection: {
     telephone: false,
   },
   icons: {
     icon: [
-      { url: "/icons/icon.svg", type: "image/svg+xml" },
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: icons.svg, type: "image/svg+xml" },
+      { url: icons.png192, sizes: "192x192", type: "image/png" },
+      { url: icons.png512, sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: icons.png192, sizes: "192x192", type: "image/png" }],
   },
   other: {
     "mobile-web-app-capable": "yes",

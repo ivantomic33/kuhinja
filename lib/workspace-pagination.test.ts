@@ -30,7 +30,7 @@ it("shows removal for tracked stock and keeps a removed level out of the reloade
       { id: "level", venue_id: "venue", ingredient_id: "onion", qty: 3, min_qty: 1, used_today: 0, used_on: "2026-11-20" },
     ],
   });
-  const html = renderWorkspace(createElement(StockWorkspace, { venueId: "venue", initialRows, recipes: [] }));
+  const html = renderWorkspace(createElement(StockWorkspace, { venueId: "venue", initialRows, recipes: Promise.resolve([]) }));
 
   expect(html).toContain('aria-label="Obriši sa stanja: Crni luk"');
   expect(html).not.toContain("Crvena paprika");
@@ -40,26 +40,26 @@ it("shows removal for tracked stock and keeps a removed level out of the reloade
 describe("large workspace lists", () => {
   const entries = Array.from({ length: 51 }, (_, index) => ({
     id: String(index),
-    name: `Mise item ${String(index + 1).padStart(3, "0")}`,
+    name: `Sample item ${String(index + 1).padStart(3, "0")}`,
     venue_id: "venue",
   }));
 
   it("renders only the first page of recipes in their original order", () => {
     const initialRecipes = entries.map((row) => ({ ...row, portions: 1, selling_price: 100 }));
     const html = renderWorkspace(createElement(RecipesWorkspace, { initialRecipes, canSeeInsights: false }));
-    expect(html).toContain("Mise item 025");
-    expect(html.includes("Mise item 026")).toBe(false);
+    expect(html).toContain("Sample item 025");
+    expect(html.includes("Sample item 026")).toBe(false);
     expect(html).toContain("51 od 51 recepata");
   });
 
   it("renders only the first page of ingredients and keeps short lists intact", () => {
     const initialIngredients = entries.map((row) => ({ ...row, unit: "kg" as const, price: 100, waste_percent: 0 }));
     const html = renderWorkspace(createElement(IngredientsWorkspace, { initialIngredients }));
-    expect(html).toContain("Mise item 025");
-    expect(html.includes("Mise item 026")).toBe(false);
+    expect(html).toContain("Sample item 025");
+    expect(html.includes("Sample item 026")).toBe(false);
     expect(html).toContain("51 od 51 sastojaka");
 
     const shortList = renderWorkspace(createElement(IngredientsWorkspace, { initialIngredients: initialIngredients.slice(0, 50) }));
-    expect(shortList).toContain("Mise item 050");
+    expect(shortList).toContain("Sample item 050");
   });
 });

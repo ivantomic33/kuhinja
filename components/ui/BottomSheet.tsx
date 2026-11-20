@@ -194,7 +194,7 @@ export function BottomSheet({
               </button>
             </div>
 
-            <div className="mise-scroll min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6 [&_form]:gap-4">
+            <div className="app-scroll min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6 [&_form]:gap-4">
               {children}
             </div>
 

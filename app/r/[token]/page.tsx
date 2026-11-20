@@ -7,7 +7,7 @@ import { loadPublicSchedule } from "@/lib/schedule/server";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { absolute: "Raspored · Mise" },
+  title: "Raspored",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };

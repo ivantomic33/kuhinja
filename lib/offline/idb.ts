@@ -3,6 +3,7 @@
  * No external dependency — uses the browser IDB API directly.
  */
 
+// Keep this database name so queued writes survive upgrades.
 const DB_NAME = "webforum-offline";
 const DB_VERSION = 1;
 const STORE_QUEUE = "sync_queue";

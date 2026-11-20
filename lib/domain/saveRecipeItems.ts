@@ -7,6 +7,7 @@ import {
   type CachedRecipe,
   type CachedRecipeItem,
 } from "@/lib/offline/cache";
+import { recipeItemQuantitySchema } from "@/lib/schemas/domain";
 import { createClient } from "@/lib/supabase/client";
 
 export type RecipeItemSaveInput = {
@@ -75,14 +76,15 @@ export async function saveRecipeItems(
     }
     seen.add(draft.ingredientId);
 
-    if (!Number.isFinite(draft.quantity) || draft.quantity <= 0) {
+    const parsed = recipeItemQuantitySchema.safeParse(draft);
+    if (!parsed.success) {
       return { ok: false, code: "invalid" };
     }
 
     const quantity = normalizeQuantity(
-      draft.quantity,
-      draft.quantityUnit,
-      draft.ingredientUnit
+      parsed.data.quantity,
+      parsed.data.quantityUnit,
+      parsed.data.ingredientUnit
     );
 
     if (!Number.isFinite(quantity) || quantity <= 0) {

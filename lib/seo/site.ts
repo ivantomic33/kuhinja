@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = "https://mise.app";
+const DEFAULT_SITE_URL = "http://localhost:3000";
 
 /** Public origin used for canonical, Open Graph, robots, and sitemap URLs. */
 export function getSiteUrl() {

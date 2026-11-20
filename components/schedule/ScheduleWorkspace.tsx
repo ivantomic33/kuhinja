@@ -7,12 +7,14 @@ import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, Cr
 import { Badge } from "@/components/ui/Badge";
 import { BentoCard } from "@/components/ui/BentoCard";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useToast } from "@/components/ui/Toast";
 import { hasMinPlan, planDisplayName, type PlanId } from "@/lib/plan/entitlements";
-import { loadScheduleReport, updateSchedule, type ScheduleAction } from "@/lib/schedule/actions";
+import { loadScheduleReport, updateSchedule } from "@/lib/schedule/actions";
+import type { ScheduleAction } from "@/lib/schemas/schedule";
 import { scheduleSharePath } from "@/lib/schedule/exports-preview";
 import { printSchedule } from "@/lib/schedule/exports-print";
 import { addDays, analyzeWeek, formatHours, shifts, shortDate, weekNumber, weekStart, type ScheduleWarning } from "@/lib/schedule/math";
@@ -111,7 +113,7 @@ export function ScheduleWorkspace({ data }: { data: ScheduleWeek }) {
 
   async function mutate(action: ScheduleAction) {
     const result = await updateSchedule(data.venue.id, data.monday, action);
-    if (!result.ok) throw new Error(result.error);
+    if ("error" in result) throw new Error(result.error.message);
     return result.data;
   }
 
@@ -166,11 +168,20 @@ export function ScheduleWorkspace({ data }: { data: ScheduleWeek }) {
   function openReport() {
     if (!business) { upsell("Mesečni izveštaj sati", "business"); return; }
     void run(async () => {
-      const [{ ScheduleReport }, report] = await Promise.all([
+      const [{ ScheduleReport }, reportResult] = await Promise.all([
         import("./ScheduleReport"),
         loadScheduleReport(data.venue.id, month),
       ]);
-      setExportDialog(<ScheduleReport open onClose={() => setExportDialog(null)} venueName={data.venue.name} month={month} {...report} />);
+      if ("error" in reportResult) throw new Error(reportResult.error.message);
+      setExportDialog(
+        <ScheduleReport
+          open
+          onClose={() => setExportDialog(null)}
+          venueName={data.venue.name}
+          month={month}
+          {...reportResult.data}
+        />
+      );
     });
   }
 
@@ -199,7 +210,7 @@ export function ScheduleWorkspace({ data }: { data: ScheduleWeek }) {
   return <section className="screen r-screen" id="s-raspored">
     <div id="rRoot">
       <header className="page-head r-header">
-        <div><h1 className="mise-h1">{mine ? "Moje smene" : "Raspored"}</h1>
+        <div><h1 className="app-h1">{mine ? "Moje smene" : "Raspored"}</h1>
           {mine ? <p>{[employee?.full_name, employee?.role, data.venue.name].filter(Boolean).join(" · ")}</p>
             : <p>Ko radi koju smenu ove nedelje.<span className="r-sub-desk"> Klikni na polje da dodeliš smenu.</span></p>}
         </div>
@@ -246,8 +257,11 @@ export function ScheduleWorkspace({ data }: { data: ScheduleWeek }) {
 
         <div className="r-week-card">
           {weekNav}
-          {!data.assignments.length ? <div className="r-week-empty"><span><b>Nedelja je prazna.</b> Kopiraj prošlu nedelju pa izmeni samo razlike.</span>
-            <PrimaryButton variant="ghost" size="sm" disabled={busy} onClick={copyWeek}>Kopiraj prošlu nedelju</PrimaryButton></div> : null}
+          {!data.employees.length ? <EmptyState title="Nema zaposlenih u rasporedu."
+            actionLabel="Dodaj zaposlenog" onAction={() => setDialog({ type: "employee" })} />
+            : !data.assignments.length ? <EmptyState title="Nedelja je prazna."
+                action={<PrimaryButton variant="secondary" disabled={busy} onClick={copyWeek}>Kopiraj prošlu nedelju</PrimaryButton>} />
+            : null}
           <ScheduleGrid monday={data.monday} today={data.today} employees={data.employees} assignments={data.assignments} analysis={analysis} showPro={pro}
             onAddEmployee={() => setDialog({ type: "employee" })} onEditEmployee={(employee) => setDialog({ type: "employee", employee })}
             onSave={saveAssignment} focus={focus} />

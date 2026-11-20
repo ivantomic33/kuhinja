@@ -95,7 +95,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div
         className={cn(
-          "mise-toast",
+          "app-toast",
           current
             ? "pointer-events-auto opacity-100 translate-y-0"
             : "pointer-events-none opacity-0 translate-y-5"

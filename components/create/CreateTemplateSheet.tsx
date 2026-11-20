@@ -293,7 +293,7 @@ export function CreateTemplateSheet({
 
   return (
     <div
-      className="mise-overlay"
+      className="app-overlay"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
@@ -331,7 +331,7 @@ export function CreateTemplateSheet({
           onSubmit={onSubmit}
           noValidate
         >
-          <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 mise-scroll">
+          <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 app-scroll">
             <div>
               <label className="field-label" htmlFor="template-name">
                 Naziv šablona

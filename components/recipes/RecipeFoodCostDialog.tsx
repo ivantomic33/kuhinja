@@ -138,7 +138,7 @@ export function RecipeFoodCostDialog({
             </div>
             <Link
               href="/premium"
-              className="mt-3 inline-flex min-h-11 items-center rounded-[10px] bg-accent px-3 text-sm font-semibold text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
+              className="mt-3 inline-flex min-h-11 items-center rounded-[10px] bg-accent px-3 text-sm font-semibold text-accent-ink hover:bg-accent-hover"
             >
               Pogledaj planove
             </Link>

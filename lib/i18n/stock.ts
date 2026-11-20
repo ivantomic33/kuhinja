@@ -1,3 +1,5 @@
+import { APP_NAME } from "@/lib/config/app";
+
 /** Serbian copy for Trebovanje / Stanje. */
 export const stockSr = {
   nav: "Trebovanje",
@@ -38,7 +40,7 @@ export const stockSr = {
   minFocusHint: "Postavi minimum u koloni Min.",
   setupMins: "Podesi minimale",
   setupMinsTitle: "Sve je iznad minimuma",
-  setupMinsMissing: "Podesi minimale da Mise zna šta fali i šta da nabaviš.",
+  setupMinsMissing: `Podesi minimale da ${APP_NAME} zna šta fali i šta da nabaviš.`,
   setupMinsSet: "Sve je iznad minimuma. Podesi minimale da znaš šta fali pre nego što nestane.",
   colUsedToday: "Potrošeno danas",
   colStatus: "Status",
@@ -94,6 +96,7 @@ export const stockSr = {
   saleTotal: "Ukupno porcija",
   saleSubmit: "Skini sa stanja",
   saleEmptyRecipes: "Nema recepata sa sastojcima.",
+  saleLoadError: "Recepti za prodaju nisu učitani.",
   saleResultTitle: "Skidanje završeno",
   saleResultStock: "Skinuto sa stanja",
   saleResultToday: "Danas",

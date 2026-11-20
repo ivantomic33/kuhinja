@@ -1,10 +1,26 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+/**
+ * @param requestHeaders - Optional mutated request headers (e.g. x-nonce for CSP).
+ *   When set, forwarded on every NextResponse.next so Server Components see them.
+ */
+export async function updateSession(
+  request: NextRequest,
+  requestHeaders?: Headers,
+) {
+  const nextWithHeaders = () =>
+    NextResponse.next(
+      requestHeaders
+        ? {
+            request: {
+              headers: requestHeaders,
+            },
+          }
+        : { request },
+    );
+
+  let supabaseResponse = nextWithHeaders();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,9 +34,7 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => {
             request.cookies.set(name, value);
           });
-          supabaseResponse = NextResponse.next({
-            request,
-          });
+          supabaseResponse = nextWithHeaders();
           cookiesToSet.forEach(({ name, value, options }) => {
             supabaseResponse.cookies.set(name, value, options);
           });

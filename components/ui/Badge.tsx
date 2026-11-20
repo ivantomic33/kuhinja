@@ -19,7 +19,7 @@ const VARIANT: Record<BadgeVariant, string> = {
     "bg-[var(--accent-soft)] text-accent border-[var(--accent-line)]",
   success:
     "bg-[var(--success-soft)] text-success border-[rgba(34,197,94,.3)]",
-  danger: "bg-[var(--danger-soft)] text-danger border-danger/30",
+  danger: "bg-[var(--danger-soft)] text-danger-text border-danger/30",
   warning:
     "bg-[var(--warning-soft)] text-warning border-[rgba(245,158,11,.3)]",
 };

@@ -135,7 +135,7 @@ export default async function OpenGraphImage() {
                 fontWeight: 600,
               }}
             >
-              {sr.marketing.freeName}
+              {sr.marketing.pricingPlans.free.name}
             </div>
           </div>
           <div style={{ display: "flex", color: "#8E8E9A", fontSize: 22 }}>

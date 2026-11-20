@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
   AlertTriangle,
@@ -30,12 +30,15 @@ import { useRouter } from "next/navigation";
 import { usePlanUi } from "@/components/plan/PlanProvider";
 import { Badge } from "@/components/ui/Badge";
 import { BentoCard } from "@/components/ui/BentoCard";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import RouteError from "@/components/ui/RouteError";
+import { FormSkeleton, StateLink } from "@/components/ui/RouteStates";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useToast } from "@/components/ui/Toast";
 import { UsageStrip } from "@/components/ui/UsageStrip";
@@ -86,7 +89,7 @@ type ModalKind =
 export type StockWorkspaceProps = {
   venueId: string | null;
   initialRows: StockRow[];
-  recipes: RecipeForSale[];
+  recipes: Promise<RecipeForSale[] | null>;
   loadError?: boolean;
   userId?: string | null;
 };
@@ -439,9 +442,8 @@ export function StockWorkspace({
     return (
       <div className="stock-page">
         <PageHeader title={t.title} description={t.subtitle} />
-        <p className="rounded-[14px] border border-border bg-surface p-5 text-[var(--text-2)] shadow-[var(--shadow)]">
-          {t.noVenue}
-        </p>
+        {loadError ? <RouteError message={t.loadError} /> : <EmptyState title={t.noVenue}
+          action={<StateLink href="/dashboard">Otvori tablu</StateLink>} />}
       </div>
     );
   }
@@ -655,14 +657,8 @@ export function StockWorkspace({
         />
       </div>
 
-      {loadError && rows.length === 0 ? (
-        <p
-          role="alert"
-          className="rounded-[14px] border border-danger/30 bg-[var(--danger-soft)] p-5 text-danger"
-        >
-          {t.loadError}
-        </p>
-      ) : (
+      {loadError ? <RouteError message={t.loadError} /> : null}
+      {(!loadError || rows.length > 0) && (
         <BentoCard
           id="stock-levels"
           className="scroll-mt-24"
@@ -735,14 +731,21 @@ export function StockWorkspace({
           {filtered.length === 0 ? (
             <EmptyState
               icon={<Package className="size-6" />}
-              title={filterRunout ? alertsText.filteredEmpty : t.emptyTitle}
-              description={filterRunout ? undefined : t.emptyHint}
-              actionLabel={t.restockPrimary}
-              onAction={filterRunout ? undefined : () => openRestock()}
+              title={filterRunout ? alertsText.filteredEmpty : query.trim() ? "Nema rezultata pretrage." : t.emptyTitle}
+              description={filterRunout || query.trim() ? undefined : t.emptyHint}
+              actionLabel={filterRunout || query.trim() ? alertsText.clearFilter : t.restockPrimary}
+              onAction={() => {
+                if (filterRunout || query.trim()) {
+                  setOnlyRunout(false);
+                  setQuery("");
+                } else {
+                  openRestock();
+                }
+              }}
             />
           ) : view === "table" ? (
-            <div className="mise-scroll stock-table-scroll overflow-auto" role="region" aria-label={t.title} tabIndex={0}>
-              <table className="mise-table stock-table">
+            <div className="app-scroll stock-table-scroll overflow-auto" role="region" aria-label={t.title} tabIndex={0}>
+              <table className="app-table stock-table">
                 <thead>
                   <tr>
                     <th scope="col" className="w-1/5">
@@ -1012,16 +1015,24 @@ export function StockWorkspace({
         loading={removing}
         danger
       />
-      {saleMounted ? <SaleModal
-        open={modal === "sale"}
-        onClose={() => setModal(null)}
-        venueId={venueId}
-        recipes={recipes}
-        stockRows={rows}
-        userId={entitlements.stockMoveAudit ? userId : null}
-        onOpenRestock={() => openRestock()}
-        onSaved={() => refreshLiveStock.current()}
-      /> : null}
+      {saleMounted ? (
+        <Suspense fallback={modal === "sale" ? (
+          <BottomSheet open onClose={() => setModal(null)} title={t.saleTitle} size="lg">
+            <FormSkeleton fields={2} />
+          </BottomSheet>
+        ) : null}>
+          <SaleModal
+            open={modal === "sale"}
+            onClose={() => setModal(null)}
+            venueId={venueId}
+            recipes={recipes}
+            stockRows={rows}
+            userId={entitlements.stockMoveAudit ? userId : null}
+            onOpenRestock={() => openRestock()}
+            onSaved={() => refreshLiveStock.current()}
+          />
+        </Suspense>
+      ) : null}
       {modal === "restock" ? <RestockModal
         open={modal === "restock"}
         onClose={() => setModal(null)}

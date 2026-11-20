@@ -23,6 +23,8 @@ import {
   type IngredientLineInput,
   type PricingMode,
 } from "@/lib/calc/foodcost";
+import { priceDifference } from "@/lib/calc/prices";
+import { parseDecimal } from "@/lib/domain/parse";
 import {
   saveRecipeItems,
   type RecipeCacheMeta,
@@ -34,6 +36,7 @@ import {
   type CachedRecipe,
   type CachedRecipeItem,
 } from "@/lib/offline/cache";
+import { ingredientUnitSchema } from "@/lib/schemas/domain";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -75,8 +78,6 @@ type DraftLine = {
   unit: CalcUnit;
 };
 
-const ALL_UNITS: CalcUnit[] = ["g", "kg", "ml", "l", "kom", "pak"];
-
 const UNIT_LABELS: Record<CalcUnit, string> = {
   g: sr.recipes.units.g,
   kg: sr.recipes.units.kg,
@@ -102,16 +103,10 @@ function createEmptyLine(defaultUnit: CalcUnit = "g"): DraftLine {
   };
 }
 
-function parseQuantity(raw: string): number {
-  const normalized = raw.replace(",", ".").trim();
-  if (!normalized) return 0;
-  const value = Number(normalized);
-  return Number.isFinite(value) ? value : 0;
-}
-
 function compatibleUnits(priceUnit: CalcUnit | null): CalcUnit[] {
-  if (!priceUnit) return ALL_UNITS;
-  return ALL_UNITS.filter((unit) => areUnitsCompatible(unit, priceUnit));
+  const units = ingredientUnitSchema.options;
+  if (!priceUnit) return units;
+  return units.filter((unit) => areUnitsCompatible(unit, priceUnit));
 }
 
 function formatMoney(value: number): string {
@@ -196,7 +191,7 @@ export function FoodCostCalculator({
         if (!areUnitsCompatible(line.unit, ingredient.unit)) return null;
 
         return {
-          quantity: parseQuantity(line.quantity),
+          quantity: parseDecimal(line.quantity) ?? 0,
           quantityUnit: line.unit,
           price: ingredient.price,
           priceUnit: ingredient.unit,
@@ -226,7 +221,7 @@ export function FoodCostCalculator({
     [result.portionCost, header.sellingPrice]
   );
 
-  const priceDelta = result.netPrice - header.sellingPrice;
+  const priceDelta = priceDifference(result.netPrice, header.sellingPrice);
 
   const perLineDisplayCosts = useMemo(() => {
     return lines.map((line) => {
@@ -234,7 +229,7 @@ export function FoodCostCalculator({
       if (!ingredient) return null;
       if (!areUnitsCompatible(line.unit, ingredient.unit)) return null;
       const cost = lineCost({
-        quantity: parseQuantity(line.quantity),
+        quantity: parseDecimal(line.quantity) ?? 0,
         quantityUnit: line.unit,
         price: ingredient.price,
         priceUnit: ingredient.unit,
@@ -308,7 +303,7 @@ export function FoodCostCalculator({
       const ingredient = ingredientMap.get(line.ingredientId);
       return {
         ingredientId: line.ingredientId,
-        quantity: parseQuantity(line.quantity),
+        quantity: parseDecimal(line.quantity) ?? 0,
         quantityUnit: line.unit,
         ingredientUnit: ingredient?.unit ?? line.unit,
       };

@@ -1,3 +1,6 @@
+import { APP_DESCRIPTION, APP_NAME } from "@/lib/config/app";
+import { FREE_MAX_INGREDIENTS, FREE_MAX_RECIPES, STARTER_MAX_STOCK_ITEMS } from "@/lib/plan/entitlements";
+
 /**
  * Serbian (Latin) UI dictionary.
  * All user-facing strings live here — do not hardcode UI text elsewhere.
@@ -5,8 +8,8 @@
  */
 export const sr = {
   app: {
-    name: "Mise",
-    description: "Mise en place za lokal",
+    name: APP_NAME,
+    description: APP_DESCRIPTION,
   },
   common: {
     loading: "Učitavanje...",
@@ -287,6 +290,7 @@ export const sr = {
       templates: "Limit šablona je dostignut.",
       timers: "Limit tajmera je dostignut.",
       stockItems: "Dostigli ste limit stanja. Nadogradite plan za više.",
+      priceHistory: "Istorija cena je Premium funkcija. Nadogradite plan.",
     },
     priceHistoryTitle: "Istorija cena",
     priceHistoryLocked: "Istorija je Premium",
@@ -418,7 +422,7 @@ export const sr = {
   },
   shift: {
     title: "Priprema smene",
-    subtitle: "Mise en place lista",
+    subtitle: "Lista pripreme za smenu",
     progress: "Napredak",
     progressOf: "od",
     items: "Stavke",
@@ -457,10 +461,10 @@ export const sr = {
     remaining: "Preostalo",
   },
   marketing: {
-    metaTitle: "Mise — Food cost kalkulator za restorane",
+    metaTitle: `${APP_NAME} — Food cost kalkulator za restorane`,
     metaDescription:
       "Izračunajte trošak porcije i food cost za restoran ili lokal. Besplatno, bez kartice.",
-    ogAlt: "Mise — food cost kalkulator za restorane",
+    ogAlt: `${APP_NAME} — food cost kalkulator za restorane`,
     navLogin: "Prijava",
     navRegister: "Registracija",
     heroEyebrow: "Food cost za kuhinje i lokale",
@@ -492,35 +496,66 @@ export const sr = {
     feature3Title: "Ček-lista smene",
     feature3Body: "Organizujte pripremu, pratite zadatke i koristite tajmere tokom smene.",
     pricingTitle: "Cene",
-    pricingSubtitle: "Počni besplatno. Nadogradi kad zatreba.",
-    freeName: "Besplatno",
-    freePrice: "0",
-    freeHint: "Zauvek besplatno",
-    freeCta: "Kreni besplatno",
-    freeFeat1: "Recepti i sastojci",
-    freeFeat2: "Food cost kalkulator",
-    freeFeat3: "1 šablon smene",
-    freeFeat4: "Osnovni offline keš",
-    premiumName: "Premium",
-    premiumHint: "Za ozbiljan lokal",
-    premiumCta: "Uzmi Premium",
-    premiumFeat1: "Istorija cena sastojaka",
-    premiumFeat2: "Neograničeni šabloni smene",
-    premiumFeat3: "Neograničeni recepti i sastojci",
-    premiumFeat4: "Više tajmera odjednom",
-    perMonth: "din / mes",
+    pricingSubtitle: "Počni besplatno i izaberi paket koji odgovara načinu na koji vodiš kuhinju.",
+    pricingPlans: {
+      free: {
+        id: "free",
+        name: "Besplatno",
+        description: "Za prve recepte i kalkulacije.",
+        cta: "Kreni besplatno",
+        features: [
+          `${FREE_MAX_RECIPES} recepata i ${FREE_MAX_INGREDIENTS} sastojaka`,
+          "Kalkulator troška po porciji",
+          "Jedan šablon smene",
+          "Pristup sačuvanim receptima bez interneta",
+        ],
+      },
+      starter: {
+        id: "starter",
+        name: "Starter",
+        description: "Za svakodnevnu organizaciju kuhinje.",
+        cta: "Pogledaj Starter",
+        features: [
+          "Neograničeni recepti i sastojci",
+          "Raspored smena",
+          `Trebovanje do ${STARTER_MAX_STOCK_ITEMS} stavki`,
+          "Obračun troška na osnovu prodaje",
+        ],
+      },
+      pro: {
+        id: "pro",
+        name: "Pro",
+        description: "Za detaljnije praćenje troškova i zaliha.",
+        cta: "Pogledaj Pro",
+        features: [
+          "Sve iz Starter paketa",
+          "Istorija nabavnih cena sastojaka",
+          "Predlog prodajne cene jela",
+          "Pregled odstupanja u troškovima",
+          "Pregled jela koja najviše utiču na trošak",
+          "Trebovanje bez ograničenja i inventura",
+          "Obaveštenja o zalihama u aplikaciji",
+          "Neograničeni šabloni smena",
+          "Više tajmera odjednom",
+          "Osnovni izveštaji",
+        ],
+      },
+    },
+    freePriceHint: "Zauvek besplatno",
+    paidPriceHint: "Mesečno",
+    pricingWaitlist: "Team i Business su na listi čekanja.",
     faqTitle: "Česta pitanja",
     faq1Q: "Da li mogu bez kartice?",
     faq1A: "Da. Free plan ne traži karticu.",
     faq2Q: "Radi li offline?",
     faq2A: "Da. Keširani recepti ostaju dostupni.",
-    faq3Q: "Za koga je Mise?",
+    faq3Q: `Za koga je ${APP_NAME}?`,
     faq3A: "Za restorane, kuhinje i male lokale.",
     faq4Q: "Mogu li otkazati Premium?",
     faq4A: "Da, bilo kada preko portala naplate.",
     faq5Q: "Koliko brzo se računa food cost?",
     faq5A: "Uživo, čim unesete sastojak.",
-    footerTagline: "Mise en place za lokal",
+    footerTagline: APP_DESCRIPTION,
     footerRights: "Sva prava zadržana.",
     footerLogin: "Prijava",
     footerRegister: "Registracija",

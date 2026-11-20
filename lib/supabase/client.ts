@@ -21,3 +21,8 @@ export function createClient(): BrowserClient {
 
   return browserClient;
 }
+
+/** Drop the singleton after sign-out so the next user gets a fresh client. */
+export function resetBrowserClient(): void {
+  browserClient = null;
+}

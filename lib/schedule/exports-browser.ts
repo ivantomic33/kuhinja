@@ -1,3 +1,5 @@
+import { APP_NAME } from "@/lib/config/app";
+import icons from "@/lib/config/pwa-icons.json";
 import { getSchedulePreview, shiftColors } from "./exports-preview";
 import type { PublicSchedule } from "./types";
 
@@ -25,7 +27,7 @@ export async function createSchedulePng(schedule: PublicSchedule): Promise<Blob>
   context.fillStyle = "#18181b";
   context.fillRect(0, 0, canvas.width, canvas.height);
   const logo = new Image();
-  logo.src = "/icons/icon.svg";
+  logo.src = icons.svg;
   await logo.decode();
   context.drawImage(logo, padding, padding, 50, 50);
 
@@ -38,7 +40,7 @@ export async function createSchedulePng(schedule: PublicSchedule): Promise<Blob>
   context.fillStyle = "#a1a1aa";
   context.fillText(week, 94, 74);
   context.textAlign = "right";
-  context.fillText("mise.rs", right, 46);
+  context.fillText(APP_NAME, right, 46);
 
   const columnWidth = (canvas.width - 2 * padding - employeeWidth - 7 * gap) / 7;
   const columnLeft = (index: number) => padding + employeeWidth + gap + index * (columnWidth + gap);

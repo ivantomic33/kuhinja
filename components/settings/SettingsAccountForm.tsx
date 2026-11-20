@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useToast } from "@/components/ui/Toast";
-import { createClient } from "@/lib/supabase/client";
+import { updateProfileAction } from "@/lib/auth/profile-actions";
 import { cn } from "@/lib/utils/cn";
 
 export type SettingsAccountFormProps = {
@@ -30,29 +30,20 @@ export function SettingsAccountForm({
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const trimmed = name.trim();
+      const result = await updateProfileAction({ full_name: name.trim() });
 
-      const { error: authError } = await supabase.auth.updateUser({
-        data: { full_name: trimmed },
-      });
-
-      if (authError) {
-        setError("Čuvanje nije uspelo. Pokušajte ponovo.");
+      if ("error" in result) {
+        setError(
+          result.error.code === "UNAUTHORIZED"
+            ? "Morate biti prijavljeni."
+            : result.error.code === "VALIDATION_ERROR"
+              ? result.error.message
+              : "Čuvanje nije uspelo. Pokušajte ponovo."
+        );
         return;
       }
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user?.id) {
-        await supabase
-          .from("profiles")
-          .update({ full_name: trimmed })
-          .eq("id", user.id);
-      }
-
+      setName(result.data.full_name);
       toast("Izmene su sačuvane", "success");
       router.refresh();
     } catch {

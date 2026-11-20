@@ -62,7 +62,7 @@ export function DataTable<T>({
   return (
     <div
       className={cn(
-        "mise-scroll w-full overflow-x-auto rounded-[var(--radius-md)] border border-border",
+        "app-scroll w-full overflow-x-auto rounded-[var(--radius-md)] border border-border",
         className
       )}
     >

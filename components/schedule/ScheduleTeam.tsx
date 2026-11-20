@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { BentoCard } from "@/components/ui/BentoCard";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import type { ScheduleAction } from "@/lib/schedule/actions";
+import type { ScheduleAction } from "@/lib/schemas/schedule";
 import { analyzeWeek, assignmentHours, assignmentTime, dayLong, dayShort, formatHours, shifts, shortDate, weekDates, weekNumber } from "@/lib/schedule/math";
 import type { Assignment, Employee, ScheduleRequest, ScheduleWeek } from "@/lib/schedule/types";
 import { cn } from "@/lib/utils/cn";

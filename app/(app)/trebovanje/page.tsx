@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { OfflineCacheSeeder } from "@/components/offline/OfflineCacheSeeder";
 import { StockWorkspace } from "@/components/stock/StockWorkspace";
 import { mergeStockRows } from "@/lib/stock/actions";
@@ -20,73 +21,15 @@ type RecipeRow = Pick<Recipe, "id" | "name" | "portions" | "venue_id" | "selling
 };
 type VenueRow = { id: string; stock_levels: Pick<StockLevel, "id" | "venue_id" | "ingredient_id" | "qty" | "min_qty" | "used_today" | "used_on">[] };
 
-export default async function TrebovanjePage() {
-  const supabase = await createClient();
-  const venueQuery = supabase
-    .from("venues")
-    .select("id, stock_levels(id, venue_id, ingredient_id, qty, min_qty, used_today, used_on)")
-    .order("created_at", { ascending: true })
-    .limit(1);
-
-  const ingredientsQuery = supabase
-    .from("ingredients")
-    .select("id, venue_id, name, unit, price, waste_percent, notes")
-    .order("name", { ascending: true })
-    .limit(200);
-
-  const recipesQuery = supabase
+async function loadRecipes(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data, error } = await supabase
     .from("recipes")
     .select("id, name, venue_id, portions, selling_price, description, recipe_items(ingredient_id, quantity, ingredients(name, unit, price, waste_percent))")
     .order("name", { ascending: true })
     .limit(100);
 
-  const templatesQuery = supabase
-    .from("checklist_templates")
-    .select("id, name, venue_id")
-    .order("name", { ascending: true });
-
-  const [user, venuesRes, ingredientsRes, recipesRes, templatesRes] = await Promise.all([
-    getServerUser(), venueQuery, ingredientsQuery, recipesQuery, templatesQuery,
-  ]);
-  const venue = venuesRes.data?.[0] as VenueRow | undefined;
-  const venueId = venue?.id ?? null;
-
-  const ingredients = (ingredientsRes.data ?? []) as Pick<
-    Ingredient,
-    | "id"
-    | "venue_id"
-    | "name"
-    | "unit"
-    | "price"
-    | "waste_percent"
-    | "notes"
-  >[];
-
-  const ingredientRows: CachedIngredient[] = ingredients.map((row) => ({
-    id: row.id,
-    venue_id: row.venue_id,
-    name: row.name,
-    unit: row.unit,
-    price: Number(row.price) || 0,
-    waste_percent: Number(row.waste_percent) || 0,
-    notes: row.notes,
-  }));
-
-  const stockRows =
-    venue
-      ? mergeStockRows({
-          venueId: venue.id,
-          ingredients: ingredients.map((row) => ({
-            id: row.id,
-            name: row.name,
-            unit: row.unit,
-            price: Number(row.price) || 0,
-          })),
-          levels: venue.stock_levels,
-        })
-      : [];
-
-  const recipeRecords = (recipesRes.data ?? []) as RecipeRow[];
+  if (error) return null;
+  const recipeRecords = (data ?? []) as RecipeRow[];
   const recipes: RecipeForSale[] = recipeRecords.map((row) => ({
     id: row.id,
     name: row.name,
@@ -115,28 +58,74 @@ export default async function TrebovanjePage() {
     selling_price: Number(row.selling_price) || 0,
   }));
 
-  const templateRows = (templatesRes.data ?? []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    venue_id: row.venue_id,
-  }));
+  return { recipes, recipeRows };
+}
 
-  const loadError = Boolean(
-    ingredientsRes.error || venuesRes.error || recipesRes.error
-  );
+async function loadTemplates(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data, error } = await supabase
+    .from("checklist_templates")
+    .select("id, name, venue_id")
+    .order("name", { ascending: true });
+  return error ? undefined : data ?? [];
+}
+
+async function DeferredOfflineCache({
+  ingredients,
+  recipeData,
+  templates,
+}: {
+  ingredients?: CachedIngredient[];
+  recipeData: ReturnType<typeof loadRecipes>;
+  templates: ReturnType<typeof loadTemplates>;
+}) {
+  const [recipes, templateRows] = await Promise.all([recipeData, templates]);
+  return <OfflineCacheSeeder ingredients={ingredients} recipes={recipes?.recipeRows} templates={templateRows} />;
+}
+
+export default async function TrebovanjePage() {
+  const supabase = await createClient();
+  const recipeData = loadRecipes(supabase).catch(() => null);
+  const templates = loadTemplates(supabase).catch(() => undefined);
+  const [user, venuesRes, ingredientsRes] = await Promise.all([
+    getServerUser(),
+    supabase
+      .from("venues")
+      .select("id, stock_levels(id, venue_id, ingredient_id, qty, min_qty, used_today, used_on)")
+      .order("created_at", { ascending: true })
+      .limit(1),
+    supabase
+      .from("ingredients")
+      .select("id, venue_id, name, unit, price, waste_percent, notes")
+      .order("name", { ascending: true })
+      .limit(200),
+  ]);
+  const venue = venuesRes.data?.[0] as VenueRow | undefined;
+  const ingredients = (ingredientsRes.data ?? []) as CachedIngredient[];
+  const ingredientRows = ingredients.map((row) => ({
+    ...row,
+    price: Number(row.price) || 0,
+    waste_percent: Number(row.waste_percent) || 0,
+  }));
+  const stockRows = venue ? mergeStockRows({
+    venueId: venue.id,
+    ingredients: ingredientRows,
+    levels: venue.stock_levels,
+  }) : [];
 
   return (
     <>
-      <OfflineCacheSeeder
-        recipes={recipeRows}
-        ingredients={ingredientRows}
-        templates={templateRows}
-      />
+      <Suspense fallback={null}>
+        <DeferredOfflineCache
+          ingredients={ingredientsRes.error ? undefined : ingredientRows}
+          recipeData={recipeData}
+          templates={templates}
+        />
+      </Suspense>
       <StockWorkspace
-        venueId={venueId}
+        venueId={venue?.id ?? null}
         initialRows={stockRows}
-        recipes={recipes}
-        loadError={loadError}
+        recipes={recipeData.then((result) => result?.recipes ?? null)}
+        loadError={Boolean(ingredientsRes.error || venuesRes.error)}
         userId={user?.id ?? null}
       />
     </>

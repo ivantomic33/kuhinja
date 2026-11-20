@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { requireUser } from "@/lib/auth/require-user";
 import type { PlanQueryResult } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
 import { FREE_MAX_RECIPES } from "@/lib/plan/limits";
@@ -9,7 +9,6 @@ import { AppQueryProvider } from "@/lib/query/provider";
 import { isPremium } from "@/lib/supabase/plan";
 import { getPlanDetails } from "@/lib/supabase/plan-server";
 import { getRecipeCount } from "@/lib/supabase/recipe-count";
-import { getServerUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -35,12 +34,9 @@ async function LoadedRecipeUsage() {
   return <RecipeUsage count={await getRecipeCount()} />;
 }
 
+/** Protected app shell — session required (middleware + this layout). */
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const user = await getServerUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
   const displayName =
     (user.user_metadata?.full_name as string | undefined) || null;

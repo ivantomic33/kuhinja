@@ -11,9 +11,10 @@ import { PlanBootstrap } from "@/components/plan/PlanBootstrap";
 import { PlanProvider } from "@/components/plan/PlanProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import type { PlanQueryResult } from "@/lib/hooks/usePlan";
-import { sr } from "@/lib/i18n/sr";
+import { APP_NAME } from "@/lib/config/app";
 import { cn } from "@/lib/utils/cn";
 import { SidebarNav } from "./SidebarNav";
+import { BottomNav } from "./BottomNav";
 
 export type AppShellProps = {
   children: ReactNode;
@@ -107,7 +108,7 @@ export function AppShell({
           </button>
           <LogoMark className="size-8" />
           <p className="text-base font-bold tracking-tight text-text">
-            {sr.app.name}
+            {APP_NAME}
           </p>
           <div className="ml-auto">
             <OfflineIndicator />
@@ -116,8 +117,8 @@ export function AppShell({
 
         <main className="flex-1">
           <div className={cn(
-            "mise-content",
-            pathname === "/trebovanje" && "mise-content-stock"
+            "app-content",
+            pathname === "/trebovanje" && "app-content-stock"
           )}>
             <div className="mb-4 empty:hidden">
               <InstallHint />
@@ -129,6 +130,7 @@ export function AppShell({
           </div>
         </main>
       </div>
+      <BottomNav />
     </div>
   );
 }

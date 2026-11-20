@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   BookOpenText,
-  Boxes,
-  CalendarDays,
   Carrot,
   Crown,
   LayoutDashboard,
@@ -15,10 +13,10 @@ import {
 } from "lucide-react";
 import { LogoMark } from "@/components/brand/LogoMark";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
-import { sr } from "@/lib/i18n/sr";
-import { stockSr } from "@/lib/i18n/stock";
+import { APP_NAME } from "@/lib/config/app";
 import { cn } from "@/lib/utils/cn";
 import { ProfileMenu } from "./ProfileMenu";
+import { matchesWorkspace, workspaceLinks } from "./workspace-links";
 
 const MAIN_NAV = [
   {
@@ -26,15 +24,14 @@ const MAIN_NAV = [
     label: "Kontrolna tabla",
     tip: "Kontrolna tabla",
     icon: LayoutDashboard,
-    match: (path: string) => path === "/dashboard" || path.startsWith("/shift"),
+    match: (path: string) => path === "/dashboard",
   },
   {
     href: "/recipes",
     label: "Recepti",
     tip: "Recepti",
     icon: BookOpenText,
-    match: (path: string) =>
-      path.startsWith("/recipes") || path.startsWith("/scaler"),
+    match: (path: string) => path.startsWith("/recipes"),
   },
   {
     href: "/ingredients",
@@ -43,20 +40,11 @@ const MAIN_NAV = [
     icon: Carrot,
     match: (path: string) => path.startsWith("/ingredients"),
   },
-  {
-    href: "/trebovanje",
-    label: stockSr.nav,
-    tip: stockSr.nav,
-    icon: Boxes,
-    match: (path: string) => path.startsWith("/trebovanje"),
-  },
-  {
-    href: "/raspored",
-    label: "Raspored",
-    tip: "Raspored",
-    icon: CalendarDays,
-    match: (path: string) => path.startsWith("/raspored"),
-  },
+  ...workspaceLinks.map((link) => ({
+    ...link,
+    tip: link.label,
+    match: (path: string) => matchesWorkspace(path, link.href),
+  })),
   {
     href: "/premium",
     label: "Premium",
@@ -86,7 +74,7 @@ export type SidebarNavProps = {
 };
 
 function initialsFrom(name?: string | null, email?: string | null): string {
-  const source = (name || email || "M").trim();
+  const source = (name || email || APP_NAME).trim();
   const parts = source.split(/\s+/).filter(Boolean);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -157,7 +145,7 @@ export function SidebarNav({
               !expanded && "max-[1199px]:hidden max-[719px]:inline"
             )}
           >
-            {sr.app.name}
+            {APP_NAME}
           </span>
         </Link>
 
@@ -204,7 +192,6 @@ export function SidebarNav({
             <Link
               key={item.href}
               href={item.href}
-              prefetch={item.href === "/recipes" || item.href === "/ingredients" ? false : undefined}
               data-tip={item.tip}
               data-screen={item.href === "/raspored" ? "raspored" : undefined}
               aria-current={active ? "page" : undefined}

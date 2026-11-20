@@ -17,18 +17,20 @@ import {
   saveIngredients,
   type CachedIngredient,
 } from "@/lib/offline/cache";
+import { createIngredientAction } from "@/lib/plan/actions";
 import {
   canCreateIngredient,
   FREE_MAX_INGREDIENTS,
-  isUnlimited,
 } from "@/lib/plan/entitlements";
+import { getFreeLimitCode } from "@/lib/plan/free-limit";
 import {
   ingredientInsertSchema,
+  ingredientPurchaseSchema,
   ingredientUnitSchema,
   type IngredientUnitInput,
 } from "@/lib/schemas/domain";
-import { createClient } from "@/lib/supabase/client";
-import { roundDisplay } from "@/lib/calc/foodcost";
+import { effectivePrice, roundDisplay } from "@/lib/calc/foodcost";
+import { unitPrice } from "@/lib/calc/prices";
 import { cn } from "@/lib/utils/cn";
 
 const UNITS = ingredientUnitSchema.options;
@@ -61,7 +63,7 @@ export function CreateIngredientSheet({
 }: CreateIngredientSheetProps) {
   const router = useRouter();
   const online = useOnline(true);
-  const { isFree } = usePlan();
+  const { plan } = usePlan();
   const { showFreeLimit, handleError } = usePlanUi();
 
   const [name, setName] = useState("");
@@ -77,28 +79,21 @@ export function CreateIngredientSheet({
 
   const remainingFree = Math.max(0, FREE_MAX_INGREDIENTS - currentCount);
 
-  const unitPricePreview = useMemo(() => {
-    const amountValue = parseDecimal(unitAmount);
-    const productPrice = parseDecimal(price);
-    if (
-      amountValue === null ||
-      amountValue <= 0 ||
-      productPrice === null ||
-      productPrice < 0
-    ) {
-      return null;
-    }
-    return productPrice / amountValue;
-  }, [unitAmount, price]);
-
-  const effectivePrice = useMemo(() => {
-    if (unitPricePreview === null) return null;
-    const wasteValue = parseDecimal(waste);
-    if (wasteValue === null || wasteValue < 0 || wasteValue >= 100) return null;
-    const factor = 1 - wasteValue / 100;
-    if (factor <= 0) return null;
-    return unitPricePreview / factor;
-  }, [unitPricePreview, waste]);
+  const amountValue = parseDecimal(unitAmount);
+  const productPrice = parseDecimal(price);
+  const wasteValue = parseDecimal(waste);
+  const purchase = ingredientPurchaseSchema.safeParse({
+    unit,
+    unitAmount: amountValue,
+    price: productPrice,
+    waste: wasteValue,
+  });
+  const unitPricePreview =
+    amountValue === null || productPrice === null ? null : unitPrice(productPrice, amountValue);
+  const adjustedPrice = unitPricePreview === null || wasteValue === null
+    ? Number.NaN
+    : effectivePrice(unitPricePreview, wasteValue);
+  const effectivePricePreview = Number.isNaN(adjustedPrice) ? null : adjustedPrice;
 
   const nameError = useMemo(() => {
     if (!touched.name && !fieldErrors.name) return undefined;
@@ -106,21 +101,7 @@ export function CreateIngredientSheet({
     return fieldErrors.name;
   }, [name, touched.name, fieldErrors.name]);
 
-  const isValid = useMemo(() => {
-    const amountValue = parseDecimal(unitAmount);
-    const productPrice = parseDecimal(price);
-    const wasteValue = parseDecimal(waste);
-    return (
-      name.trim().length > 0 &&
-      amountValue !== null &&
-      amountValue > 0 &&
-      productPrice !== null &&
-      productPrice >= 0 &&
-      wasteValue !== null &&
-      wasteValue >= 0 &&
-      wasteValue < 100
-    );
-  }, [name, unitAmount, price, waste]);
+  const isValid = name.trim().length > 0 && purchase.success && unitPricePreview !== null;
 
   function reset() {
     setName("");
@@ -151,29 +132,24 @@ export function CreateIngredientSheet({
       return;
     }
 
-    if (isFree && currentCount >= FREE_MAX_INGREDIENTS) {
+    if (!canCreateIngredient(plan, currentCount)) {
       showFreeLimit("FREE_LIMIT_INGREDIENTS");
       return;
     }
 
-    const amountValue = parseDecimal(unitAmount);
-    const productPrice = parseDecimal(price);
-    const wasteValue = parseDecimal(waste);
-
-    if (amountValue === null || amountValue <= 0) {
-      setFieldErrors({ unitAmount: sr.create.invalidNumber });
+    if (!purchase.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of purchase.error.issues) {
+        errors[String(issue.path[0])] = sr.create.invalidNumber;
+      }
+      setFieldErrors(errors);
+      if (errors.unit) setFormError(errors.unit);
       return;
     }
-    if (productPrice === null || productPrice < 0) {
+    if (unitPricePreview === null) {
       setFieldErrors({ price: sr.create.invalidNumber });
       return;
     }
-    if (wasteValue === null || wasteValue < 0 || wasteValue >= 100) {
-      setFieldErrors({ waste: sr.create.invalidNumber });
-      return;
-    }
-
-    const pricePerUnit = productPrice / amountValue;
 
     let venueId = venueIdProp ?? null;
     if (!venueId) {
@@ -187,9 +163,9 @@ export function CreateIngredientSheet({
     const parsed = ingredientInsertSchema.safeParse({
       venue_id: venueId,
       name,
-      unit,
-      price: pricePerUnit,
-      waste_percent: wasteValue,
+      unit: purchase.data.unit,
+      price: unitPricePreview,
+      waste_percent: purchase.data.waste,
       notes: notes.trim() ? notes.trim() : null,
     });
 
@@ -208,27 +184,25 @@ export function CreateIngredientSheet({
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("ingredients")
-        .insert({
-          venue_id: parsed.data.venue_id,
-          name: parsed.data.name,
-          unit: parsed.data.unit,
-          price: parsed.data.price,
-          waste_percent: parsed.data.waste_percent,
-          notes: parsed.data.notes ?? null,
-        })
-        .select("id, venue_id, name, unit, price, waste_percent, notes")
-        .single();
+      const result = await createIngredientAction({
+        venue_id: parsed.data.venue_id,
+        name: parsed.data.name,
+        unit: parsed.data.unit,
+        price: parsed.data.price,
+        waste_percent: parsed.data.waste_percent,
+        notes: parsed.data.notes ?? null,
+      });
 
-      if (error) {
-        if (handleError(error)) return;
-        const message = error.message?.toLowerCase() ?? "";
+      if ("error" in result) {
+        const limitCode = getFreeLimitCode(result.error);
+        if (limitCode || result.error.code === "LIMIT_REACHED") {
+          showFreeLimit(limitCode ?? "FREE_LIMIT_INGREDIENTS");
+          return;
+        }
+        if (handleError(result.error)) return;
         if (
-          error.code === "23505" ||
-          message.includes("unique") ||
-          message.includes("duplicate")
+          result.error.code === "VALIDATION_ERROR" &&
+          result.error.message === "duplicate"
         ) {
           setFormError(sr.create.duplicateName);
           return;
@@ -237,16 +211,12 @@ export function CreateIngredientSheet({
         return;
       }
 
-      if (!data) {
-        setFormError(sr.create.genericError);
-        return;
-      }
-
+      const data = result.data;
       const created: CachedIngredient = {
         id: data.id,
         venue_id: data.venue_id,
         name: data.name,
-        unit: data.unit,
+        unit: data.unit as CachedIngredient["unit"],
         price: Number(data.price) || 0,
         waste_percent: Number(data.waste_percent) || 0,
         notes: data.notes,
@@ -270,7 +240,7 @@ export function CreateIngredientSheet({
     }
   }
 
-  const wasteNum = parseDecimal(waste) ?? 0;
+  const wasteNum = wasteValue ?? 0;
 
   return (
     <BottomSheet
@@ -478,10 +448,10 @@ export function CreateIngredientSheet({
               <p className="text-sm text-muted">
                 {sr.ingredients.effectivePrice}
               </p>
-              {effectivePrice !== null ? (
+              {effectivePricePreview !== null ? (
                 <p className="mt-1 flex flex-wrap items-baseline gap-1">
                   <BigNumber
-                    value={roundDisplay(effectivePrice)}
+                    value={roundDisplay(effectivePricePreview)}
                     fractionDigits={2}
                     size="sm"
                     className="text-accent"

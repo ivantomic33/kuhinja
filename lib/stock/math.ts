@@ -1,3 +1,4 @@
+import { APP_NAME } from "@/lib/config/app";
 import type {
   BuyListItem,
   SaleDeductionLine,
@@ -78,7 +79,7 @@ export function buildBuyList(rows: StockRow[]): BuyListItem[] {
 }
 
 export function formatBuyListClipboard(items: BuyListItem[]): string {
-  const lines = ["Nabavka — Mise"];
+  const lines = [`Nabavka — ${APP_NAME}`];
   for (const item of items) {
     lines.push(
       `- ${item.name}: ${formatQty(item.need)} ${item.unit} (sada ${formatQty(item.qty)}, min ${formatQty(item.min)})`

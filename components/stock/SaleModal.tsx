@@ -1,11 +1,12 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
 import { SaleFoodCost } from "@/components/stock/SaleFoodCost";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import RouteError from "@/components/ui/RouteError";
 import { useToast } from "@/components/ui/Toast";
 import { usePlan } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
@@ -21,7 +22,7 @@ export type SaleModalProps = {
   open: boolean;
   onClose: () => void;
   venueId: string;
-  recipes: RecipeForSale[];
+  recipes: Promise<RecipeForSale[] | null>;
   stockRows: StockRow[];
   userId?: string | null;
   onOpenRestock: () => void;
@@ -34,6 +35,8 @@ type SaleResult = {
   lines: SaleDeductionLine[];
   foodCost: ReturnType<typeof summarizeSaleFoodCost>;
 };
+
+const emptyRecipes: RecipeForSale[] = [];
 
 const saleDateFormatter = new Intl.DateTimeFormat("sr-Latn-RS", {
   timeZone: "Europe/Belgrade",
@@ -117,12 +120,14 @@ export function SaleModal({
   open,
   onClose,
   venueId,
-  recipes,
+  recipes: recipeData,
   stockRows,
   userId,
   onOpenRestock,
   onSaved,
 }: SaleModalProps) {
+  const loadedRecipes = use(recipeData);
+  const recipes = loadedRecipes ?? emptyRecipes;
   const { toast } = useToast();
   const router = useRouter();
   const { plan } = usePlan();
@@ -347,7 +352,9 @@ export function SaleModal({
           <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <section className="flex flex-col gap-2">
               <h3 className="text-sm font-semibold text-text">{t.saleRecipes}</h3>
-              {recipes.length === 0 ? (
+              {loadedRecipes === null ? (
+                <RouteError message={t.saleLoadError} />
+              ) : recipes.length === 0 ? (
                 <p className="text-sm text-[var(--text-2)]">{t.saleEmptyRecipes}</p>
               ) : editing ? (
                 <ul className="flex flex-col gap-2">

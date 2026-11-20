@@ -1,7 +1,7 @@
 /**
  * Offline cache for recent recipes and ingredients via idb-keyval.
  */
-import { createStore, del, get, set } from "idb-keyval";
+import { clear, createStore, del, get, set } from "idb-keyval";
 import type { IngredientUnit } from "@/lib/supabase/database.types";
 import type { ChecklistItemInput } from "@/lib/schemas/domain";
 
@@ -216,9 +216,8 @@ export async function removeCachedTemplate(id: string): Promise<void> {
   await del(`${KEYS.templatePrefix}${id}`, store);
 }
 
+/** Wipe the entire offline idb-keyval store (lists + recipe:/template: keys). */
 export async function clearOfflineCache(): Promise<void> {
   if (!isBrowser()) return;
-  await del(KEYS.recipes, store);
-  await del(KEYS.ingredients, store);
-  await del(KEYS.templates, store);
+  await clear(store);
 }

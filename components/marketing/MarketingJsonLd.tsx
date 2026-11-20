@@ -1,4 +1,5 @@
 import { sr } from "@/lib/i18n/sr";
+import { PLAN_PRICES } from "@/lib/plan/entitlements";
 
 type MarketingJsonLdProps = {
   siteUrl: string;
@@ -20,21 +21,13 @@ export function MarketingJsonLd({ siteUrl }: MarketingJsonLdProps) {
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web, iOS, Android",
     description: sr.marketing.jsonLdDescription,
-    offers: [
-      {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "RSD",
-        name: sr.marketing.freeName,
-      },
-      {
-        "@type": "Offer",
-        price: String(sr.premium.priceMonthly),
-        priceCurrency: "RSD",
-        name: sr.marketing.premiumName,
-        billingDuration: "P1M",
-      },
-    ],
+    offers: Object.values(sr.marketing.pricingPlans).map(({ id, name }) => ({
+      "@type": "Offer",
+      price: String(PLAN_PRICES[id].monthly),
+      priceCurrency: "RSD",
+      name,
+      ...(id === "free" ? {} : { billingDuration: "P1M" }),
+    })),
     url: siteUrl,
     inLanguage: "sr-Latn",
   };

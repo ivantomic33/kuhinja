@@ -67,7 +67,7 @@ export function SegmentedControl<T extends string>({
             className={cn(
               "inline-flex items-center justify-center gap-1.5",
               selected && "on",
-              option.disabled && "cursor-not-allowed opacity-50"
+              option.disabled && "cursor-not-allowed"
             )}
           >
             {option.icon}

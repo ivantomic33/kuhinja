@@ -209,7 +209,7 @@ function WeekGrid({
   return (
     <div ref={grid} className="r-schedule-grid">
       <div className="r-desktop">
-        <div className="r-grid-wrap mise-scroll">
+        <div className="r-grid-wrap app-scroll">
           <table className="r-grid">
             <thead>
               <tr>

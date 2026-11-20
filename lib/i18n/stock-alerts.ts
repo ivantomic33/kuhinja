@@ -1,3 +1,5 @@
+import { APP_NAME } from "@/lib/config/app";
+
 export const stockAlertsSr = {
   critical: "Kritično",
   belowMinimum: "Ispod minimuma",
@@ -5,7 +7,7 @@ export const stockAlertsSr = {
   clearFilter: "Prikaži sve",
   filteredEmpty: "Nema stavki koje uskoro nestaju.",
   notifications: "Obaveštenja o stanju",
-  pushLabel: "Mise · Obaveštenje",
+  pushLabel: `${APP_NAME} · Obaveštenje`,
   pushTime: "sada",
   projection: "Projekcija po današnjoj potrošnji.",
   goneEta: "nema zalihe",

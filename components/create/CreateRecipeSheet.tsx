@@ -15,10 +15,10 @@ import {
   saveRecentRecipes,
   type CachedRecipe,
 } from "@/lib/offline/cache";
+import { createRecipeAction } from "@/lib/plan/actions";
 import { canCreateRecipe } from "@/lib/plan/entitlements";
+import { getFreeLimitCode } from "@/lib/plan/free-limit";
 import { recipeInsertSchema } from "@/lib/schemas/domain";
-import { createClient } from "@/lib/supabase/client";
-
 
 export type CreatedRecipeSummary = {
   id: string;
@@ -131,26 +131,24 @@ export function CreateRecipeSheet({
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("recipes")
-        .insert({
-          venue_id: parsed.data.venue_id,
-          name: parsed.data.name,
-          description: parsed.data.description ?? null,
-          portions: parsed.data.portions,
-          selling_price: parsed.data.selling_price,
-        })
-        .select("id, venue_id, name, description, portions, selling_price")
-        .single();
+      const result = await createRecipeAction({
+        venue_id: parsed.data.venue_id,
+        name: parsed.data.name,
+        description: parsed.data.description ?? null,
+        portions: parsed.data.portions,
+        selling_price: parsed.data.selling_price,
+      });
 
-      if (error) {
-        if (handleError(error)) return;
-        const message = error.message?.toLowerCase() ?? "";
+      if ("error" in result) {
+        const limitCode = getFreeLimitCode(result.error);
+        if (limitCode || result.error.code === "LIMIT_REACHED") {
+          showFreeLimit(limitCode ?? "FREE_LIMIT_RECIPES");
+          return;
+        }
+        if (handleError(result.error)) return;
         if (
-          error.code === "23505" ||
-          message.includes("unique") ||
-          message.includes("duplicate")
+          result.error.code === "VALIDATION_ERROR" &&
+          result.error.message === "duplicate"
         ) {
           setFormError(sr.create.duplicateName);
           return;
@@ -159,11 +157,7 @@ export function CreateRecipeSheet({
         return;
       }
 
-      if (!data) {
-        setFormError(sr.create.genericError);
-        return;
-      }
-
+      const data = result.data;
       const created: CreatedRecipeSummary = {
         id: data.id,
         venue_id: data.venue_id,

@@ -24,8 +24,8 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0 flex flex-col">
-        {eyebrow ? <div className="mise-eyebrow">{eyebrow}</div> : null}
-        <h1 className="mise-h1">{title}</h1>
+        {eyebrow ? <div className="app-eyebrow">{eyebrow}</div> : null}
+        <h1 className="app-h1">{title}</h1>
         {description ? (
           <p className="mt-1.5 max-w-2xl text-[length:var(--fs-base)] text-[var(--text-2)]">
             {description}

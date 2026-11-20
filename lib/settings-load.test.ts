@@ -9,11 +9,12 @@ import { createClient } from "@/lib/supabase/server";
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
-  getServerUser: async () => null,
+  getServerUser: async () => ({ id: "settings-user" }),
 }));
 vi.mock("@/lib/supabase/plan-server", () => ({ getPlanDetails: vi.fn() }));
 vi.mock("@/components/settings/SettingsAccountForm", () => ({ SettingsAccountForm: () => null }));
 vi.mock("@/components/auth/DeleteAccountButton", () => ({ DeleteAccountButton: () => null }));
+vi.mock("@/components/auth/SignOutButton", () => ({ SignOutButton: () => null }));
 
 it.each(["free", "starter", "pro"])("loads only the usage counts displayed on %s", async (plan) => {
   const counts = new Map([

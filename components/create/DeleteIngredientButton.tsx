@@ -137,9 +137,9 @@ export function DeleteIngredientButton({
         aria-label={ariaLabel}
         className={cn(
           "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl",
-          "border border-danger/40 px-3 text-sm font-medium text-danger",
-          "hover:bg-[var(--danger-soft)] outline-none",
-          "disabled:cursor-not-allowed disabled:opacity-50"
+          "border border-danger/40 px-3 text-sm font-medium text-danger-text",
+          "enabled:hover:bg-[var(--danger-soft)] outline-none",
+          "disabled:cursor-not-allowed disabled:border-dashed"
         )}
       >
         <Trash2 className="size-4" aria-hidden="true" />

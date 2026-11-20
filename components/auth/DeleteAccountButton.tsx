@@ -1,15 +1,18 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { clearClientUserState } from "@/lib/auth/clear-client-state";
 import { createClient } from "@/lib/supabase/client";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
 export function DeleteAccountButton() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -60,6 +63,7 @@ export function DeleteAccountButton() {
       }
 
       setConfirmOpen(false);
+      await clearClientUserState(queryClient);
       await supabase.auth.signOut();
       router.replace("/login");
       router.refresh();

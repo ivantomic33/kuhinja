@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { LogoMark } from "@/components/brand/LogoMark";
+import { APP_NAME } from "@/lib/config/app";
 import { shiftColors, type getSchedulePreview } from "@/lib/schedule/exports-preview";
 import "./schedule-export.css";
 
@@ -12,9 +13,9 @@ export function SchedulePreview({ preview, titleId }: { preview: ReturnType<type
           <strong id={titleId}>{preview.title}</strong>
           <span>{preview.week}</span>
         </div>
-        <span className="sp-brand">mise.rs</span>
+        <span className="sp-brand">{APP_NAME}</span>
       </div>
-      <div className="sp-scroll mise-scroll" role="region" aria-labelledby={titleId} tabIndex={0}>
+      <div className="sp-scroll app-scroll" role="region" aria-labelledby={titleId} tabIndex={0}>
         <table className="sp-grid" aria-labelledby={titleId}>
           <thead>
             <tr>

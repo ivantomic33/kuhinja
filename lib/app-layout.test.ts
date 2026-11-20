@@ -12,6 +12,9 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ from: () => ({ select }) }),
   getServerUser: async () => ({ id: "account-1", email: "cook@example.com" }),
 }));
+vi.mock("@/lib/auth/require-user", () => ({
+  requireUser: async () => ({ id: "account-1", email: "cook@example.com" }),
+}));
 vi.mock("@/lib/supabase/plan-server", () => ({ getPlanDetails: vi.fn() }));
 vi.mock("@/components/layout/AppShell", () => ({
   AppShell: ({ children, recipeUsage }: { children: ReactNode; recipeUsage?: ReactNode }) =>

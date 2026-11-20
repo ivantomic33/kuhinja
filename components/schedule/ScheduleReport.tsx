@@ -110,7 +110,7 @@ export function ScheduleReport({ open, onClose, venueName, month, employees, ass
           ))}
           <div className="fc-kpi"><span>Bruto trošak rada</span><strong>{totals.cost ? <>{formatMoney(totals.cost)} <small>din</small></> : "—"}</strong></div>
         </div>
-        <div className="r-rep-scroll mise-scroll" role="region" aria-label={title} tabIndex={0}>
+        <div className="r-rep-scroll app-scroll" role="region" aria-label={title} tabIndex={0}>
           <table className="tbl r-rep">
             <thead><tr><th scope="col">Zaposleni</th>{headers.map((header) => <th scope="col" key={header}>{header}</th>)}</tr></thead>
             <tbody>

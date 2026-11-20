@@ -25,6 +25,8 @@ function messageForCode(code?: FreeLimitCode | null): string {
       return sr.premium.limits.timers;
     case "FREE_LIMIT_STOCK_ITEMS":
       return sr.premium.limits.stockItems;
+    case "FREE_LIMIT_PRICE_HISTORY":
+      return sr.premium.limits.priceHistory;
     default:
       return sr.premium.limits.generic;
   }

@@ -1,59 +1,159 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { APP_NAME } from "@/lib/config/app";
+import {
+  actionData,
+  actionError,
+  parseActionInput,
+  requireActionUser,
+  requireScheduleLocationAccess,
+  type ActionResult,
+} from "@/lib/server/action";
+import {
+  loadScheduleReportInputSchema,
+  scheduleActionSchema,
+  updateScheduleInputSchema,
+  type ScheduleAction,
+} from "@/lib/schemas/schedule";
+import { parsePublicSchedule } from "./public-payload";
 import { loadMonthlyReport } from "./server";
-import type { PublicSchedule } from "./types";
+import type { Assignment, Employee, PublicSchedule } from "./types";
 
-const id = z.string().uuid();
-const date = z.string().date();
-const time = z.string().regex(/^(?:[01]\d|2[0-3]):(?:00|30)$/);
-const code = z.enum(["J", "P", "N", "D", "X", "O", "B", "G"]);
-const action = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("employee"), id: id.optional(), full_name: z.string().trim().min(1).max(120),
-    role: z.string().trim().min(1).max(100), hourly_rate_rsd: z.number().min(0).max(99999999).nullable(),
-    login_email: z.string().trim().email().max(254).nullable() }),
-  z.object({ type: z.literal("location"), name: z.string().trim().min(1).max(120) }),
-  z.object({ type: z.literal("assignment"), employee_id: id, date, code: code.nullable(),
-    custom_start: time.nullable(), custom_end: time.nullable() }),
-  z.object({ type: z.literal("publish") }),
-  z.object({ type: z.literal("copy") }),
-  z.object({ type: z.literal("undo"), token: id }),
-  z.object({ type: z.literal("share") }),
-  z.object({ type: z.literal("request"), requestType: z.enum(["slobodan", "zamena"]), date,
-    with_employee_id: id.nullable(), note: z.string().trim().max(500) }),
-  z.object({ type: z.literal("decide"), id, status: z.enum(["odobreno", "odbijeno"]) }),
-]);
+type ScheduleMutationData = {
+  id?: string;
+  token?: string;
+  notified?: number;
+  preview?: PublicSchedule;
+};
 
-export type ScheduleAction = z.input<typeof action>;
+type ScheduleReportData = {
+  employees: Employee[];
+  assignments: Assignment[];
+};
 
-type ActionResult = { ok: true; data: { id?: string; token?: string; notified?: number; preview?: PublicSchedule } }
-  | { ok: false; error: string };
-
-export async function updateSchedule(location: string, week: string, command: ScheduleAction): Promise<ActionResult> {
-  const parsed = action.safeParse(command);
-  if (!parsed.success || !id.safeParse(location).success || !date.safeParse(week).success) {
-    return { ok: false, error: "Proveri unete podatke." };
+function mapScheduleRpcError(error: {
+  message?: string;
+  code?: string;
+}): ReturnType<typeof actionError> {
+  if (error.message === "SCHEDULE_LOGIN_MISSING") {
+    return actionError(
+      "VALIDATION_ERROR",
+      `Nema potvrđenog ${APP_NAME} naloga za ovaj imejl.`
+    );
   }
-  const { type, ...fields } = parsed.data;
-  const payload = parsed.data.type === "request" ? { ...fields, type: parsed.data.requestType } : fields;
-  const client = await createClient();
-  const { data, error } = await client.rpc("schedule_command", {
-    p_action: type, p_location: location, p_week: week, p_payload: payload,
-  });
-  if (error) {
-    const message = error.message === "SCHEDULE_LOGIN_MISSING" ? "Nema potvrđenog Mise naloga za ovaj imejl."
-      : error.message === "SCHEDULE_STALE" ? "Raspored je u međuvremenu izmenjen."
-        : error.code === "42501" ? "Ova akcija nije dostupna."
-          : error.code === "23505" ? "Ovaj unos već postoji."
-            : "Promena nije sačuvana. Pokušaj ponovo.";
-    return { ok: false, error: message };
+  if (error.message === "SCHEDULE_STALE") {
+    return actionError(
+      "VALIDATION_ERROR",
+      "Raspored je u međuvremenu izmenjen."
+    );
   }
-  if (type !== "share") revalidatePath("/raspored");
-  return { ok: true, data };
+  if (error.code === "42501" || error.message === "SCHEDULE_FORBIDDEN") {
+    return actionError("FORBIDDEN", "Ova akcija nije dostupna.");
+  }
+  if (error.code === "23505") {
+    return actionError("VALIDATION_ERROR", "Ovaj unos već postoji.");
+  }
+  return actionError(
+    "INTERNAL_ERROR",
+    "Promena nije sačuvana. Pokušaj ponovo."
+  );
 }
 
-export async function loadScheduleReport(location: string, month: string) {
-  return loadMonthlyReport(location, month);
+/**
+ * Mutate schedule state via security-definer RPC.
+ * Auth: getUser(). Ownership: schedule location membership (never trust body user ids).
+ */
+export async function updateSchedule(
+  location: string,
+  week: string,
+  command: ScheduleAction
+): Promise<ActionResult<ScheduleMutationData>> {
+  const auth = await requireActionUser();
+  if ("error" in auth) return auth;
+
+  const parsed = parseActionInput(updateScheduleInputSchema, {
+    location,
+    week,
+    command,
+  });
+  if ("error" in parsed) {
+    return actionError("VALIDATION_ERROR", "Proveri unete podatke.");
+  }
+
+  // Re-validate command alone so unknown fields on nested objects are rejected.
+  const commandParsed = scheduleActionSchema.safeParse(parsed.data.command);
+  if (!commandParsed.success) {
+    return actionError("VALIDATION_ERROR", "Proveri unete podatke.");
+  }
+
+  const access = await requireScheduleLocationAccess(
+    auth,
+    parsed.data.location
+  );
+  if ("error" in access) return access;
+
+  const { type, ...fields } = commandParsed.data;
+  const payload =
+    commandParsed.data.type === "request"
+      ? { ...fields, type: commandParsed.data.requestType }
+      : fields;
+
+  // Location comes only from validated input + membership check — not from payload user ids.
+  const { data, error } = await auth.supabase.rpc("schedule_command", {
+    p_action: type,
+    p_location: access.locationId,
+    p_week: parsed.data.week,
+    p_payload: payload,
+  });
+
+  if (error) {
+    return mapScheduleRpcError(error);
+  }
+
+  if (type !== "share") {
+    revalidatePath("/raspored");
+  }
+
+  return actionData((data ?? {}) as ScheduleMutationData);
+}
+
+/**
+ * Monthly hours report for a location the current user owns (business plan RPC).
+ */
+export async function loadScheduleReport(
+  location: string,
+  month: string
+): Promise<ActionResult<ScheduleReportData>> {
+  const auth = await requireActionUser();
+  if ("error" in auth) return auth;
+
+  const parsed = parseActionInput(loadScheduleReportInputSchema, {
+    location,
+    month,
+  });
+  if ("error" in parsed) {
+    return actionError("VALIDATION_ERROR", "Proveri unete podatke.");
+  }
+
+  const access = await requireScheduleLocationAccess(
+    auth,
+    parsed.data.location
+  );
+  if ("error" in access) return access;
+
+  try {
+    const data = await loadMonthlyReport(
+      access.locationId,
+      parsed.data.month,
+      auth
+    );
+    return actionData(data);
+  } catch (error) {
+    const err = error as { message?: string; code?: string };
+    if (err?.code === "42501" || err?.message === "SCHEDULE_FORBIDDEN") {
+      return actionError("FORBIDDEN", "Ova akcija nije dostupna.");
+    }
+    return actionError("INTERNAL_ERROR", "Izveštaj nije učitan.");
+  }
 }

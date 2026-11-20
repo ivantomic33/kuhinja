@@ -13,6 +13,8 @@ it("loads quantities and recipe items with their parent records for the stock pa
   const item = { id: "item", recipe_id: "meal", ingredient_id: "onion", quantity: .25, ingredients: ingredient };
   const recipe = { id: "meal", venue_id: "venue", name: "Supa", portions: 1, selling_price: 280, description: null };
   const requestPaths: string[] = [];
+  let releaseRecipes!: () => void;
+  const recipeGate = new Promise<void>((resolve) => { releaseRecipes = resolve; });
   const client = createSupabaseClient("https://stock.example.com", "test-key", {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
@@ -20,6 +22,7 @@ it("loads quantities and recipe items with their parent records for the stock pa
         const query = new URL(String(url));
         const table = query.pathname.split("/").at(-1)!;
         requestPaths.push(table);
+        if (table === "recipes") await recipeGate;
         const include = query.searchParams.get("select") ?? "";
         const rows: Record<string, unknown[]> = {
           venues: [include.includes("stock_levels(") ? { id: "venue", stock_levels: [level] } : { id: "venue" }],
@@ -35,11 +38,21 @@ it("loads quantities and recipe items with their parent records for the stock pa
   });
   vi.mocked(createClient).mockResolvedValue(client);
 
-  const page = await TrebovanjePage() as ReactElement<{ children: [ReactElement, ReactElement<StockWorkspaceProps>] }>;
-  const { initialRows, recipes, venueId } = page.props.children[1].props;
+  let page: ReactElement<{ children: [ReactElement, ReactElement<StockWorkspaceProps>] }> | undefined;
+  const rendering = TrebovanjePage().then((result) => { page = result as NonNullable<typeof page>; });
+  try {
+    await vi.waitFor(() => {
+      expect(requestPaths).toContain("recipes");
+      expect(page).toBeDefined();
+    });
+  } finally {
+    releaseRecipes();
+    await rendering;
+  }
+  const { initialRows, recipes, venueId } = page!.props.children[1].props;
 
   expect(venueId).toBe("venue");
   expect(initialRows).toMatchObject([{ ingredientId: "onion", qty: 5, hasLevel: true }]);
-  expect(recipes).toMatchObject([{ name: "Supa", items: [{ ingredientId: "onion", name: "Luk", quantity: .25 }] }]);
+  await expect(recipes).resolves.toMatchObject([{ name: "Supa", items: [{ ingredientId: "onion", name: "Luk", quantity: .25 }] }]);
   expect(requestPaths.sort()).toEqual(["checklist_templates", "ingredients", "recipes", "venues"]);
 });

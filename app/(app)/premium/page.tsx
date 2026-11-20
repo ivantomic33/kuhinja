@@ -18,6 +18,7 @@ import { FaqAccordion } from "@/components/marketing/FaqAccordion";
 import { Badge } from "@/components/ui/Badge";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { APP_NAME } from "@/lib/config/app";
 import { usePlan } from "@/lib/hooks/usePlan";
 import {
   FREE_MAX_RECIPES,
@@ -401,7 +402,7 @@ export default function PremiumPage() {
     <div className="flex flex-col gap-10 pb-8">
       {/* 1. Hero */}
       <header className="prem-hero mx-auto mt-2 max-w-[820px] text-center">
-        <p className="mise-eyebrow">Mise Premium</p>
+        <p className="app-eyebrow">{APP_NAME} Premium</p>
         <h1 className="text-[length:var(--fs-3xl)] font-semibold leading-[1.15] tracking-[-0.02em] text-text max-[900px]:text-[length:var(--fs-2xl)]">
           Više prostora za vaš posao
         </h1>
@@ -488,7 +489,7 @@ export default function PremiumPage() {
         </article>
 
         {/* Starter */}
-        <article className="card plan relative flex min-h-0 flex-col gap-4 rounded-2xl border border-border bg-surface px-[18px] py-[22px] shadow-[var(--shadow)]">
+        <article id="plan-starter" className="card plan relative flex min-h-0 scroll-mt-20 flex-col gap-4 rounded-2xl border border-border bg-surface px-[18px] py-[22px] shadow-[var(--shadow)]">
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-[length:var(--fs-lg)] font-semibold text-text">
               Starter
@@ -549,8 +550,9 @@ export default function PremiumPage() {
 
         {/* Pro — featured */}
         <article
+          id="plan-pro"
           className={cn(
-            "card plan featured relative flex min-h-0 flex-col gap-4 rounded-2xl border px-[18px] py-[22px]",
+            "card plan featured relative flex min-h-0 scroll-mt-20 flex-col gap-4 rounded-2xl border px-[18px] py-[22px]",
             "border-[var(--accent-line)] shadow-[var(--glow-pro)]"
           )}
           style={{
@@ -558,7 +560,7 @@ export default function PremiumPage() {
               "linear-gradient(180deg, rgba(255,107,53,.1), var(--surface) 42%)",
           }}
         >
-          <span className="pop absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--accent-ink)] shadow-sm">
+          <span className="pop absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-accent-ink shadow-sm">
             Najpopularnije
           </span>
           <div className="flex items-start justify-between gap-2 pt-1">

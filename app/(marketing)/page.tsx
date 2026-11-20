@@ -6,13 +6,13 @@ import {
   Check,
   ClipboardList,
   Scale,
-  Sparkles,
 } from "lucide-react";
 import { FoodCostMockup } from "@/components/marketing/FoodCostMockup";
 import { MarketingFaq } from "@/components/marketing/MarketingFaq";
 import { MarketingJsonLd } from "@/components/marketing/MarketingJsonLd";
-import { BentoCard } from "@/components/ui/BentoCard";
+import { PricingCard } from "@/components/ui/PricingCard";
 import { sr } from "@/lib/i18n/sr";
+import { PLAN_PRICES } from "@/lib/plan/entitlements";
 import { getSiteUrl } from "@/lib/seo/site";
 import { cn } from "@/lib/utils/cn";
 
@@ -27,6 +27,7 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
+    siteName: sr.app.name,
     title: sr.marketing.metaTitle,
     description: sr.marketing.metaDescription,
     url: "/",
@@ -68,20 +69,6 @@ const STEPS = [
   { title: sr.marketing.step3Title, body: sr.marketing.step3Body },
 ] as const;
 
-const FREE_FEATURES = [
-  sr.marketing.freeFeat1,
-  sr.marketing.freeFeat2,
-  sr.marketing.freeFeat3,
-  sr.marketing.freeFeat4,
-] as const;
-
-const PREMIUM_FEATURES = [
-  sr.marketing.premiumFeat1,
-  sr.marketing.premiumFeat2,
-  sr.marketing.premiumFeat3,
-  sr.marketing.premiumFeat4,
-] as const;
-
 function CtaLink({
   href,
   children,
@@ -101,7 +88,7 @@ function CtaLink({
         "rounded-[var(--radius-input)] px-6 text-base font-semibold",
         "outline-none transition-opacity",
         "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        variant === "primary" && "bg-accent text-background hover:opacity-90",
+        variant === "primary" && "bg-accent text-accent-ink hover:bg-accent-hover",
         variant === "ghost" &&
           "border border-border bg-surface-2 text-text hover:opacity-90",
         className
@@ -197,85 +184,29 @@ export default function MarketingPage() {
             <p className="text-sm text-muted">{sr.marketing.pricingSubtitle}</p>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <BentoCard
-              header={
-                <div className="flex w-full items-center justify-between gap-2">
-                  <h3 className="text-base font-semibold text-text">
-                    {sr.marketing.freeName}
-                  </h3>
-                </div>
-              }
-              footer={
-                <CtaLink href="/register" variant="ghost" className="w-full">
-                  {sr.marketing.freeCta}
-                </CtaLink>
-              }
-            >
-              <div className="flex flex-col gap-1">
-                <p className="text-3xl font-semibold tabular-nums tracking-tight text-text">
-                  {priceFormat.format(0)} {sr.premium.currency}
-                </p>
-                <p className="text-sm text-muted">{sr.marketing.freeHint}</p>
-              </div>
-              <ul className="flex flex-col gap-1">
-                {FREE_FEATURES.map((feat) => (
-                  <li
-                    key={feat}
-                    className="flex items-start gap-1 text-sm text-text"
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            {Object.values(sr.marketing.pricingPlans).map((plan) => (
+              <PricingCard
+                key={plan.id}
+                name={plan.name}
+                description={plan.description}
+                price={`${priceFormat.format(PLAN_PRICES[plan.id].monthly)} ${sr.premium.currency}`}
+                priceHint={plan.id === "free" ? sr.marketing.freePriceHint : sr.marketing.paidPriceHint}
+                features={plan.features}
+                highlighted={plan.id === "pro"}
+                cta={
+                  <CtaLink
+                    href={plan.id === "free" ? "/register" : `/premium#plan-${plan.id}`}
+                    variant={plan.id === "pro" ? "primary" : "ghost"}
+                    className="w-full"
                   >
-                    <Check
-                      className="mt-0.5 size-4 shrink-0 text-success"
-                      aria-hidden
-                    />
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
-            </BentoCard>
-
-            <BentoCard
-              className="border-accent/30"
-              header={
-                <div className="flex w-full items-center justify-between gap-2">
-                  <h3 className="text-base font-semibold text-text">
-                    {sr.marketing.premiumName}
-                  </h3>
-                  <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
-                    <Sparkles className="size-3" aria-hidden />
-                    {sr.premium.badge}
-                  </span>
-                </div>
-              }
-              footer={
-                <CtaLink href="/register" className="w-full">
-                  {sr.marketing.premiumCta}
-                </CtaLink>
-              }
-            >
-              <div className="flex flex-col gap-1">
-                <p className="text-3xl font-semibold tabular-nums tracking-tight text-text">
-                  {priceFormat.format(sr.premium.priceMonthly)}
-                </p>
-                <p className="text-sm text-muted">{sr.marketing.perMonth}</p>
-                <p className="text-sm text-muted">{sr.marketing.premiumHint}</p>
-              </div>
-              <ul className="flex flex-col gap-1">
-                {PREMIUM_FEATURES.map((feat) => (
-                  <li
-                    key={feat}
-                    className="flex items-start gap-1 text-sm text-text"
-                  >
-                    <Check
-                      className="mt-0.5 size-4 shrink-0 text-accent"
-                      aria-hidden
-                    />
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
-            </BentoCard>
+                    {plan.cta}
+                  </CtaLink>
+                }
+              />
+            ))}
           </div>
+          <p className="text-sm text-muted">{sr.marketing.pricingWaitlist}</p>
         </section>
 
         <section aria-labelledby="faq-heading">

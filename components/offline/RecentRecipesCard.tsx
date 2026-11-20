@@ -124,8 +124,8 @@ export function RecentRecipesCard({
         }
       >
         {shown.length > 0 ? (
-          <div className="max-h-80 overflow-auto mise-scroll -mx-6 -mb-6">
-            <table className="mise-table">
+          <div className="max-h-80 overflow-auto app-scroll -mx-6 -mb-6">
+            <table className="app-table">
               <thead className="sticky top-0 z-10">
                 <tr>
                   <th>Recept</th>

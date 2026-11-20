@@ -4,19 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
-  Box,
-  CalendarDays,
   Carrot,
   LayoutDashboard,
+  LogOut,
   MoreHorizontal,
   Settings,
   Sparkles,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { sr } from "@/lib/i18n/sr";
-import { stockSr } from "@/lib/i18n/stock";
 import { cn } from "@/lib/utils/cn";
 import { signOutAction } from "@/lib/auth/actions";
+import { matchesWorkspace, workspaceLinks } from "./workspace-links";
 
 const TABS = [
   {
@@ -24,15 +23,14 @@ const TABS = [
     label: sr.dashboard.title,
     short: "Tabla",
     icon: LayoutDashboard,
-    match: (path: string) => path === "/dashboard" || path.startsWith("/shift"),
+    match: (path: string) => path === "/dashboard",
   },
   {
     href: "/recipes",
     label: sr.recipes.title,
     short: sr.recipes.title,
     icon: BookOpen,
-    match: (path: string) =>
-      path.startsWith("/recipes") || path.startsWith("/scaler"),
+    match: (path: string) => path.startsWith("/recipes"),
   },
   {
     href: "/ingredients",
@@ -40,13 +38,6 @@ const TABS = [
     short: "Sastojci",
     icon: Carrot,
     match: (path: string) => path.startsWith("/ingredients"),
-  },
-  {
-    href: "/trebovanje",
-    label: stockSr.nav,
-    short: stockSr.nav,
-    icon: Box,
-    match: (path: string) => path.startsWith("/trebovanje"),
   },
   {
     href: "/settings",
@@ -61,6 +52,7 @@ export function BottomNav() {
   const pathname = usePathname() || "/dashboard";
   const [moreOpen, setMoreOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setMoreOpen(false);
@@ -74,7 +66,10 @@ export function BottomNav() {
       }
     }
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setMoreOpen(false);
+      if (event.key === "Escape") {
+        setMoreOpen(false);
+        triggerRef.current?.focus();
+      }
     }
     document.addEventListener("mousedown", onPointer);
     document.addEventListener("keydown", onKey);
@@ -88,7 +83,7 @@ export function BottomNav() {
     <nav
       aria-label="Mobilna navigacija"
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 lg:hidden",
+        "fixed inset-x-0 bottom-0 z-40 min-[720px]:hidden",
         "border-t border-border bg-surface/95 backdrop-blur-xl",
         "pb-[max(8px,env(safe-area-inset-bottom))]"
       )}
@@ -101,10 +96,9 @@ export function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              prefetch={tab.href === "/recipes" || tab.href === "/ingredients" ? false : undefined}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex min-w-[64px] flex-1 flex-col items-center justify-center gap-0.5",
+                "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5",
                 "rounded-[var(--radius-sm)] text-[11px] font-medium outline-none",
                 "focus-visible:ring-2 focus-visible:ring-accent",
                 active ? "text-accent" : "text-muted"
@@ -121,15 +115,15 @@ export function BottomNav() {
 
         <div className="relative flex flex-1" ref={menuRef}>
           <button
+            ref={triggerRef}
             type="button"
             aria-expanded={moreOpen}
-            aria-haspopup="menu"
             onClick={() => setMoreOpen((v) => !v)}
             className={cn(
-              "flex min-w-[64px] w-full flex-col items-center justify-center gap-0.5",
+              "flex w-full flex-col items-center justify-center gap-0.5",
               "rounded-[var(--radius-sm)] text-[11px] font-medium outline-none",
               "focus-visible:ring-2 focus-visible:ring-accent",
-              moreOpen || pathname.startsWith("/premium") || pathname.startsWith("/raspored")
+              moreOpen || pathname.startsWith("/premium") || workspaceLinks.some(({ href }) => matchesWorkspace(pathname, href))
                 ? "text-accent"
                 : "text-muted"
             )}
@@ -140,37 +134,40 @@ export function BottomNav() {
 
           {moreOpen ? (
             <div
-              role="menu"
               className={cn(
-                "absolute bottom-[calc(100%+8px)] right-1 z-50 w-48",
+                "absolute bottom-[calc(100%+8px)] right-1 z-50 max-h-[calc(100dvh-8rem)] w-52 overflow-y-auto",
                 "rounded-[var(--radius-lg)] border border-border bg-surface p-1 shadow-xl"
               )}
             >
+              {workspaceLinks.map(({ href, label, icon: Icon }) => {
+                const active = matchesWorkspace(pathname, href);
+                return <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMoreOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  className={cn("flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm hover:bg-surface-2", active ? "text-accent" : "text-text")}
+                >
+                  <Icon className="size-4" aria-hidden="true" />
+                  {label}
+                </Link>;
+              })}
               <Link
-                role="menuitem"
-                href="/raspored"
-                aria-current={pathname.startsWith("/raspored") ? "page" : undefined}
-                className="flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm text-text hover:bg-surface-2"
-              >
-                <CalendarDays className="size-4" aria-hidden="true" />
-                Raspored
-              </Link>
-              <Link
-                role="menuitem"
                 href="/premium"
+                onClick={() => setMoreOpen(false)}
                 className="flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm text-text hover:bg-surface-2"
               >
                 <Sparkles className="size-4 text-accent" aria-hidden="true" />
                 {sr.premium.title}
               </Link>
               <button
-                role="menuitem"
                 type="button"
                 className="flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm text-muted hover:bg-surface-2 hover:text-text"
                 onClick={() => {
                   void signOutAction();
                 }}
               >
+                <LogOut className="size-4" aria-hidden="true" />
                 {sr.auth.signOut}
               </button>
             </div>

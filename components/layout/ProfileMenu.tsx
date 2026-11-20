@@ -1,9 +1,12 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LogOut, Settings } from "lucide-react";
+import { clearClientUserState } from "@/lib/auth/clear-client-state";
 import { signOutAction } from "@/lib/auth/actions";
+import { APP_NAME } from "@/lib/config/app";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
@@ -18,10 +21,11 @@ export type ProfileMenuProps = {
 export function ProfileMenu({
   email,
   displayName,
-  initials = "M",
+  initials = APP_NAME[0],
   compact = false,
   forceCompactClass,
 }: ProfileMenuProps) {
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -48,6 +52,11 @@ export function ProfileMenu({
 
   async function handleSignOut() {
     setLoading(true);
+    try {
+      await clearClientUserState(queryClient);
+    } catch {
+      // Still sign out if storage APIs fail.
+    }
     await signOutAction();
   }
 
@@ -78,7 +87,7 @@ export function ProfileMenu({
             onClick={() => {
               void handleSignOut();
             }}
-            className="flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm text-muted hover:bg-surface-2 hover:text-text disabled:opacity-50"
+            className="flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm text-muted enabled:hover:bg-surface-2 enabled:hover:text-text disabled:cursor-not-allowed disabled:text-text-3"
           >
             <LogOut className="size-4" aria-hidden="true" />
             {sr.auth.signOut}

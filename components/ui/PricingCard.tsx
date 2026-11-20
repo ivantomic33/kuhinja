@@ -9,7 +9,7 @@ export type PricingCardProps = {
   price: ReactNode;
   priceHint?: string;
   description?: string;
-  features: string[];
+  features: readonly string[];
   cta: ReactNode;
   highlighted?: boolean;
   /** Already-on-this-plan state. Calmer than the sales highlight. */
