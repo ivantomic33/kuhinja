@@ -30,7 +30,7 @@ export default function MarketingLayout({
             </Link>
             <Link
               href="/register"
-              className="flex min-h-11 items-center rounded-[var(--radius-input)] bg-accent px-4 text-sm font-semibold text-background hover:opacity-90"
+              className="flex min-h-11 items-center rounded-[var(--radius-input)] bg-accent px-4 text-sm font-semibold text-accent-ink hover:bg-accent-hover"
             >
               {sr.marketing.navRegister}
             </Link>

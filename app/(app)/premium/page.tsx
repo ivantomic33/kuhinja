@@ -558,7 +558,7 @@ export default function PremiumPage() {
               "linear-gradient(180deg, rgba(255,107,53,.1), var(--surface) 42%)",
           }}
         >
-          <span className="pop absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--accent-ink)] shadow-sm">
+          <span className="pop absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-accent-ink shadow-sm">
             Najpopularnije
           </span>
           <div className="flex items-start justify-between gap-2 pt-1">

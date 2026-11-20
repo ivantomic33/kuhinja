@@ -5,8 +5,8 @@
 /* -------------------------------------------------------------------------- */
 :root {
   /* Surfaces */
-  --bg: #0b0b0c;
-  --background: #0b0b0c;
+  --bg: #0b0b0e;
+  --background: var(--bg);
   --surface: #18181b;
   --surface-2: #1f1f23;
   --surface-3: #27272a;
@@ -20,14 +20,14 @@
   /* Text */
   --text: #fafafa;
   --text-2: #a1a1aa;
-  --text-3: #71717a;
+  --text-3: #9898a1;
   --muted: #a1a1aa;
 
   /* Brand */
   --accent: #ff6b35;
-  --accent-hover: #ff8255;
+  --accent-hover: #ff7f50;
   --accent-pressed: #e85a28;
-  --accent-ink: #1a0a03;
+  --accent-ink: var(--background);
   --accent-soft: rgba(255, 107, 53, 0.12);
   --accent-line: rgba(255, 107, 53, 0.35);
   --accent-muted: rgba(255, 107, 53, 0.12);
@@ -39,12 +39,13 @@
   --warning: #f59e0b;
   --warning-soft: rgba(245, 158, 11, 0.12);
   --danger: #ef4444;
+  --danger-text: #f87171;
   --danger-soft: rgba(239, 68, 68, 0.12);
   --danger-muted: rgba(239, 68, 68, 0.12);
 
   /* Focus */
   --ring: #ff6b35;
-  --ring-offset: #0b0b0c;
+  --ring-offset: var(--background);
   --focus: 0 0 0 3px rgba(255, 107, 53, 0.28);
 
   /* Typography scale */
@@ -120,6 +121,7 @@
   --color-accent-ink: var(--accent-ink);
   --color-success: var(--success);
   --color-danger: var(--danger);
+  --color-danger-text: var(--danger-text);
   --color-warning: var(--warning);
 
   --font-sans: var(--font-inter), "Inter", system-ui, -apple-system, "Segoe UI",
@@ -237,6 +239,12 @@ button:not(:disabled),
 :focus-visible {
   outline: none;
   box-shadow: var(--focus);
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 input,
@@ -360,10 +368,6 @@ button.stock-tinted:hover {
 .stock-page > .stock-kpis,
 .stock-page > #stock-levels {
   margin-bottom: 4px;
-}
-
-.stock-buy button:disabled {
-  opacity: 0.55;
 }
 
 .buy-setup {
@@ -657,6 +661,10 @@ button.stock-tinted:hover {
   color: var(--text);
 }
 
+.seg button:disabled {
+  color: var(--text-3);
+}
+
 .seg.big button {
   min-height: 40px;
   padding: 0 18px;
@@ -895,7 +903,7 @@ select.field-control {
 }
 
 .restock-add:disabled {
-  opacity: 0.5;
+  color: var(--text-3);
   cursor: not-allowed;
 }
 

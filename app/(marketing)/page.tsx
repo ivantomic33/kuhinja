@@ -101,7 +101,7 @@ function CtaLink({
         "rounded-[var(--radius-input)] px-6 text-base font-semibold",
         "outline-none transition-opacity",
         "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        variant === "primary" && "bg-accent text-background hover:opacity-90",
+        variant === "primary" && "bg-accent text-accent-ink hover:bg-accent-hover",
         variant === "ghost" &&
           "border border-border bg-surface-2 text-text hover:opacity-90",
         className
