@@ -78,7 +78,7 @@ export function ProfileMenu({
             onClick={() => {
               void handleSignOut();
             }}
-            className="flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm text-muted hover:bg-surface-2 hover:text-text disabled:opacity-50"
+            className="flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm text-muted enabled:hover:bg-surface-2 enabled:hover:text-text disabled:cursor-not-allowed disabled:text-text-3"
           >
             <LogOut className="size-4" aria-hidden="true" />
             {sr.auth.signOut}

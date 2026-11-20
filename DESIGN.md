@@ -17,6 +17,8 @@
 | `text-primary` | `#F5F5F7` | Titles, body |
 | `text-muted` | `#9A9AA6` | Labels (≥ AA on dark) |
 | `accent` | `#FF6B35` / hover `#FF7F50` | CTA, active nav |
+| `accent-ink` | `var(--background)` (`#0B0B0E`) | Text and icons on solid accent fills |
+| `text-3` | `#9898A1` | Tertiary text and placeholders on dark surfaces |
 | `success` / `danger` | `#22C55E` / `#EF4444` | Price down / up, delete |
 | `--glow-pro` | soft orange glow | Pro pricing card |
 | `--card-highlight` | top-edge gradient | subtle card lift |

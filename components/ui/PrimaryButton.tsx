@@ -14,6 +14,13 @@ export type PrimaryButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   fullWidth?: boolean;
 };
 
+const VARIANT = {
+  primary: "bg-accent text-accent-ink enabled:hover:bg-accent-hover enabled:active:bg-accent-pressed",
+  secondary: "border border-border-strong bg-surface-2 text-text enabled:hover:bg-surface-3",
+  ghost: "bg-transparent text-text-2 enabled:hover:bg-surface-2 enabled:hover:text-text",
+  danger: "bg-danger text-accent-ink enabled:hover:bg-[color-mix(in_srgb,var(--danger)_90%,white)]",
+} as const;
+
 export function PrimaryButton({
   loading = false,
   leftIcon,
@@ -46,17 +53,10 @@ export function PrimaryButton({
         size === "lg" &&
           "min-h-[52px] px-5 text-[length:var(--fs-md)]",
         fullWidth && "w-full",
-        variant === "primary" &&
-          "bg-accent text-[var(--accent-ink)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-pressed)]",
-        variant === "secondary" &&
-          "border border-border-strong bg-surface-2 text-text hover:bg-surface-3",
-        variant === "ghost" &&
-          "bg-transparent text-[var(--text-2)] hover:bg-surface-2 hover:text-text",
-        variant === "danger" && "bg-danger text-white hover:opacity-90",
-        isDisabled &&
-          !loading &&
-          "cursor-not-allowed border border-border bg-surface-2 text-[var(--text-3)] hover:bg-surface-2 hover:text-[var(--text-3)] active:bg-surface-2",
-        loading && "cursor-not-allowed opacity-80",
+        isDisabled && !loading
+          ? "border border-border bg-surface-2 text-text-2"
+          : VARIANT[variant],
+        isDisabled && "cursor-not-allowed",
         className
       )}
       {...rest}

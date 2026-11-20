@@ -140,9 +140,9 @@ export function DeleteTemplateButton({
         aria-label={sr.create.template.delete}
         className={cn(
           "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[var(--radius-input)]",
-          "border border-danger/40 px-3 text-sm font-medium text-danger",
-          "hover:bg-danger/10 focus-visible:ring-2 focus-visible:ring-accent outline-none",
-          "disabled:cursor-not-allowed disabled:opacity-50"
+          "border border-danger/40 px-3 text-sm font-medium text-danger-text",
+          "enabled:hover:bg-danger/10 focus-visible:ring-2 focus-visible:ring-accent outline-none",
+          "disabled:cursor-not-allowed disabled:border-dashed"
         )}
       >
         <Trash2 className="size-4" aria-hidden="true" />
