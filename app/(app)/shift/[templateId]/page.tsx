@@ -31,11 +31,12 @@ export default async function ShiftChecklistPage({ params }: ShiftPageProps) {
     .eq("id", templateId)
     .maybeSingle();
 
-  if (templateError || !template) {
+  if (templateError && templateError.code !== "22P02") throw templateError;
+  if (!template) {
     notFound();
   }
 
-  const [plan, { data: activeRun }] = await Promise.all([
+  const [plan, { data: activeRun, error: runError }] = await Promise.all([
     getPlan(),
     supabase
       .from("checklist_runs")
@@ -45,6 +46,7 @@ export default async function ShiftChecklistPage({ params }: ShiftPageProps) {
       .eq("status", "active")
       .maybeSingle(),
   ]);
+  if (runError) throw runError;
 
   const items = parseChecklistItems(template.items);
   const initialRun = activeRun ? runFromRow(activeRun) : null;

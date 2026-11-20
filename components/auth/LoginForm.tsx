@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { AuthDivider } from "@/components/auth/AuthDivider";
 import { AuthField } from "@/components/auth/AuthField";
 import { GoogleButton } from "@/components/auth/GoogleButton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { loginAction } from "@/lib/auth/actions";
 import { loginSchema } from "@/lib/schemas/auth";
@@ -42,17 +43,22 @@ export function LoginForm() {
     setFieldErrors({});
     setLoading(true);
 
-    const result = await loginAction(parsed.data);
+    try {
+      const result = await loginAction(parsed.data);
 
-    if (!result.success) {
-      setFieldErrors(result.fieldErrors ?? {});
-      setFormError(result.message);
+      if (!result.success) {
+        setFieldErrors(result.fieldErrors ?? {});
+        setFormError(result.message ?? sr.auth.errors.generic);
+        setLoading(false);
+        return;
+      }
+
+      router.replace(nextPath);
+      router.refresh();
+    } catch {
+      setFormError(sr.auth.errors.generic);
       setLoading(false);
-      return;
     }
-
-    router.replace(nextPath);
-    router.refresh();
   }
 
   return (
@@ -96,22 +102,21 @@ export function LoginForm() {
         ) : null}
 
         <PrimaryButton type="submit" fullWidth loading={loading}>
-          {sr.auth.signIn}
+          {formError ? sr.common.retry : sr.auth.signIn}
         </PrimaryButton>
       </form>
 
       <AuthDivider />
       <GoogleButton nextPath={nextPath} />
 
-      <p className="text-center text-sm text-muted">
-        {sr.auth.noAccount}{" "}
+      <EmptyState className="!gap-1 !p-0" title={sr.auth.noAccount} action={
         <Link
           href="/register"
           className="font-medium text-text underline-offset-2 hover:underline"
         >
           {sr.auth.signUp}
         </Link>
-      </p>
+      } />
     </div>
   );
 }

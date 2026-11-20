@@ -7,6 +7,7 @@ import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, Cr
 import { Badge } from "@/components/ui/Badge";
 import { BentoCard } from "@/components/ui/BentoCard";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -246,8 +247,11 @@ export function ScheduleWorkspace({ data }: { data: ScheduleWeek }) {
 
         <div className="r-week-card">
           {weekNav}
-          {!data.assignments.length ? <div className="r-week-empty"><span><b>Nedelja je prazna.</b> Kopiraj prošlu nedelju pa izmeni samo razlike.</span>
-            <PrimaryButton variant="ghost" size="sm" disabled={busy} onClick={copyWeek}>Kopiraj prošlu nedelju</PrimaryButton></div> : null}
+          {!data.employees.length ? <EmptyState title="Nema zaposlenih u rasporedu."
+            actionLabel="Dodaj zaposlenog" onAction={() => setDialog({ type: "employee" })} />
+            : !data.assignments.length ? <EmptyState title="Nedelja je prazna."
+                action={<PrimaryButton variant="secondary" disabled={busy} onClick={copyWeek}>Kopiraj prošlu nedelju</PrimaryButton>} />
+            : null}
           <ScheduleGrid monday={data.monday} today={data.today} employees={data.employees} assignments={data.assignments} analysis={analysis} showPro={pro}
             onAddEmployee={() => setDialog({ type: "employee" })} onEditEmployee={(employee) => setDialog({ type: "employee", employee })}
             onSave={saveAssignment} focus={focus} />

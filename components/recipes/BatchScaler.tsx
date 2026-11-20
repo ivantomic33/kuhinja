@@ -13,6 +13,7 @@ import { BigNumber } from "@/components/ui/BigNumber";
 import { NumericKeypad } from "@/components/ui/NumericKeypad";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { StateLink } from "@/components/ui/RouteStates";
 import {
   MAX_SERVINGS,
   MIN_SERVINGS,
@@ -55,6 +56,7 @@ function formatFactor(factor: number): string {
 }
 
 export function BatchScaler({
+  recipeId,
   recipeName,
   baseServings,
   baseTimeMinutes,
@@ -186,7 +188,8 @@ export function BatchScaler({
     }
   }
 
-  const hasIngredients = ingredients.length > 0;
+  if (ingredients.length === 0) return <EmptyState title={sr.scaler.emptyIngredients}
+    action={<StateLink href={`/recipes/${recipeId}`}>{sr.scaler.backToRecipe}</StateLink>} />;
 
   return (
     <div className="flex flex-col gap-2">
@@ -196,6 +199,24 @@ export function BatchScaler({
           {recipeName}
         </h1>
         <p className="text-sm text-muted">{sr.scaler.hint}</p>
+      </div>
+
+      <div>
+        <PrimaryButton
+          leftIcon={<ShoppingCart aria-hidden="true" />}
+          aria-expanded={showShopping}
+          aria-controls="scaler-shopping-list"
+          onClick={() => {
+            setShowShopping(true);
+            window.requestAnimationFrame(() => {
+              const list = document.getElementById("scaler-shopping-list");
+              list?.focus({ preventScroll: true });
+              list?.scrollIntoView({ block: "start" });
+            });
+          }}
+        >
+          {sr.scaler.shoppingList}
+        </PrimaryButton>
       </div>
 
       <BentoCard
@@ -281,9 +302,6 @@ export function BatchScaler({
           </h2>
         }
       >
-        {!hasIngredients ? (
-          <EmptyState title={sr.scaler.emptyIngredients} />
-        ) : (
           <ul className="flex flex-col gap-1">
             {result.scaled.map((item) => {
               const display = formatScaledQuantity(
@@ -320,7 +338,6 @@ export function BatchScaler({
               );
             })}
           </ul>
-        )}
       </BentoCard>
 
       <BentoCard
@@ -382,8 +399,10 @@ export function BatchScaler({
           </div>
         </div>
       </BentoCard>
-
       <BentoCard
+        id="scaler-shopping-list"
+        className="scroll-mt-20"
+        tabIndex={-1}
         header={
           <h2 className="text-base font-semibold text-text">
             {sr.scaler.shoppingList}
@@ -395,6 +414,7 @@ export function BatchScaler({
             type="button"
             fullWidth
             leftIcon={<ShoppingCart className="size-5" aria-hidden="true" />}
+            aria-expanded={showShopping}
             onClick={() => setShowShopping((open) => !open)}
           >
             {sr.scaler.shoppingList}
