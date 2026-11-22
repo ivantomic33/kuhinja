@@ -2,7 +2,6 @@
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
-import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
 export type PrimaryButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -15,7 +14,7 @@ export type PrimaryButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const VARIANT = {
-  primary: "bg-accent text-accent-ink enabled:hover:bg-accent-hover enabled:active:bg-accent-pressed",
+  primary: "bg-accent text-text-on-accent enabled:hover:bg-accent-hover enabled:active:bg-accent-pressed",
   secondary: "border border-border-strong bg-surface-2 text-text enabled:hover:bg-surface-3",
   ghost: "bg-transparent text-text-2 enabled:hover:bg-surface-2 enabled:hover:text-text",
   danger: "bg-danger text-accent-ink enabled:hover:bg-[color-mix(in_srgb,var(--danger)_90%,white)]",
@@ -38,12 +37,13 @@ export function PrimaryButton({
 
   return (
     <button
+      {...rest}
       type={type}
       disabled={isDisabled}
-      aria-busy={loading || undefined}
-      aria-disabled={isDisabled || undefined}
+      aria-busy={loading || rest["aria-busy"]}
+      aria-disabled={isDisabled || rest["aria-disabled"]}
       className={cn(
-        "inline-flex items-center justify-center gap-2 whitespace-nowrap",
+        "focus-ring relative inline-flex items-center justify-center whitespace-nowrap",
         "rounded-[10px] font-semibold transition-[background,border-color,color] duration-150 outline-none",
         "[&_svg]:size-5",
         size === "sm" &&
@@ -59,20 +59,24 @@ export function PrimaryButton({
         isDisabled && "cursor-not-allowed",
         className
       )}
-      {...rest}
     >
-      {loading ? (
-        <>
-          <Loader2 className="size-5 shrink-0 animate-spin" aria-hidden="true" />
-          <span>{sr.ui.primaryButton.loading}</span>
-          <span className="sr-only">{sr.common.loading}</span>
-        </>
-      ) : (
-        <>
-          {leftIcon ? <span className="shrink-0">{leftIcon}</span> : null}
-          <span>{children}</span>
-          {rightIcon ? <span className="shrink-0">{rightIcon}</span> : null}
-        </>
+      <span
+        className={cn(
+          "inline-flex items-center justify-center gap-2",
+          loading && "opacity-0"
+        )}
+      >
+        {leftIcon ? <span className="shrink-0">{leftIcon}</span> : null}
+        <span>{children}</span>
+        {rightIcon ? <span className="shrink-0">{rightIcon}</span> : null}
+      </span>
+      {loading && (
+        <span
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          aria-hidden="true"
+        >
+          <Loader2 className="motion-safe:animate-spin" />
+        </span>
       )}
     </button>
   );

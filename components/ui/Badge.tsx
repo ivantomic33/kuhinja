@@ -15,8 +15,7 @@ export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
 
 const VARIANT: Record<BadgeVariant, string> = {
   neutral: "bg-surface-2 text-[var(--text-2)] border-border-strong",
-  accent:
-    "bg-[var(--accent-soft)] text-accent border-[var(--accent-line)]",
+  accent: "border-accent bg-accent text-text-on-accent",
   success:
     "bg-[var(--success-soft)] text-success border-[rgba(34,197,94,.3)]",
   danger: "bg-[var(--danger-soft)] text-danger-text border-danger/30",
@@ -33,7 +32,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center gap-1 rounded-full",
+        "focus-ring inline-flex h-6 items-center gap-1 rounded-full",
         "border px-2.5 text-[length:var(--fs-xs)] font-semibold",
         VARIANT[variant],
         className

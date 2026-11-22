@@ -207,14 +207,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.focus-ring {
-  outline: none;
-}
-
-.focus-ring:focus-visible {
-  box-shadow: var(--focus);
-}
-
 .pb-safe {
   padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
@@ -242,9 +234,14 @@ button:not(:disabled),
 }
 
 button:focus-visible,
-a:focus-visible {
+a:focus-visible,
+.focus-ring:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring-offset);
 }
 
 input,
@@ -668,11 +665,24 @@ button.stock-tinted:hover {
 }
 
 .seg button.on {
-  background: var(--surface-3);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--text-on-accent);
 }
 
-.seg button:disabled {
+.seg button.on:enabled:hover {
+  background: var(--accent-hover);
+}
+
+.seg button.on:enabled:active {
+  background: var(--accent-pressed);
+}
+
+.seg button:focus-visible {
+  position: relative;
+  z-index: 1;
+}
+
+.seg button:disabled:not(.on) {
   color: var(--text-3);
 }
 
