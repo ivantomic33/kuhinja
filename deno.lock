@@ -1,0 +1,36 @@
+{
+  "version": "5",
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.49.8": "fd72c6e822ed41d5fe7ad3bbe3a48420abbb21a579c73d532b36a6467f5b5f7d"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@eslint/eslintrc@^3.3.1",
+        "npm:@serwist/next@^9.5.15",
+        "npm:@supabase/ssr@~0.6.1",
+        "npm:@supabase/supabase-js@^2.49.8",
+        "npm:@tailwindcss/postcss@^4.1.8",
+        "npm:@tanstack/react-query@^5.80.6",
+        "npm:@types/node@^20.17.57",
+        "npm:@types/react-dom@^19.1.5",
+        "npm:@types/react@^19.1.6",
+        "npm:@vitest/coverage-v8@3.2.7",
+        "npm:eslint-config-next@^15.5.29",
+        "npm:eslint@^9.28.0",
+        "npm:framer-motion@^12.15.0",
+        "npm:idb-keyval@^6.3.0",
+        "npm:lucide-react@0.511",
+        "npm:next@^15.5.29",
+        "npm:react-dom@^19.3.1",
+        "npm:react@^19.3.1",
+        "npm:serwist@^9.5.15",
+        "npm:tailwindcss@^4.1.8",
+        "npm:typescript@^5.8.3",
+        "npm:vitest@^3.2.1",
+        "npm:zod@^3.25.42",
+        "npm:zustand@^5.0.5"
+      ]
+    }
+  }
+}

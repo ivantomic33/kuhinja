@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality-checks:
+    name: Quality checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check PWA icon versions match
+        run: pnpm check:pwa-icons
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          NEXT_PUBLIC_SITE_URL: https://treuplate.example
+
+  # supabase-types:
+  #   name: Supabase types
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v7
+  #     - uses: supabase/setup-cli@v1
+  #       with:
+  #         version: latest
+  #     - run: supabase init
+  #     - run: supabase db start
+  #     - name: Compare generated database types
+  #       run: |
+  #         supabase gen types typescript --local > lib/supabase/database.types.ts
+  #         git diff --exit-code -- lib/supabase/database.types.ts
