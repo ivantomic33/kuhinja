@@ -15,7 +15,7 @@ export function SignOutButton() {
     setLoading(true);
     try {
       // Wipe caches / IDB / React Query before cookies redirect away.
-      await clearClientUserState(queryClient);
+      await clearClientUserState(queryClient, { preserveSession: true });
     } catch {
       // Still sign out even if a storage API fails.
     }

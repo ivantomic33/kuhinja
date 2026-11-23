@@ -34,8 +34,9 @@ export function DeleteIngredientButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
+  const actionLabel = compact ? sr.common.delete : sr.create.ingredient.delete;
   const ariaLabel = ingredientName?.trim()
-    ? `Obriši ${ingredientName}`
+    ? `${actionLabel} ${ingredientName}`
     : sr.create.ingredient.delete;
 
   function openConfirm(event: MouseEvent<HTMLButtonElement>) {
@@ -134,7 +135,7 @@ export function DeleteIngredientButton({
         type="button"
         onClick={openConfirm}
         disabled={loading}
-        aria-label={ariaLabel}
+        aria-label={loading ? undefined : ariaLabel}
         className={cn(
           "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl",
           "border border-danger/40 px-3 text-sm font-medium text-danger-text",

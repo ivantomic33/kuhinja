@@ -30,7 +30,7 @@ export function UsageStrip({
         )}
       >
         <Badge variant="accent">{planLabel ?? "Premium"}</Badge>
-        <p className="text-[length:var(--fs-sm)] text-[var(--text-2)]">
+        <p className="text-ui-sm text-text-2">
           {label}:{" "}
           <span className="font-semibold tabular-nums text-text">
             {used} · bez limita
@@ -53,7 +53,7 @@ export function UsageStrip({
       )}
     >
       <Badge variant="neutral">{planLabel ?? "Free"}</Badge>
-      <p className="text-[length:var(--fs-sm)] text-[var(--text-2)]">
+      <p className="text-ui-sm text-text-2">
         {label}:{" "}
         <span className="font-semibold tabular-nums text-text">
           {used} / {max}
@@ -64,7 +64,7 @@ export function UsageStrip({
       </div>
       <Link
         href="/premium"
-        className="ml-auto text-[length:var(--fs-sm)] font-semibold text-accent no-underline hover:underline"
+        className="ml-auto text-ui-sm font-semibold text-accent no-underline hover:underline"
       >
         Povećaj limit
       </Link>

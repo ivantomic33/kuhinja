@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, use, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
 import { SaleFoodCost } from "@/components/stock/SaleFoodCost";
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils/cn";
 export type SaleModalProps = {
   open: boolean;
   onClose: () => void;
+  returnFocusRef: RefObject<HTMLElement | null>;
   venueId: string;
   recipes: Promise<RecipeForSale[] | null>;
   stockRows: StockRow[];
@@ -60,7 +61,7 @@ const SaleRecipeRow = memo(function SaleRecipeRow({
     <li className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-2 px-3 py-3">
       <div className="min-w-0">
         <p className="truncate font-medium text-text">{recipe.name}</p>
-        <p className="truncate text-[length:var(--fs-xs)] text-[var(--text-3)]">{summary || "—"}</p>
+        <p className="truncate text-ui-xs text-text-3">{summary || "—"}</p>
       </div>
       <div className="flex items-center gap-2">
         <button
@@ -91,7 +92,7 @@ const SalePreview = memo(function SalePreview({ lines }: { lines: SaleDeductionL
     <section className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3">
       <h3 className="text-sm font-semibold text-text">{t.saleLive}</h3>
       {lines.length === 0 ? (
-        <p className="text-sm text-[var(--text-2)]">{t.saleLiveEmpty}</p>
+        <p className="text-sm text-text-2">{t.saleLiveEmpty}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {lines.map((line) => (
@@ -119,6 +120,7 @@ const SalePreview = memo(function SalePreview({ lines }: { lines: SaleDeductionL
 export function SaleModal({
   open,
   onClose,
+  returnFocusRef,
   venueId,
   recipes: recipeData,
   stockRows,
@@ -300,12 +302,13 @@ export function SaleModal({
       <BottomSheet
         open={editing}
         onClose={closeEntry}
+        returnFocusRef={returnFocusRef}
         title={t.saleTitle}
         description={t.saleSub}
         size="lg"
         footer={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-[var(--text-2)]">
+            <p className="text-sm text-text-2">
               {t.saleTotal}: {totalPortions}
             </p>
             <div className="flex gap-2">
@@ -325,7 +328,7 @@ export function SaleModal({
       >
         <fieldset disabled={loading} className="flex min-w-0 flex-col gap-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-[length:var(--fs-xs)] text-[var(--text-2)]">
+            <label className="flex flex-col gap-1 text-ui-xs text-text-2">
               {t.saleDate}
               <input
                 type="date"
@@ -334,7 +337,7 @@ export function SaleModal({
                 onChange={(e) => setDate(e.target.value)}
               />
             </label>
-            <label className="flex flex-col gap-1 text-[length:var(--fs-xs)] text-[var(--text-2)]">
+            <label className="flex flex-col gap-1 text-ui-xs text-text-2">
               {t.saleShift}
               <select
                 className="field-control"
@@ -355,7 +358,7 @@ export function SaleModal({
               {loadedRecipes === null ? (
                 <RouteError message={t.saleLoadError} />
               ) : recipes.length === 0 ? (
-                <p className="text-sm text-[var(--text-2)]">{t.saleEmptyRecipes}</p>
+                <p className="text-sm text-text-2">{t.saleEmptyRecipes}</p>
               ) : editing ? (
                 <ul className="flex flex-col gap-2">
                   {recipes.map((recipe) => (
@@ -410,7 +413,7 @@ export function SaleModal({
         }
       >
         <div className="flex flex-col gap-2">
-          <p className="text-sm text-[var(--text-2)]">{t.negBody}</p>
+          <p className="text-sm text-text-2">{t.negBody}</p>
           <ul className="list-disc pl-5 text-sm text-danger">
             {negOpen && previewLines
               .filter((l) => l.after < 0)
@@ -428,11 +431,12 @@ export function SaleModal({
         id="modalSaleResult"
         open={resultOpen}
         onClose={closeResult}
+        returnFocusRef={returnFocusRef}
         title={canSeeFoodCost ? t.saleFoodCostTitle : t.saleResultTitle}
         description={
           <span className="flex flex-wrap items-center gap-2">
             {resultDescription}
-            <span className="rounded-full border border-border-strong bg-surface-2 px-2 py-0.5 text-xs font-medium text-text">
+            <span className="rounded-full border border-border-strong bg-surface-2 px-2 py-1 text-xs font-medium text-text">
               {planDisplayName(canSeeDishes ? "pro" : plan)}
             </span>
           </span>

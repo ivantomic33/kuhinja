@@ -34,7 +34,7 @@ export function WaitlistButton({
         {joined ? "Na waitlisti" : "Priključi se waitlisti"}
       </PrimaryButton>
       {joined ? (
-        <p className="text-center text-[length:var(--fs-xs)] text-[var(--text-3)]">
+        <p className="text-center text-ui-xs text-text-3">
           Javićemo vam kada {planLabel} bude dostupan.
         </p>
       ) : null}

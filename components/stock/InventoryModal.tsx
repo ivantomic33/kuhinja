@@ -96,7 +96,7 @@ export function InventoryModal({
       size="lg"
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-[var(--text-2)]">{t.inventoryFoot}</p>
+          <p className="text-sm text-text-2">{t.inventoryFoot}</p>
           <div className="flex gap-2">
             <PrimaryButton variant="secondary" onClick={onClose}>
               {sr.common.cancel}
@@ -113,12 +113,12 @@ export function InventoryModal({
       }
     >
       {tracked.length === 0 ? (
-        <p className="text-sm text-[var(--text-2)]">{t.emptyHint}</p>
+        <p className="text-sm text-text-2">{t.emptyHint}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-[length:var(--fs-xs)] text-[var(--text-3)]">
+              <tr className="border-b border-border text-ui-xs text-text-3">
                 <th className="px-2 py-2 font-medium">{t.colIngredient}</th>
                 <th className="px-2 py-2 font-medium">{t.inventoryExpected}</th>
                 <th className="px-2 py-2 font-medium">{t.inventoryActual}</th>
@@ -133,12 +133,13 @@ export function InventoryModal({
                 const din = delta * (row.price || 0);
                 return (
                   <tr key={row.ingredientId} className="border-b border-border/70">
-                    <td className="px-2 py-3 font-medium text-text">{row.name}</td>
-                    <td className="px-2 py-3 tabular-nums text-[var(--text-2)]">
+                    <th scope="row" className="px-2 py-3 font-medium text-text">{row.name}</th>
+                    <td className="px-2 py-3 tabular-nums text-text-2">
                       {formatQty(row.qty)} {row.unit}
                     </td>
                     <td className="px-2 py-3">
                       <input
+                        aria-label={`${t.inventoryActual}: ${row.name} (${row.unit})`}
                         className="field-control w-28 tabular-nums"
                         inputMode="decimal"
                         value={counts[row.ingredientId] ?? ""}

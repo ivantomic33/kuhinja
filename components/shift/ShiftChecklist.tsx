@@ -393,7 +393,7 @@ export function ShiftChecklist({
     <div className="relative flex min-h-[calc(100dvh-10rem)] flex-col gap-5">
       <header className="flex flex-col gap-2">
         <p className="text-sm text-muted">{sr.shift.subtitle}</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-text">
+        <h1>
           {templateName}
         </h1>
         <div className="flex flex-wrap items-center gap-1 text-xs text-muted">
@@ -448,7 +448,7 @@ export function ShiftChecklist({
           className="flex items-start gap-2 rounded-[var(--radius-card)] border border-border bg-surface-2 p-2"
           role="status"
         >
-          <Lock className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden="true" />
+          <Lock className="mt-1 size-5 shrink-0 text-muted" aria-hidden="true" />
           <div>
             <p className="text-sm font-semibold text-text">
               {sr.shift.lockedTimers}

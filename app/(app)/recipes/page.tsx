@@ -113,7 +113,7 @@ export default async function RecipesPage() {
         initialRecipes={recipeRows}
         canSeeInsights={canSeeInsights}
         venueId={venueId}
-        loadError={Boolean(recipesRes.error)}
+        loadError={Boolean(recipesRes.error || venuesRes.error)}
       />
     </>
   );

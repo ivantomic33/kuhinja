@@ -91,11 +91,11 @@ export function HistorySheet({
     >
       <div className="flex flex-col gap-2">
         {loading ? (
-          <p className="text-sm text-[var(--text-2)]">…</p>
+          <p className="text-sm text-text-2">…</p>
         ) : error ? (
           <p className="text-sm text-danger">{t.loadError}</p>
         ) : moves.length === 0 ? (
-          <p className="text-sm text-[var(--text-2)]">
+          <p className="text-sm text-text-2">
             {ingredientId ? t.historyEmpty : t.historyGlobalEmpty}
           </p>
         ) : (
@@ -122,7 +122,7 @@ export function HistorySheet({
                     <p className="truncate text-sm font-medium text-text">
                       {move.ingredientName ?? ingredientName ?? "—"}
                     </p>
-                    <p className="text-[length:var(--fs-xs)] text-[var(--text-3)]">
+                    <p className="text-ui-xs text-text-3">
                       {formatShortDate(move.createdAt)}
                       {move.reason ? ` · ${move.reason}` : ""}
                       {move.note ? ` · ${move.note}` : ""}

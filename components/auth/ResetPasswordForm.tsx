@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { AuthError } from "@/components/auth/AuthError";
 import { AuthField } from "@/components/auth/AuthField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { resetPasswordAction } from "@/lib/auth/actions";
@@ -20,6 +21,7 @@ export function ResetPasswordForm() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return;
     setFormError(undefined);
     setSuccessMessage(undefined);
 
@@ -43,22 +45,26 @@ export function ResetPasswordForm() {
     setFieldErrors({});
     setLoading(true);
 
-    const result = await resetPasswordAction(parsed.data);
+    try {
+      const result = await resetPasswordAction(parsed.data);
 
-    if (!result.success) {
-      setFieldErrors(result.fieldErrors ?? {});
-      setFormError(result.message);
+      if (!result.success) {
+        setFieldErrors(result.fieldErrors ?? {});
+        setFormError(result.message ?? sr.auth.errors.generic);
+        return;
+      }
+
+      setSuccessMessage(result.message ?? sr.auth.passwordUpdated);
+
+      window.setTimeout(() => {
+        router.replace("/dashboard");
+        router.refresh();
+      }, 1200);
+    } catch {
+      setFormError(sr.auth.errors.generic);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setSuccessMessage(result.message ?? sr.auth.passwordUpdated);
-    setLoading(false);
-
-    window.setTimeout(() => {
-      router.replace("/dashboard");
-      router.refresh();
-    }, 1200);
   }
 
   if (successMessage) {
@@ -96,11 +102,7 @@ export function ResetPasswordForm() {
           required
         />
 
-        {formError ? (
-          <p role="alert" className="text-sm text-danger">
-            {formError}
-          </p>
-        ) : null}
+        <AuthError message={formError} />
 
         <PrimaryButton type="submit" fullWidth loading={loading}>
           {sr.auth.updatePassword}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { AuthError } from "@/components/auth/AuthError";
 import { AuthField } from "@/components/auth/AuthField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { forgotPasswordAction } from "@/lib/auth/actions";
@@ -17,6 +18,7 @@ export function ForgotPasswordForm() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return;
     setFormError(undefined);
     setSuccessMessage(undefined);
 
@@ -36,17 +38,22 @@ export function ForgotPasswordForm() {
     setFieldErrors({});
     setLoading(true);
 
-    const result = await forgotPasswordAction(parsed.data);
+    try {
+      const result = await forgotPasswordAction(parsed.data);
 
-    if (!result.success) {
-      setFieldErrors(result.fieldErrors ?? {});
-      setFormError(result.message);
+      if (!result.success) {
+        setFieldErrors(result.fieldErrors ?? {});
+        setFormError(result.message ?? sr.auth.errors.generic);
+        return;
+      }
+
+      setSuccessMessage(result.message ?? sr.auth.resetEmailSent);
       setLoading(false);
-      return;
+    } catch {
+      setFormError(sr.auth.errors.generic);
+    } finally {
+      setLoading(false);
     }
-
-    setSuccessMessage(result.message ?? sr.auth.resetEmailSent);
-    setLoading(false);
   }
 
   if (successMessage) {
@@ -86,11 +93,7 @@ export function ForgotPasswordForm() {
           required
         />
 
-        {formError ? (
-          <p role="alert" className="text-sm text-danger">
-            {formError}
-          </p>
-        ) : null}
+        <AuthError message={formError} />
 
         <PrimaryButton type="submit" fullWidth loading={loading}>
           {sr.auth.sendResetLink}

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { LogoMark } from "@/components/brand/LogoMark";
@@ -37,6 +37,7 @@ export function AppShell({
   const pathname = usePathname();
   const [expanded, setExpanded] = useState(false);
   const [collapsedDesktop, setCollapsedDesktop] = useState(false);
+  const sidebarTrigger = useRef<HTMLButtonElement>(null);
 
   // Close overlay drawer on navigation
   useEffect(() => {
@@ -63,8 +64,9 @@ export function AppShell({
       {expanded ? (
         <button
           type="button"
-          aria-label="Zatvori meni"
-          className="fixed inset-0 z-30 bg-black/50 min-[1200px]:hidden"
+          aria-hidden="true"
+          tabIndex={-1}
+          className="fixed inset-0 z-[35] bg-black/50 min-[1200px]:hidden"
           onClick={() => setExpanded(false)}
         />
       ) : null}
@@ -76,11 +78,13 @@ export function AppShell({
         isPremium={isPremium}
         expanded={expanded}
         collapsedDesktop={railCollapsed}
-        onToggleCollapse={() => {
+        returnFocusRef={sidebarTrigger}
+        onToggleCollapse={(trigger) => {
           // ≥1200: toggle rail; <1200: toggle overlay
           if (typeof window !== "undefined" && window.innerWidth >= 1200) {
             setCollapsedDesktop((v) => !v);
           } else {
+            sidebarTrigger.current = trigger;
             setExpanded((v) => !v);
           }
         }}
@@ -88,20 +92,24 @@ export function AppShell({
       />
 
       <div
+        inert={expanded || undefined}
         className={cn(
           "flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out",
           railCollapsed
-            ? "min-[1200px]:pl-[var(--sidebar-rail)]"
-            : "min-[1200px]:pl-[var(--sidebar)]",
-          "max-[1199px]:pl-[var(--sidebar-rail)] max-[719px]:pl-0"
+            ? "md:pl-sidebar-rail"
+            : "md:max-[1200px]:pl-sidebar-rail min-[1200px]:pl-sidebar"
         )}
       >
-        {/* Mobile topbar ≤719px */}
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background px-4 py-3 min-[720px]:hidden">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background px-4 py-3 md:hidden">
           <button
             type="button"
             aria-label="Otvori meni"
-            onClick={() => setExpanded(true)}
+            aria-expanded={expanded}
+            aria-controls="app-sidebar"
+            onClick={(event) => {
+              sidebarTrigger.current = event.currentTarget;
+              setExpanded(true);
+            }}
             className="icon-btn bordered"
           >
             <Menu className="size-5" aria-hidden="true" />
@@ -115,22 +123,23 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="flex-1">
+        <main className="min-w-0 flex-1">
           <div className={cn(
             "app-content",
             pathname === "/trebovanje" && "app-content-stock"
           )}>
-            <div className="mb-4 empty:hidden">
-              <InstallHint />
-            </div>
+            {pathname !== "/dashboard" ? <div className="mb-4 empty:hidden"><InstallHint /></div> : null}
             <PlanProvider>
               {initialPlan ? <PlanBootstrap initial={initialPlan} /> : null}
               <ToastProvider>{children}</ToastProvider>
             </PlanProvider>
+            {pathname === "/dashboard" ? <div className="mt-6 empty:hidden"><InstallHint /></div> : null}
           </div>
         </main>
       </div>
-      <BottomNav />
+      <div inert={expanded || undefined}>
+        <BottomNav />
+      </div>
     </div>
   );
 }

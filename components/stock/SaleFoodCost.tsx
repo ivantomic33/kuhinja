@@ -24,7 +24,7 @@ export function SaleFoodCost({
         <div>
           <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold text-text">
             {t.saleFoodCostTitle}
-            <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs text-accent">
+            <span className="rounded-full bg-[var(--accent-soft)] px-2 py-1 text-xs text-accent">
               {planDisplayName("starter")}
             </span>
           </h3>

@@ -69,7 +69,7 @@ export default async function IngredientsPage() {
       <IngredientsWorkspace
         initialIngredients={ingredientRows}
         venueId={venueId}
-        loadError={Boolean(ingredientsRes.error)}
+        loadError={Boolean(ingredientsRes.error || venuesRes.error)}
       />
     </>
   );

@@ -1,24 +1,73 @@
-/**
- * Builds app icons from the Phosphor cooking-pot mark (MIT).
- * https://github.com/phosphor-icons/core
- */
+/** Builds the versioned SVG favicon and PWA icons from the TreuPlate mark. */
 import { deflateSync } from "node:zlib";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import icons from "../lib/config/pwa-icons.json" with { type: "json" };
+import { brandMark } from "../components/brand/mark.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outDir = join(__dirname, "..", "public", "icons");
-const { name } = JSON.parse(readFileSync(join(outDir, "..", "manifest.json"), "utf8"));
+const rootDir = join(__dirname, "..");
+const configPath = join(rootDir, "lib", "config", "pwa-icons.json");
+const manifestPath = join(rootDir, "public", "manifest.json");
+const outDir = join(rootDir, "public", "icons");
 
-const POT_PATH =
-  "M88,48V16a8,8,0,0,1,16,0V48a8,8,0,0,1-16,0Zm40,8a8,8,0,0,0,8-8V16a8,8,0,0,0-16,0V48A8,8,0,0,0,128,56Zm32,0a8,8,0,0,0,8-8V16a8,8,0,0,0-16,0V48A8,8,0,0,0,160,56Zm94.4,35.2a8,8,0,0,0-11.2-1.6L224,104V80a8,8,0,0,0-8-8H40a8,8,0,0,0-8,8v24L12.8,89.6a8,8,0,0,0-9.6,12.8L32,124v60a32,32,0,0,0,32,32H192a32,32,0,0,0,32-32V124l28.8-21.6A8,8,0,0,0,254.4,91.2Z";
+const VERSION_RE = /-v(\d+)\.(?:svg|png)$/;
 
-const BG = [0x0b, 0x0b, 0x0e];
-const TILE_TOP = [0xff, 0x8a, 0x4d];
-const TILE_BOTTOM = [0xf2, 0x55, 0x1e];
-const MARK = [0xff, 0xf8, 0xf4];
+function extractVersion(url) {
+  const match = String(url).match(VERSION_RE);
+  if (!match) {
+    throw new Error(`Icon path must include a cache-busting version (got ${url})`);
+  }
+  return match[1];
+}
+
+function pathsForVersion(version) {
+  return {
+    svg: `/icons/icon-v${version}.svg`,
+    png192: `/icons/icon-192-v${version}.png`,
+    png512: `/icons/icon-512-v${version}.png`,
+  };
+}
+
+function assertSingleVersion(urls, label) {
+  const versions = [...new Set(urls.map(extractVersion))];
+  if (versions.length !== 1) {
+    throw new Error(`${label} must use one icon version, found: ${versions.join(", ")}`);
+  }
+  return versions[0];
+}
+
+function writeJson(path, value) {
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+let icons = JSON.parse(readFileSync(configPath, "utf8"));
+const versionArg = process.argv[2];
+if (versionArg !== undefined) {
+  const version = String(versionArg).replace(/^v/i, "");
+  if (!/^\d+$/.test(version)) {
+    throw new Error(`Invalid icon version "${versionArg}". Use a number like 3 or v3.`);
+  }
+  icons = pathsForVersion(version);
+}
+
+assertSingleVersion(Object.values(icons), "lib/config/pwa-icons.json");
+
+const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+const { name } = manifest;
+
+function hexRgb(hex) {
+  return [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16));
+}
+
+const background = hexRgb(brandMark.background);
+const accent = hexRgb(brandMark.accent);
 
 function crcTable() {
   const table = new Uint32Array(256);
@@ -294,57 +343,23 @@ function insideRoundRect(px, py, x, y, w, h, rad) {
 
 function render(size) {
   const rgba = Buffer.alloc(size * size * 4);
-  const cx = (size - 1) / 2;
-  const cy = (size - 1) / 2;
-  const glowR = size * 0.46;
-
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const dx = x - cx;
-      const dy = y - cy;
-      const t = Math.min(1, Math.hypot(dx, dy) / (size * 0.72));
-      const warm = Math.exp(-(dx * dx + dy * dy) / (glowR * glowR));
-      const r = Math.round(BG[0] + (0x1a - BG[0]) * (1 - t) + 28 * warm);
-      const g = Math.round(BG[1] + (0x10 - BG[1]) * (1 - t) + 10 * warm);
-      const b = Math.round(BG[2] + (0x0c - BG[2]) * (1 - t) + 4 * warm);
-      setPx(rgba, size, x, y, r, g, b);
-    }
-  }
-
-  const margin = size * 0.14;
-  const tile = size - margin * 2;
-  const rad = tile * 0.28;
-  for (let y = 0; y < size; y += 1) {
-    const gy = (y + 0.5 - margin) / tile;
-    for (let x = 0; x < size; x += 1) {
-      if (!insideRoundRect(x + 0.5, y + 0.5, margin, margin, tile, tile, rad)) {
-        continue;
-      }
-      const u = Math.min(1, Math.max(0, gy));
-      const r = Math.round(TILE_TOP[0] + (TILE_BOTTOM[0] - TILE_TOP[0]) * u);
-      const g = Math.round(TILE_TOP[1] + (TILE_BOTTOM[1] - TILE_TOP[1]) * u);
-      const b = Math.round(TILE_TOP[2] + (TILE_BOTTOM[2] - TILE_TOP[2]) * u);
-      setPx(rgba, size, x, y, r, g, b);
-    }
-  }
-
-  const iconBox = tile * 0.62;
-  const iconX = margin + (tile - iconBox) / 2;
-  const iconY = margin + (tile - iconBox) / 2;
-  const scale = iconBox / 256;
-  const contours = pathToContours(POT_PATH);
-  const mask = fillContours(size, contours, (x, y) => [
-    iconX + x * scale,
-    iconY + y * scale,
+  const scale = size / brandMark.size;
+  const { x, y, width, height, rx } = brandMark.tile;
+  const mask = fillContours(size, pathToContours(brandMark.glyph), (x, y) => [
+    x * scale, y * scale,
   ]);
+  const tile = [x, y, width, height, rx].map((value) => value * scale);
 
   let markPixels = 0;
-  for (let i = 0; i < mask.length; i += 1) {
-    if (!mask[i]) continue;
-    markPixels += 1;
-    const x = i % size;
-    const y = (i - x) / size;
-    setPx(rgba, size, x, y, MARK[0], MARK[1], MARK[2]);
+  for (let row = 0; row < size; row += 1) {
+    for (let column = 0; column < size; column += 1) {
+      const ink = mask[row * size + column];
+      if (ink) markPixels += 1;
+      const onTile = insideRoundRect(column + 0.5, row + 0.5, ...tile);
+      // The opaque background extends to the edges for maskable launchers.
+      const color = !ink && onTile ? accent : background;
+      setPx(rgba, size, column, row, ...color);
+    }
   }
 
   return { rgba, markPixels };
@@ -384,25 +399,6 @@ function downsample(src, srcSize, dstSize) {
   return dst;
 }
 
-function asciiPreview(rgba, size) {
-  const cols = 42;
-  const rows = 21;
-  const shades = " .:-=+*#%@";
-  const lines = [];
-  for (let y = 0; y < rows; y += 1) {
-    let line = "";
-    for (let x = 0; x < cols; x += 1) {
-      const sx = Math.min(size - 1, Math.floor(((x + 0.5) / cols) * size));
-      const sy = Math.min(size - 1, Math.floor(((y + 0.5) / rows) * size));
-      const i = (sy * size + sx) * 4;
-      const lum = (rgba[i] * 0.3 + rgba[i + 1] * 0.59 + rgba[i + 2] * 0.11) / 255;
-      line += shades[Math.min(shades.length - 1, Math.floor(lum * (shades.length - 1)))];
-    }
-    lines.push(line);
-  }
-  return lines.join("\n");
-}
-
 const HI = 1536;
 const { rgba, markPixels } = render(HI);
 if (markPixels < HI * HI * 0.02) {
@@ -417,13 +413,56 @@ for (const [size, url] of [[192, icons.png192], [512, icons.png512]]) {
 }
 
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="${name}">
-  <rect width="32" height="32" rx="8" fill="#0B0B0E"/>
-  <rect x="4.5" y="4.5" width="23" height="23" rx="6.4" fill="#FF6B35"/>
-  <path fill="#FFF8F4" transform="translate(8.15 8.15) scale(0.0615)" d="${POT_PATH}"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${brandMark.size} ${brandMark.size}" role="img" aria-label="${name}">
+  <rect width="${brandMark.size}" height="${brandMark.size}" rx="${brandMark.radius}" fill="${brandMark.background}"/>
+  <rect x="${brandMark.tile.x}" y="${brandMark.tile.y}" width="${brandMark.tile.width}" height="${brandMark.tile.height}" rx="${brandMark.tile.rx}" fill="${brandMark.accent}"/>
+  <path d="${brandMark.glyph}" fill="${brandMark.background}"/>
 </svg>
 `;
+const vectorPath = join(rootDir, "components", "brand", "treuplate.svg");
+writeFileSync(vectorPath, svg);
 writeFileSync(join(outDir, basename(icons.svg)), svg);
-console.log(`Wrote ${icons.svg}`);
+console.log(`Wrote ${vectorPath} and ${icons.svg}`);
+
+manifest.icons = [
+  {
+    src: icons.png192,
+    sizes: "192x192",
+    type: "image/png",
+    purpose: "any",
+  },
+  {
+    src: icons.png192,
+    sizes: "192x192",
+    type: "image/png",
+    purpose: "maskable",
+  },
+  {
+    src: icons.png512,
+    sizes: "512x512",
+    type: "image/png",
+    purpose: "any",
+  },
+  {
+    src: icons.png512,
+    sizes: "512x512",
+    type: "image/png",
+    purpose: "maskable",
+  },
+];
+writeJson(configPath, icons);
+writeJson(manifestPath, manifest);
+console.log(`Updated ${manifestPath}`);
+
+const keep = new Set([
+  basename(icons.svg),
+  basename(icons.png192),
+  basename(icons.png512),
+]);
+for (const file of readdirSync(outDir)) {
+  if (keep.has(file) || !/^icon(?:-(?:192|512))?-v\d+\.(?:svg|png)$/.test(file)) continue;
+  unlinkSync(join(outDir, file));
+  console.log(`Removed stale ${file}`);
+}
+
 console.log(`mark pixels ${markPixels}`);
-console.log(asciiPreview(rgba, HI));

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
@@ -19,22 +19,11 @@ export type BigNumberProps = {
   /** Locale for number formatting (default: sr-Latn) */
   locale?: string;
   className?: string;
-  /** Animation duration in ms (default 300) */
+  /** Animation duration in ms (default 180) */
   durationMs?: number;
   /** Visual size scale */
   size?: "sm" | "md" | "lg" | "hero";
 };
-
-function formatNumber(
-  value: number,
-  locale: string,
-  fractionDigits: number
-): string {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(value);
-}
 
 const SIZE_CLASS = {
   sm: "text-2xl sm:text-3xl",
@@ -51,54 +40,44 @@ export function BigNumber({
   label = sr.ui.bigNumber.label,
   locale = "sr-Latn",
   className,
-  durationMs = 300,
+  durationMs = 180,
   size = "md",
 }: BigNumberProps) {
-  const reduceMotion = useReducedMotion();
+  const immediate = usePrefersReducedMotion() || durationMs <= 0;
   const [display, setDisplay] = useState(value);
-  const fromRef = useRef(value);
-  const frameRef = useRef<number | null>(null);
+  const latest = useRef(value);
+  const formatter = useMemo(() => new Intl.NumberFormat(locale, {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }), [locale, fractionDigits]);
 
   useEffect(() => {
-    if (reduceMotion || durationMs <= 0) {
-      fromRef.current = value;
+    const from = latest.current;
+    if (Object.is(from, value)) return;
+    if (immediate || !Number.isFinite(from) || !Number.isFinite(value)) {
+      latest.current = value;
       setDisplay(value);
       return;
     }
 
-    const from = fromRef.current;
-    const to = value;
     const start = performance.now();
-
+    let frame: number;
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / durationMs);
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - t, 3);
-      const next = from + (to - from) * eased;
-      setDisplay(next);
-      if (t < 1) {
-        frameRef.current = requestAnimationFrame(tick);
-      } else {
-        fromRef.current = to;
-        setDisplay(to);
-      }
+      latest.current = t < 1 ? from + (value - from) * eased : value;
+      setDisplay(latest.current);
+      if (t < 1) frame = requestAnimationFrame(tick);
     };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value, durationMs, immediate]);
 
-    frameRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (frameRef.current !== null) {
-        cancelAnimationFrame(frameRef.current);
-      }
-    };
-  }, [value, durationMs, reduceMotion]);
-
-  const text = `${prefix}${formatNumber(display, locale, fractionDigits)}${suffix}`;
+  const text = `${prefix}${formatter.format(immediate ? value : display)}${suffix}`;
 
   return (
     <span
       data-numeric
-      aria-label={`${label}: ${prefix}${formatNumber(value, locale, fractionDigits)}${suffix}`}
       className={cn(
         "inline-block max-w-full [overflow-wrap:anywhere] font-semibold tabular-nums tracking-tight text-text",
         SIZE_CLASS[size],
@@ -106,6 +85,9 @@ export function BigNumber({
       )}
     >
       <span aria-hidden="true">{text}</span>
+      <span className="sr-only">
+        {`${label}: ${prefix}${formatter.format(value)}${suffix}`}
+      </span>
     </span>
   );
 }

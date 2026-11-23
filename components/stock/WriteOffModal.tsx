@@ -91,7 +91,7 @@ export function WriteOffModal({
       size="md"
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-[var(--text-2)]">{t.writeOffFoot}</p>
+          <p className="text-sm text-text-2">{t.writeOffFoot}</p>
           <div className="flex gap-2">
             <PrimaryButton variant="secondary" onClick={onClose}>
               {sr.common.cancel}
@@ -104,7 +104,7 @@ export function WriteOffModal({
       }
     >
       <div className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1 text-[length:var(--fs-xs)] text-[var(--text-2)]">
+        <label className="flex flex-col gap-1 text-ui-xs text-text-2">
           {t.restockIngredient}
           <select
             className="field-control"
@@ -119,7 +119,7 @@ export function WriteOffModal({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-[length:var(--fs-xs)] text-[var(--text-2)]">
+        <label className="flex flex-col gap-1 text-ui-xs text-text-2">
           {t.writeOffQty}
           <div className="flex gap-2">
             <input
@@ -128,14 +128,14 @@ export function WriteOffModal({
               value={qty}
               onChange={(e) => setQty(e.target.value)}
             />
-            <span className="flex min-w-12 items-center text-sm text-[var(--text-2)]">
+            <span className="flex min-w-12 items-center text-sm text-text-2">
               {selected?.unit ?? ""}
             </span>
           </div>
         </label>
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-[length:var(--fs-xs)] text-[var(--text-2)]">
+          <legend className="text-ui-xs text-text-2">
             {t.writeOffReason}
           </legend>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -156,7 +156,7 @@ export function WriteOffModal({
           </div>
         </fieldset>
 
-        <label className="flex flex-col gap-1 text-[length:var(--fs-xs)] text-[var(--text-2)]">
+        <label className="flex flex-col gap-1 text-ui-xs text-text-2">
           {t.writeOffNote}
           <input
             className="field-control"

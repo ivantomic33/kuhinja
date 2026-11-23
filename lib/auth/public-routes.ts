@@ -9,6 +9,8 @@ const PUBLIC_EXACT = new Set([
   "/forgot-password",
   "/reset-password",
   "/premium",
+  "/opengraph-image",
+  "/twitter-image",
   "/~offline",
 ]);
 

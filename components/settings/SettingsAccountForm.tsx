@@ -107,7 +107,7 @@ export function SettingsAccountForm({
       </div>
 
       {error ? (
-        <p role="alert" className="text-[length:var(--fs-sm)] text-danger">
+        <p role="alert" className="text-ui-sm text-danger">
           {error}
         </p>
       ) : null}

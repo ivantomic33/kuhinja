@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { OfflineSync } from "@/components/pwa/OfflineSync";
+import { MotionProvider } from "@/components/ui/MotionProvider";
 import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME } from "@/lib/config/app";
 import icons from "@/lib/config/pwa-icons.json";
+import { tokens } from "@/lib/design/tokens";
 import { sr } from "@/lib/i18n/sr";
 import { getSiteUrl } from "@/lib/seo/site";
+import { openGraphCard, twitterCard } from "@/lib/seo/social-card";
 import "./globals.css";
 
 const inter = Inter({
@@ -29,11 +32,13 @@ export const metadata: Metadata = {
     title: sr.marketing.metaTitle,
     description: APP_DESCRIPTION,
     url: "/",
+    images: [openGraphCard],
   },
   twitter: {
     card: "summary_large_image",
     title: sr.marketing.metaTitle,
     description: APP_DESCRIPTION,
+    images: [twitterCard],
   },
   manifest: "/manifest.json",
   appleWebApp: {
@@ -58,7 +63,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B0B0C",
+  themeColor: tokens.bg,
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
@@ -74,7 +79,7 @@ export default function RootLayout({
     <html lang="sr-Latn" className={inter.variable} suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
         <OfflineSync />
-        {children}
+        <MotionProvider>{children}</MotionProvider>
       </body>
     </html>
   );

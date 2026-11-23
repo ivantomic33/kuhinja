@@ -37,6 +37,39 @@ it("shows removal for tracked stock and keeps a removed level out of the reloade
   expect(html).toContain("1 od 1 stavki");
 });
 
+it("keeps the recipe and ingredient prices, details and actions in the responsive rows", () => {
+  const recipe = renderWorkspace(createElement(RecipesWorkspace, {
+    initialRecipes: [{ id: "recipe", venue_id: "venue", name: "Hleb", portions: 5, selling_price: 890 }],
+    canSeeInsights: false,
+  }));
+  const ingredient = renderWorkspace(createElement(IngredientsWorkspace, {
+    initialIngredients: [{ id: "ingredient", venue_id: "venue", name: "Brašno", unit: "kg", price: 240, waste_percent: 5 }],
+  }));
+
+  expect(recipe).toContain('class="app-table table-cards"');
+  expect(recipe).toMatch(/<th[^>]*aria-sort="none"[^>]*><button[^>]*>Prodajna cena/);
+  expect(recipe).toMatch(/data-card-price="true"[^>]*>.*Prodajna cena.*890/);
+  expect(recipe).toContain('aria-label="Izaberi: Hleb"');
+  expect(recipe).toContain('aria-label="Obriši Hleb"');
+  expect(ingredient).toContain('class="app-table table-cards"');
+  expect(ingredient).toMatch(/<th[^>]*aria-sort="none"[^>]*><button[^>]*>Trenutna cena/);
+  expect(ingredient).toMatch(/data-card-price="true"[^>]*>.*Trenutna cena.*240/);
+  expect(ingredient).toContain('aria-label="Izaberi: Brašno"');
+  expect(ingredient).toContain('aria-label="Obriši Brašno"');
+});
+
+it("offers a retry for failed recipe and ingredient requests", () => {
+  const recipe = renderWorkspace(createElement(RecipesWorkspace, {
+    initialRecipes: [], canSeeInsights: false, loadError: true,
+  }));
+  const ingredient = renderWorkspace(createElement(IngredientsWorkspace, { initialIngredients: [], loadError: true }));
+
+  expect(recipe).toContain("Pokušaj ponovo");
+  expect(ingredient).toContain("Pokušaj ponovo");
+  expect(recipe).not.toContain("Još nema recepata");
+  expect(ingredient).not.toContain("Još nema sastojaka");
+});
+
 describe("large workspace lists", () => {
   const entries = Array.from({ length: 51 }, (_, index) => ({
     id: String(index),

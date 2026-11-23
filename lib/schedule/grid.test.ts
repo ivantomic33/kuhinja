@@ -53,6 +53,8 @@ describe("schedule grid", () => {
   it("makes an unassigned employee reachable from the default mobile day view", () => {
     const html = renderGrid(false, []).split('class="r-mobile"')[1];
     expect(html).toContain("Nije dodeljeno");
-    expect(html).toMatch(/<button[^>]+aria-label="Ana Jović · Ponedeljak 16.11. · Nije dodeljeno"/);
+    expect(html).toMatch(
+      /<button[^>]+aria-haspopup="dialog"[^>]*>Ana<span class="sr-only"> Jović · Ponedeljak 16.11. · <\/span><span class="sr-only">Nije dodeljeno<\/span>/
+    );
   });
 });

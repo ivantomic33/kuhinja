@@ -1,31 +1,32 @@
+import { tokens } from "@/lib/design/tokens";
 import { escapeMarkup, getSchedulePreview } from "./exports-preview";
 import type { PublicSchedule } from "./types";
 
 const printStyles = `
   @page { size: A4 landscape; margin: 14mm; }
-  body { font: 12px system-ui, sans-serif; color: #202023; }
+  body { font: 12px system-ui, sans-serif; color: ${tokens.printText}; }
   h1 { font-size: 22px; margin-bottom: 3px; }
   .sp-head strong { display: block; font-size: 22px; }
   .sp-brand, .sp-head svg, .r-rep-avatar { display: none; }
   .sp-head, .r-rep-print-heading { margin-bottom: 14px; }
   p { margin: 8px 0; }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-  th, td { border: 1px solid #c9c9c9; padding: 7px; text-align: right; }
+  th, td { border: 1px solid ${tokens.printBorder}; padding: 7px; text-align: right; }
   th[scope=row], th:first-child, .sp-grid th, .sp-grid td { text-align: center; }
   th[scope=row], th:first-child { text-align: left; }
-  thead, tfoot, tbody tr:nth-child(even) { background-color: #f3f3f3; }
+  thead, tfoot, tbody tr:nth-child(even) { background-color: ${tokens.printZebra}; }
   thead { display: table-header-group; }
   tfoot { display: table-row-group; font-weight: 700; }
   tr { break-inside: avoid; }
   .r-rep-kpis { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 12px; }
   .r-rep-kpis strong, .r-rep-details span, .r-rep-details strong { display: block; }
   .sp-grid td[data-code] { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .sp-grid .sp-today { color: #a33d1b; }
-  .sp-grid td[data-code=J] { background-color: #dbeafe; }
-  .sp-grid td[data-code=P] { background-color: #f3e8ff; }
-  .sp-grid td[data-code=N] { background-color: #e0e7ff; }
-  .sp-grid td[data-code=D] { background-color: #ccfbf1; }
-  .sp-grid td[data-code=X], .sp-grid td[data-code=B], .sp-grid td[data-code=G] { background-color: #f4f4f5; }
+  .sp-grid .sp-today { color: ${tokens.printToday}; }
+  .sp-grid td[data-code=J] { background-color: ${tokens.printShiftJ}; }
+  .sp-grid td[data-code=P] { background-color: ${tokens.printShiftP}; }
+  .sp-grid td[data-code=N] { background-color: ${tokens.printShiftN}; }
+  .sp-grid td[data-code=D] { background-color: ${tokens.printShiftD}; }
+  .sp-grid td[data-code=X], .sp-grid td[data-code=B], .sp-grid td[data-code=G] { background-color: ${tokens.printShiftMuted}; }
 `;
 
 export function printScheduleContent(title: string, html: string): boolean {

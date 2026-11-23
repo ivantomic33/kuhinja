@@ -9,20 +9,13 @@ export type BillingPeriod = "monthly" | "yearly";
 
 export type DbPlanValue = string | null | undefined;
 
-/** Fixed list prices (RSD). Annual = 10× monthly (≈2 months free). */
+/** List prices (RSD) by billing period. */
 export const PLAN_PRICES = {
   free: { monthly: 0, yearly: 0 },
   starter: { monthly: 990, yearly: 9900 },
   pro: { monthly: 1990, yearly: 19900 },
   team: { monthly: 3990, yearly: 39900 },
   business: { monthly: 5990, yearly: 59900 },
-} as const;
-
-export const PLAN_YEARLY_NOTES = {
-  starter: "~825 din/mes · Uštedi ~1.980 din/god",
-  pro: "~1.658 din/mes · Uštedi ~3.980 din/god",
-  team: "~3.325 din/mes · Uštedi ~7.980 din/god",
-  business: "~4.992 din/mes · Uštedi ~11.980 din/god",
 } as const;
 
 export const TRIAL_DAYS_PRO = 14;

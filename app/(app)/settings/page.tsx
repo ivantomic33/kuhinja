@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { DeleteAccountButton } from "@/components/auth/DeleteAccountButton";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { SettingsAccountForm } from "@/components/settings/SettingsAccountForm";
@@ -6,7 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { BentoCard } from "@/components/ui/BentoCard";
 import { LimitMeter } from "@/components/ui/LimitMeter";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { StateLink } from "@/components/ui/RouteStates";
 import { sr } from "@/lib/i18n/sr";
 import {
   FREE_MAX_INGREDIENTS,
@@ -43,7 +42,7 @@ export default async function SettingsPage() {
     (user?.user_metadata?.full_name as string | undefined) || "";
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
       <PageHeader
         title={sr.settings.title}
         description={sr.settings.subtitle}
@@ -60,7 +59,7 @@ export default async function SettingsPage() {
       <BentoCard
         header={
           <div className="flex w-full items-center justify-between gap-2">
-            <h2 className="text-[length:var(--fs-md)] font-semibold text-text">
+            <h2 className="text-ui-md font-semibold text-text">
               {sr.settings.planAndBilling}
             </h2>
             <Badge variant={premium ? "accent" : "neutral"}>
@@ -69,17 +68,17 @@ export default async function SettingsPage() {
           </div>
         }
       >
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-3">
             <div>
               <p className="field-label mb-1">{sr.settings.renewalDate}</p>
-              <p className="text-[length:var(--fs-base)] text-text">
+              <p className="text-ui-base text-text">
                 {premium
                   ? formatShortDate(details.planExpiresAt)
                   : sr.billing.noExpiration}
               </p>
             </div>
-            <p className="text-[length:var(--fs-sm)] text-[var(--text-2)]">
+            <p className="text-ui-sm text-text-2">
               {sr.settings.usage}
             </p>
             <LimitMeter
@@ -102,18 +101,12 @@ export default async function SettingsPage() {
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Link href="/settings/billing" className="block">
-              <PrimaryButton fullWidth type="button" variant="secondary">
-                {sr.settings.manageBilling}
-              </PrimaryButton>
-            </Link>
+          <div className="flex min-w-0 flex-col gap-2">
+            <StateLink href="/settings/billing" fullWidth variant="secondary">
+              {sr.settings.manageBilling}
+            </StateLink>
             {!premium ? (
-              <Link href="/premium" className="block">
-                <PrimaryButton fullWidth type="button">
-                  {sr.settings.upgrade}
-                </PrimaryButton>
-              </Link>
+              <StateLink href="/premium" fullWidth>{sr.settings.upgrade}</StateLink>
             ) : null}
             <div className="pt-2">
               <SignOutButton />
@@ -125,20 +118,18 @@ export default async function SettingsPage() {
       {/* Security */}
       <BentoCard
         header={
-          <h2 className="text-[length:var(--fs-md)] font-semibold text-text">
+          <h2 className="text-ui-md font-semibold text-text">
             {sr.settings.security}
           </h2>
         }
       >
-        <p className="text-[length:var(--fs-sm)] text-[var(--text-2)]">
+        <p className="text-ui-sm text-text-2">
           {sr.auth.resetPasswordHint}
         </p>
         <div className="max-w-xs">
-          <Link href="/forgot-password" className="block">
-            <PrimaryButton fullWidth type="button" variant="ghost">
-              {sr.auth.forgotPassword}
-            </PrimaryButton>
-          </Link>
+          <StateLink href="/forgot-password" fullWidth variant="ghost">
+            {sr.auth.forgotPassword}
+          </StateLink>
         </div>
       </BentoCard>
 
@@ -147,7 +138,7 @@ export default async function SettingsPage() {
         <BentoCard
           className="border-danger/30 bg-transparent shadow-none"
           header={
-            <h2 className="text-[length:var(--fs-md)] font-semibold text-danger">
+            <h2 className="text-ui-md font-semibold text-danger">
               {sr.settings.dangerZone}
             </h2>
           }

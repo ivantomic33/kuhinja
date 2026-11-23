@@ -1,19 +1,17 @@
 "use client";
 
 import {
-  useCallback,
-  useEffect,
   useId,
   useRef,
   type ReactNode,
+  type RefObject,
 } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { sr } from "@/lib/i18n/sr";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { cn } from "@/lib/utils/cn";
-
-let scrollLocks = 0;
-let originalBodyOverflow = "";
+import { useDialogFocus } from "./useDialogFocus";
 
 export type BottomSheetProps = {
   id?: string;
@@ -29,6 +27,8 @@ export type BottomSheetProps = {
   size?: "md" | "lg";
   /** Optional class for the panel */
   className?: string;
+  /** Trigger for a sheet that mounts after a loading dialog. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 };
 
 export function BottomSheet({
@@ -41,83 +41,23 @@ export function BottomSheet({
   footer,
   size = "md",
   className,
+  returnFocusRef,
 }: BottomSheetProps) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
-  const previouslyFocused = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useDialogFocus({ open, onClose, panelRef, returnFocusRef });
 
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
-    if (dialogs[dialogs.length - 1] !== panelRef.current) return;
-    if (event.key === "Escape") {
-      event.preventDefault();
-      onCloseRef.current();
-      return;
-    }
-    if (event.key === "Tab" && panelRef.current) {
-      const elements = Array.from(panelRef.current.querySelectorAll<HTMLElement>(
-        'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]'
-      )).filter((element) => element.getClientRects().length > 0);
-      const first = elements[0];
-      const last = elements[elements.length - 1];
-      const active = document.activeElement;
-      if (!first) {
-        event.preventDefault();
-        panelRef.current.focus();
-      } else if (event.shiftKey && (active === first || !elements.includes(active as HTMLElement))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (active === last || !elements.includes(active as HTMLElement))) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const panel = panelRef.current;
-
-    previouslyFocused.current = document.activeElement as HTMLElement | null;
-    document.addEventListener("keydown", handleKeyDown);
-    if (scrollLocks === 0) originalBodyOverflow = document.body.style.overflow;
-    scrollLocks += 1;
-    document.body.style.overflow = "hidden";
-
-    const frame = requestAnimationFrame(() => {
-      const active = document.activeElement;
-      if (
-        panelRef.current &&
-        (!active || !panelRef.current.contains(active))
-      ) {
-        panelRef.current.focus();
-      }
-    });
-
-    return () => {
-      cancelAnimationFrame(frame);
-      document.removeEventListener("keydown", handleKeyDown);
-      scrollLocks -= 1;
-      if (scrollLocks === 0) document.body.style.overflow = originalBodyOverflow;
-      const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
-      const top = dialogs[dialogs.length - 1];
-      const previous = previouslyFocused.current;
-      if (previous?.isConnected && (!top || top === panel || top.contains(previous))) previous.focus();
-    };
-  }, [open, handleKeyDown]);
-
-  const spring = reduceMotion
+  const transition = reduceMotion
     ? { duration: 0 }
-    : { type: "spring" as const, stiffness: 420, damping: 36, mass: 0.8 };
+    : { duration: 0.18, ease: "easeOut" as const };
 
   return (
     <AnimatePresence>
       {open ? (
         <div className="fixed inset-0 z-50" role="presentation">
           <motion.button
+            data-motion-surface
             type="button"
             tabIndex={-1}
             aria-label={sr.ui.bottomSheet.closeAria}
@@ -131,6 +71,7 @@ export function BottomSheet({
 
           {/* Mobile: bottom sheet · Desktop: centered dialog */}
           <motion.div
+            data-motion-surface
             id={id}
             ref={panelRef}
             role="dialog"
@@ -143,7 +84,7 @@ export function BottomSheet({
               "border border-border bg-surface text-text shadow-2xl",
               // Mobile bottom sheet
               "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-[var(--radius-xl)] border-b-0",
-              "pb-[max(0px,env(safe-area-inset-bottom))]",
+              "bottom-sheet-safe",
               // Desktop modal
               "md:inset-auto md:left-1/2 md:top-1/2 md:bottom-auto md:right-auto",
               "md:max-h-[min(90dvh,840px)] md:-translate-x-1/2 md:-translate-y-1/2",
@@ -152,14 +93,10 @@ export function BottomSheet({
               size === "lg" && "md:w-[min(100%-32px,720px)]",
               className
             )}
-            initial={
-              reduceMotion
-                ? false
-                : { y: "100%", opacity: 0.8 }
-            }
+            initial={reduceMotion ? false : { y: 12, opacity: 0.9 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={reduceMotion ? undefined : { y: "100%", opacity: 0 }}
-            transition={spring}
+            exit={reduceMotion ? undefined : { y: 8, opacity: 0 }}
+            transition={transition}
           >
             <div className="mx-auto mt-2 mb-1 h-1 w-10 rounded-[var(--radius-pill)] bg-border md:hidden" />
 
@@ -187,7 +124,7 @@ export function BottomSheet({
                 className={cn(
                   "inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
                   "text-muted hover:bg-surface-2 hover:text-text",
-                  "focus-visible:ring-2 focus-visible:ring-accent outline-none"
+                  "focus-ring outline-none"
                 )}
               >
                 <X className="size-5" aria-hidden="true" />

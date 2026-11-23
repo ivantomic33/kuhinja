@@ -1,8 +1,6 @@
 import { Suspense } from "react";
-import {
-  DashboardClient,
-  type ActivityItem,
-} from "@/components/dashboard/DashboardClient";
+import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
+import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import type {
   RecipeFoodCosts,
   RecipePreview,
@@ -81,19 +79,68 @@ async function loadRecipeFoodCosts(
   return foodCosts;
 }
 
-async function RecipeActivityCost({
-  recipeId,
-  costs,
-}: {
-  recipeId: string;
-  costs: Promise<RecipeFoodCosts>;
-}) {
-  const percent = (await costs).get(recipeId)?.percent;
-  return percent == null ? "—" : `${Math.round(percent)}%`;
+async function loadAdditionTrend(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: "recipes" | "ingredients" | "checklist_templates",
+  end: number,
+) {
+  const week = 7 * 24 * 60 * 60 * 1000;
+  const latest = new Date(end).toISOString();
+  const middle = new Date(end - week).toISOString();
+  const earliest = new Date(end - 2 * week).toISOString();
+
+  const additions = (from: string, to: string) => supabase.from(table)
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", from)
+    .lt("created_at", to);
+
+  try {
+    const [current, previous] = await Promise.all([
+      additions(middle, latest),
+      additions(earliest, middle),
+    ]);
+    if (current.error || previous.error || current.count == null || previous.count == null) return null;
+    return current.count - previous.count;
+  } catch {
+    return null;
+  }
+}
+
+async function AdditionTrend({ result }: { result: Promise<number | null> }) {
+  const delta = await result;
+  if (delta === null) return <span className="block h-12">Trend nije dostupan.</span>;
+  const Arrow = delta > 0 ? ArrowUpRight : delta < 0 ? ArrowDownRight : ArrowRight;
+  return (
+    <span className="block h-12">
+      <span className="flex items-center gap-1 font-semibold tabular-nums text-text">
+        <Arrow className="size-4" aria-hidden="true" />
+        {delta < 0 ? "−" : delta > 0 ? "+" : "±"}{Math.abs(delta)}
+      </span>
+      <span className="block leading-tight">Novih u odnosu na preth. 7 dana</span>
+    </span>
+  );
+}
+
+function renderTrend(result: Promise<number | null>) {
+  return (
+    <Suspense fallback={
+      <span className="block h-12" aria-hidden="true">
+        <span className="block h-8 w-full rounded-md bg-surface-2 motion-safe:animate-pulse" />
+      </span>
+    }>
+      <AdditionTrend result={result} />
+    </Suspense>
+  );
 }
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const now = Date.now();
+  const trends = {
+    recipes: renderTrend(loadAdditionTrend(supabase, "recipes", now)),
+    ingredients: renderTrend(loadAdditionTrend(supabase, "ingredients", now)),
+    templates: renderTrend(loadAdditionTrend(supabase, "checklist_templates", now)),
+  };
   const venueAndStock = Promise.resolve(
     supabase
       .from("venues")
@@ -136,8 +183,8 @@ export default async function DashboardPage() {
       venueAndStock,
       supabase
         .from("checklist_templates")
-        .select("id, name, venue_id, items")
-        .order("name", { ascending: true }),
+        .select("id, name, venue_id, items", { count: "exact" })
+        .order("updated_at", { ascending: false }),
       recipeInputs,
       supabase
         .from("ingredients")
@@ -152,6 +199,7 @@ export default async function DashboardPage() {
       user?.email ||
       sr.app.name
     )
+      .trim()
       .split(/\s+/)[0]
       ?.trim() || sr.app.name;
 
@@ -184,13 +232,12 @@ export default async function DashboardPage() {
 
   const templateRows: TemplateRow[] = templates.map((row) => {
     const items = Array.isArray(row.items) ? row.items : [];
-    let totalMinutes = 0;
+    let totalMinutes: number | undefined;
     for (const item of items) {
-      const mins =
-        item && typeof item === "object" && "minutes" in item
-          ? Number((item as { minutes?: number }).minutes) || 0
-          : 0;
-      totalMinutes += mins;
+      const minutes = item && typeof item === "object" && "minutes" in item ? item.minutes : null;
+      if (typeof minutes === "number" && Number.isFinite(minutes)) {
+        totalMinutes = (totalMinutes ?? 0) + minutes;
+      }
     }
     return {
       id: row.id,
@@ -200,40 +247,6 @@ export default async function DashboardPage() {
       totalMinutes,
     };
   });
-
-  const activity: ActivityItem[] = [];
-  if (ingredientRows[0]) {
-    const ing = ingredientRows[0];
-    activity.push({
-      id: `ing-${ing.id}`,
-      kind: "ingredient",
-      title: `Dodat sastojak „${ing.name}”`,
-      body: `${ing.price.toLocaleString("sr-RS", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })} din/${ing.unit}`,
-    });
-  }
-  if (recipes.rows[0]) {
-    const r = recipes.rows[0];
-    activity.push({
-      id: `rec-${r.id}`,
-      kind: "recipe",
-      title: `Recept „${r.name}” ažuriran`,
-      body: (
-        <>
-          Food cost{" "}
-          <Suspense
-            fallback={
-              <span aria-hidden="true" className="inline-block h-3 w-7 rounded bg-surface-2 motion-safe:animate-pulse" />
-            }
-          >
-            <RecipeActivityCost recipeId={r.id} costs={recipeFoodCosts} />
-          </Suspense>
-        </>
-      ),
-    });
-  }
 
   const stockAlertCount = (stockLevels ?? []).filter((row) => {
     const { status } = classifyStockAlert({
@@ -250,17 +263,18 @@ export default async function DashboardPage() {
     <DashboardClient
       firstName={firstName}
       greeting={greeting}
+      plan={plan}
+      trends={trends}
       venueId={venueId}
       recipes={recipes.rows}
       recipeFoodCosts={recipeFoodCosts}
-      recipeCount={recipes.count ?? recipes.rows.length}
+      recipeCount={recipes.error ? null : recipes.count ?? recipes.rows.length}
       ingredients={ingredientRows}
-      ingredientCount={ingredientsRes.count ?? ingredientRows.length}
+      ingredientCount={ingredientsRes.error ? null : ingredientsRes.count ?? ingredientRows.length}
       stockAlertCount={stockAlertCount}
-      stockAlertsAreZeroOnly={plan === "free"}
       templates={templateRows}
+      initialTemplateCount={templatesRes.error ? null : templatesRes.count ?? templateRows.length}
       loadError={Boolean(recipes.error || ingredientsRes.error || templatesRes.error)}
-      activity={activity}
     />
   );
 }

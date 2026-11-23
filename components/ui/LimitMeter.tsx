@@ -35,6 +35,7 @@ export function LimitMeter({
 
   const safeMax = Math.max(1, max);
   const pct = (used / safeMax) * 100;
+  const full = used >= max;
   const near = used >= max - 1 || pct >= 80;
 
   return (
@@ -45,6 +46,7 @@ export function LimitMeter({
           <span className="font-medium tabular-nums text-text">
             {used} {sr.create.ingredient.limitFreeOf} {max}
           </span>
+          {full ? " · Limit dostignut" : near ? " · Blizu limita" : null}
         </p>
         {showUpgrade && near ? (
           <Link
@@ -55,7 +57,7 @@ export function LimitMeter({
           </Link>
         ) : null}
       </div>
-      <ProgressBar value={pct} warnNearLimit />
+      <ProgressBar value={pct} ariaLabel={label} warnNearLimit />
     </div>
   );
 }

@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "db:types": "supabase gen types typescript --local > lib/supabase/database.types.ts",
     "fonts:og": "node scripts/fetch-og-fonts.mjs",
+    "check:pwa-icons": "node scripts/check-pwa-icon-versions.mjs",
     "pkg:install": "pnpm install",
     "pkg:audit": "pnpm audit --audit-level high",
     "pkg:frozen": "pnpm install --frozen-lockfile"

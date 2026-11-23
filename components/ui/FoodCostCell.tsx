@@ -20,7 +20,7 @@ export function foodCostTone(
 
 export function FoodCostCell({ percent, cost, className }: FoodCostCellProps) {
   if (percent == null || !Number.isFinite(percent)) {
-    return <span className={cn("text-[var(--text-3)]", className)}>—</span>;
+    return <span className={cn("text-text-3", className)}>—</span>;
   }
 
   const tone = foodCostTone(percent);
@@ -33,7 +33,7 @@ export function FoodCostCell({ percent, cost, className }: FoodCostCellProps) {
   const width = Math.max(0, Math.min(100, percent));
 
   return (
-    <div className={cn("inline-flex items-center gap-2.5", className)}>
+    <div className={cn("inline-flex items-center gap-3", className)}>
       <span
         className="relative block h-1.5 w-16 overflow-hidden rounded-full bg-surface-3"
         aria-hidden="true"
@@ -47,7 +47,7 @@ export function FoodCostCell({ percent, cost, className }: FoodCostCellProps) {
         {formatPercent(percent, { fractionDigits: 0 })}
       </span>
       {cost != null && Number.isFinite(cost) ? (
-        <span className="hide-sm text-[length:var(--fs-sm)] tabular-nums text-[var(--text-3)]">
+        <span className="hide-sm text-ui-sm tabular-nums text-text-3">
           {formatMoney(cost, { fractionDigits: 0 })} din
         </span>
       ) : null}

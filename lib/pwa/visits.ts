@@ -1,5 +1,5 @@
-const VISIT_KEY = "mise.pwa.visitCount";
-const DISMISS_KEY = "mise.pwa.installHintDismissed";
+const VISIT_KEY = "treuplate.pwa.visitCount";
+const DISMISS_KEY = "treuplate.pwa.installHintDismissed";
 
 function safeStorage(): Storage | null {
   if (typeof window === "undefined") return null;

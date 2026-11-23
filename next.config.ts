@@ -14,6 +14,9 @@ const nextConfig: NextConfig = {
     // Tree-shake icon/motion entry points instead of pulling full packages.
     optimizePackageImports: ["lucide-react", "framer-motion"],
   },
+  async redirects() {
+    return [{ source: "/podesavanja", destination: "/settings", permanent: false }];
+  },
   async headers() {
     return [
       // Baseline browser hardening for every path (including sw.js / manifest).

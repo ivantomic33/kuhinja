@@ -1,16 +1,8 @@
+import { shiftScreenColors } from "@/lib/design/tokens";
 import { assignmentTime, dayShort, shifts, shortDate, todayBelgrade, weekDates, weekNumber } from "./math";
 import type { PublicSchedule, ShiftCode } from "./types";
 
-export const shiftColors = {
-  J: ["rgba(59,130,246,.12)", "rgba(59,130,246,.28)", "#bfdbfe"],
-  P: ["rgba(168,85,247,.12)", "rgba(168,85,247,.28)", "#e9d5ff"],
-  N: ["rgba(99,102,241,.16)", "rgba(99,102,241,.34)", "#c7d2fe"],
-  D: ["rgba(20,184,166,.12)", "rgba(20,184,166,.28)", "#99f6e4"],
-  X: ["rgba(161,161,170,.10)", "rgba(161,161,170,.26)", "#fafafa"],
-  O: ["transparent", "#3f3f46", "#a1a1aa"],
-  B: ["#25252a", "#3f3f46", "#d4d4d8"],
-  G: ["#1f1f23", "#3f3f46", "#d4d4d8"],
-} as const;
+export const shiftColors = shiftScreenColors;
 
 const nonWorkingLabel: Partial<Record<ShiftCode, string>> = { O: "—", B: "Bol.", G: "God." };
 const shareTokenPattern = /^(?:[a-z0-9]+(?:-[a-z0-9]+)*-n\d{1,2}-)?([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i;

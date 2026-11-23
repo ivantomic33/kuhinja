@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthField } from "@/components/auth/AuthField";
 import { usePlanUi } from "@/components/plan/PlanProvider";
@@ -8,6 +8,7 @@ import { BigNumber } from "@/components/ui/BigNumber";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { useToast } from "@/components/ui/Toast";
 import { parseDecimal } from "@/lib/domain/parse";
 import { getPrimaryVenueId } from "@/lib/domain/venue";
 import { useOnline } from "@/lib/hooks/useOnline";
@@ -34,6 +35,8 @@ import { unitPrice } from "@/lib/calc/prices";
 import { cn } from "@/lib/utils/cn";
 
 const UNITS = ingredientUnitSchema.options;
+const MAX_WASTE = 99.99;
+const copy = sr.create.ingredient;
 
 const UNIT_LABELS: Record<IngredientUnitInput, string> = {
   g: sr.recipes.units.g,
@@ -65,6 +68,7 @@ export function CreateIngredientSheet({
   const online = useOnline(true);
   const { plan } = usePlan();
   const { showFreeLimit, handleError } = usePlanUi();
+  const { toast } = useToast();
 
   const [name, setName] = useState("");
   const [unit, setUnit] = useState<IngredientUnitInput>("kg");
@@ -72,7 +76,7 @@ export function CreateIngredientSheet({
   const [price, setPrice] = useState("");
   const [waste, setWaste] = useState("0");
   const [notes, setNotes] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [duplicateName, setDuplicateName] = useState(false);
   const [formError, setFormError] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -88,20 +92,39 @@ export function CreateIngredientSheet({
     price: productPrice,
     waste: wasteValue,
   });
-  const unitPricePreview =
-    amountValue === null || productPrice === null ? null : unitPrice(productPrice, amountValue);
-  const adjustedPrice = unitPricePreview === null || wasteValue === null
-    ? Number.NaN
-    : effectivePrice(unitPricePreview, wasteValue);
-  const effectivePricePreview = Number.isNaN(adjustedPrice) ? null : adjustedPrice;
+  const purchaseErrors = purchase.success ? {} : purchase.error.flatten().fieldErrors;
+  const unitPricePreview = amountValue === null || productPrice === null ? null : unitPrice(productPrice, amountValue);
+  const errors = {
+    ingredientName: !name.trim() ? sr.auth.errors.required
+      : !ingredientInsertSchema.shape.name.safeParse(name).success ? copy.nameTooLong
+      : duplicateName ? sr.create.duplicateName : undefined,
+    ingredientUnitAmount: purchaseErrors.unitAmount ? copy.unitAmountError : undefined,
+    ingredientPrice: purchaseErrors.price || (!purchaseErrors.unitAmount && unitPricePreview === null)
+      ? copy.priceError : undefined,
+    ingredientWasteInput: purchaseErrors.waste || wasteValue === null || wasteValue > MAX_WASTE
+      || Number(wasteValue.toFixed(2)) !== wasteValue ? copy.wasteError : undefined,
+    ingredientNotes: ingredientInsertSchema.shape.notes.safeParse(notes).success ? undefined : copy.notesTooLong,
+  };
+  const firstInvalid = Object.keys(errors).find(key => errors[key as keyof typeof errors]);
+  const isValid = !firstInvalid;
+  const wasteNum = Math.min(MAX_WASTE, Math.max(0, Number((wasteValue ?? 0).toFixed(2))));
+  const wasteText = `${wasteNum.toLocaleString("sr-Latn", { maximumFractionDigits: 2 })}%`;
+  const adjustedPrice = unitPricePreview !== null && wasteValue !== null && !errors.ingredientWasteInput
+    ? effectivePrice(unitPricePreview, wasteValue) : Number.NaN;
+  const effectivePricePreview = Number.isFinite(adjustedPrice) ? adjustedPrice : null;
 
-  const nameError = useMemo(() => {
-    if (!touched.name && !fieldErrors.name) return undefined;
-    if (!name.trim()) return sr.auth.errors.required;
-    return fieldErrors.name;
-  }, [name, touched.name, fieldErrors.name]);
+  function visibleError(field: keyof typeof errors) {
+    return touched[field] ? errors[field] : undefined;
+  }
 
-  const isValid = name.trim().length > 0 && purchase.success && unitPricePreview !== null;
+  function touch(field: keyof typeof errors) {
+    setTouched(previous => ({ ...previous, [field]: true }));
+  }
+
+  function focusField(form: HTMLFormElement, name: string) {
+    const field = form.elements.namedItem(name);
+    if (field instanceof HTMLElement) requestAnimationFrame(() => field.focus());
+  }
 
   function reset() {
     setName("");
@@ -110,7 +133,7 @@ export function CreateIngredientSheet({
     setPrice("");
     setWaste("0");
     setNotes("");
-    setFieldErrors({});
+    setDuplicateName(false);
     setFormError(undefined);
     setTouched({});
   }
@@ -123,9 +146,15 @@ export function CreateIngredientSheet({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return;
+    const form = event.currentTarget;
     setFormError(undefined);
-    setFieldErrors({});
-    setTouched({ name: true, unitAmount: true, price: true, waste: true });
+
+    if (firstInvalid || !purchase.success || unitPricePreview === null) {
+      setTouched(Object.fromEntries(Object.keys(errors).map(field => [field, true])));
+      if (firstInvalid) focusField(form, firstInvalid);
+      return;
+    }
 
     if (!online) {
       setFormError(sr.create.offline);
@@ -137,61 +166,28 @@ export function CreateIngredientSheet({
       return;
     }
 
-    if (!purchase.success) {
-      const errors: Record<string, string> = {};
-      for (const issue of purchase.error.issues) {
-        errors[String(issue.path[0])] = sr.create.invalidNumber;
-      }
-      setFieldErrors(errors);
-      if (errors.unit) setFormError(errors.unit);
-      return;
-    }
-    if (unitPricePreview === null) {
-      setFieldErrors({ price: sr.create.invalidNumber });
-      return;
-    }
-
-    let venueId = venueIdProp ?? null;
-    if (!venueId) {
-      venueId = await getPrimaryVenueId();
-    }
-    if (!venueId) {
-      setFormError(sr.create.noVenue);
-      return;
-    }
-
-    const parsed = ingredientInsertSchema.safeParse({
-      venue_id: venueId,
-      name,
-      unit: purchase.data.unit,
-      price: unitPricePreview,
-      waste_percent: purchase.data.waste,
-      notes: notes.trim() ? notes.trim() : null,
-    });
-
-    if (!parsed.success) {
-      const errors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = issue.path[0];
-        if (typeof key === "string" && !errors[key]) {
-          errors[key] =
-            key === "name" ? sr.auth.errors.required : issue.message;
-        }
-      }
-      setFieldErrors(errors);
-      return;
-    }
-
     setLoading(true);
     try {
-      const result = await createIngredientAction({
-        venue_id: parsed.data.venue_id,
-        name: parsed.data.name,
-        unit: parsed.data.unit,
-        price: parsed.data.price,
-        waste_percent: parsed.data.waste_percent,
-        notes: parsed.data.notes ?? null,
+      const venueId = venueIdProp ?? await getPrimaryVenueId();
+      if (!venueId) {
+        setFormError(sr.create.noVenue);
+        return;
+      }
+
+      const parsed = ingredientInsertSchema.safeParse({
+        venue_id: venueId,
+        name,
+        unit: purchase.data.unit,
+        price: unitPricePreview,
+        waste_percent: purchase.data.waste,
+        notes: notes.trim() || null,
       });
+      if (!parsed.success) {
+        setFormError(sr.create.genericError);
+        return;
+      }
+
+      const result = await createIngredientAction(parsed.data);
 
       if ("error" in result) {
         const limitCode = getFreeLimitCode(result.error);
@@ -204,7 +200,9 @@ export function CreateIngredientSheet({
           result.error.code === "VALIDATION_ERROR" &&
           result.error.message === "duplicate"
         ) {
-          setFormError(sr.create.duplicateName);
+          setDuplicateName(true);
+          touch("ingredientName");
+          focusField(form, "ingredientName");
           return;
         }
         setFormError(sr.create.genericError);
@@ -229,6 +227,7 @@ export function CreateIngredientSheet({
       void saveIngredients(merged);
 
       onCreated?.(created);
+      toast(sr.create.ingredient.success, "success");
       reset();
       onClose();
       router.refresh();
@@ -240,148 +239,133 @@ export function CreateIngredientSheet({
     }
   }
 
-  const wasteNum = wasteValue ?? 0;
+  const priceError = visibleError("ingredientPrice");
+  const wasteError = visibleError("ingredientWasteInput");
+  const preview = { unit, unitPricePreview, effectivePricePreview };
 
   return (
     <BottomSheet
       open={open}
       onClose={handleClose}
-      title={sr.create.ingredient.title}
+      title={copy.title}
       size="lg"
       description={
         <span>
-          {sr.create.ingredient.limitFreeRemaining} {remainingFree}{" "}
-          {sr.create.ingredient.limitFreeOf} {FREE_MAX_INGREDIENTS}
+          {copy.limitFreeRemaining} {remainingFree} {copy.limitFreeOf} {FREE_MAX_INGREDIENTS}
           {" · "}
-          {sr.create.ingredient.limitPremium}
+          {copy.limitPremium}
         </span>
       }
       footer={
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <PrimaryButton
-            type="button"
-            variant="ghost"
-            onClick={handleClose}
-            disabled={loading}
-            className="sm:min-w-[120px]"
-          >
-            {sr.common.cancel}
-          </PrimaryButton>
-          <PrimaryButton
-            type="submit"
-            form="create-ingredient-form"
-            loading={loading}
-            disabled={!isValid}
-            className="sm:min-w-[180px]"
-          >
-            {sr.create.ingredient.submit}
-          </PrimaryButton>
+        <div className="grid gap-3">
+          <IngredientPricePreview {...preview} compact />
+          {formError ? <p role="alert" className="text-sm text-danger">{formError}</p> : null}
+          <div className="flex flex-wrap justify-end gap-2">
+            <PrimaryButton type="button" variant="ghost" onClick={handleClose} disabled={loading}>
+              {sr.common.cancel}
+            </PrimaryButton>
+            <PrimaryButton
+              type="submit"
+              form="create-ingredient-form"
+              loading={loading}
+              disabled={!isValid}
+            >
+              {copy.submit}
+            </PrimaryButton>
+          </div>
         </div>
       }
     >
       <form
         id="create-ingredient-form"
-        className="flex flex-col gap-4"
+        className="grid items-start gap-4 md:grid-cols-2"
         onSubmit={onSubmit}
+        onKeyDown={event => {
+          if (event.key !== "Enter" || isValid || event.nativeEvent.isComposing ||
+            !(event.target instanceof HTMLInputElement) || event.target.type === "range") return;
+          // A disabled submit button suppresses implicit submission from text fields.
+          event.preventDefault();
+          event.currentTarget.requestSubmit();
+        }}
         noValidate
       >
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Left column */}
-          <div className="flex flex-col gap-3">
-            <AuthField
-              label={`${sr.create.ingredient.name} *`}
-              name="ingredientName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={() => setTouched((t) => ({ ...t, name: true }))}
-              error={nameError}
-              autoComplete="off"
-              required
-            />
+        <div className="grid min-w-0 gap-2 md:gap-3">
+          <AuthField
+            label={`${copy.name} *`}
+            name="ingredientName"
+            value={name}
+            onChange={event => {
+              setName(event.currentTarget.value);
+              setDuplicateName(false);
+            }}
+            onBlur={() => touch("ingredientName")}
+            error={visibleError("ingredientName")}
+            autoComplete="off"
+            className="max-md:min-h-12"
+            required
+          />
 
-            <div className="flex flex-col gap-1.5">
-              <p className="text-sm font-medium text-text">
-                {sr.create.ingredient.unit} *
-              </p>
-              <SegmentedControl<IngredientUnitInput>
-                ariaLabel={sr.create.ingredient.unit}
-                value={unit}
-                onChange={setUnit}
-                size="sm"
-                options={UNITS.map((value) => ({
-                  value,
-                  label: UNIT_LABELS[value],
-                }))}
-              />
-            </div>
-
-            <AuthField
-              label={`${sr.create.ingredient.notes} (${sr.create.ingredient.notesOptional})`}
-              name="ingredientNotes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              error={fieldErrors.notes}
+          <div className="grid min-w-0 gap-1">
+            <p className="text-sm font-medium text-text">{copy.unit} *</p>
+            <SegmentedControl<IngredientUnitInput>
+              ariaLabel={copy.unit}
+              value={unit}
+              onChange={setUnit}
+              size="sm"
+              className="grid! grid-cols-6 [&>button]:min-h-11! [&>button]:px-1!"
+              options={UNITS.map(value => ({ value, label: UNIT_LABELS[value] }))}
             />
           </div>
 
-          {/* Right column */}
-          <div className="flex flex-col gap-3">
-            <AuthField
-              label={`${sr.create.ingredient.unitAmount} *`}
-              name="ingredientUnitAmount"
-              inputMode="decimal"
-              value={unitAmount}
-              onChange={(e) => setUnitAmount(e.target.value)}
-              error={fieldErrors.unitAmount}
-              placeholder="1"
-              required
-            />
+          <AuthField
+            label={`${copy.unitAmount} *`}
+            name="ingredientUnitAmount"
+            inputMode="decimal"
+            value={unitAmount}
+            onChange={event => setUnitAmount(event.currentTarget.value)}
+            onBlur={() => touch("ingredientUnitAmount")}
+            error={visibleError("ingredientUnitAmount")}
+            placeholder="1"
+            className="max-md:min-h-12"
+            required
+          />
 
-            <div className="flex flex-col gap-1">
-              <label
-                htmlFor="ingredientPrice"
-                className="text-sm font-medium text-text"
-              >
-                {sr.create.ingredient.price} *
-              </label>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">
-                  {sr.create.ingredient.pricePrefix}
-                </span>
-                <input
-                  id="ingredientPrice"
-                  name="ingredientPrice"
-                  inputMode="decimal"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="1.990"
-                  required
-                  aria-invalid={fieldErrors.price ? true : undefined}
-                  className={cn(
-                    "min-h-11 w-full rounded-[var(--radius-md)] border bg-surface-2 py-2 pl-12 pr-3",
-                    "text-base text-text outline-none placeholder:text-muted",
-                    "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
-                    fieldErrors.price ? "border-danger" : "border-border"
-                  )}
-                />
-              </div>
-              {fieldErrors.price ? (
-                <p role="alert" className="text-sm text-danger">
-                  {fieldErrors.price}
-                </p>
-              ) : null}
+          <div className="grid gap-1">
+            <label htmlFor="ingredientPrice" className="text-sm font-medium text-text">
+              {copy.price} *
+              <span className="sr-only"> ({copy.pricePrefix})</span>
+            </label>
+            <div className="relative">
+              <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">
+                {copy.pricePrefix}
+              </span>
+              <input
+                id="ingredientPrice"
+                name="ingredientPrice"
+                inputMode="decimal"
+                value={price}
+                onChange={event => setPrice(event.currentTarget.value)}
+                onBlur={() => touch("ingredientPrice")}
+                placeholder="1990,00"
+                required
+                aria-invalid={priceError ? true : undefined}
+                aria-describedby={priceError ? "ingredient-price-error" : undefined}
+                className={cn(
+                  "focus-ring h-12 w-full rounded-[var(--radius-input)] border bg-surface-2 py-2 pl-11 pr-3 md:h-13",
+                  "text-base tabular-nums text-text outline-none placeholder:text-muted",
+                  priceError ? "border-danger" : "border-border"
+                )}
+              />
             </div>
+            {priceError ? <p id="ingredient-price-error" role="alert" className="text-sm text-danger">{priceError}</p> : null}
+          </div>
 
-            <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_5rem] items-end gap-x-3 gap-y-1">
+            <div className="grid min-w-0 gap-1">
               <div className="flex items-center justify-between gap-2">
-                <label
-                  htmlFor="ingredientWaste"
-                  className="text-sm font-medium text-text"
-                >
-                  {sr.create.ingredient.waste}
-                </label>
-                <span className="text-sm font-semibold tabular-nums text-text">
-                  {wasteNum}%
+                <label htmlFor="ingredientWaste" className="text-sm font-medium text-text">{copy.waste}</label>
+                <span aria-hidden="true" className="text-sm font-semibold tabular-nums text-text">
+                  {errors.ingredientWasteInput ? "—" : wasteText}
                 </span>
               </div>
               <input
@@ -389,95 +373,98 @@ export function CreateIngredientSheet({
                 name="ingredientWaste"
                 type="range"
                 min={0}
-                max={50}
-                step={1}
-                value={Math.min(50, Math.max(0, wasteNum))}
-                onChange={(e) => setWaste(e.target.value)}
-                className="h-2 w-full cursor-pointer appearance-none rounded-full bg-surface-2 accent-[var(--accent)]"
-              />
-              <AuthField
-                label=""
-                name="ingredientWasteInput"
-                inputMode="decimal"
-                value={waste}
-                onChange={(e) => setWaste(e.target.value)}
-                error={fieldErrors.waste}
-                placeholder="0"
-                aria-label={sr.create.ingredient.waste}
-                className="min-h-9"
+                max={MAX_WASTE}
+                step="any"
+                value={wasteNum}
+                aria-valuetext={wasteText}
+                onChange={event => setWaste(String(Number(event.currentTarget.valueAsNumber.toFixed(2))))}
+                className="focus-ring h-11 w-full cursor-pointer rounded-md accent-accent"
               />
             </div>
+            <AuthField
+              label={copy.wasteInput}
+              name="ingredientWasteInput"
+              inputMode="decimal"
+              value={waste}
+              onChange={event => setWaste(event.currentTarget.value)}
+              onBlur={() => touch("ingredientWasteInput")}
+              aria-label={`${copy.waste} · ${copy.wasteInput}`}
+              aria-invalid={wasteError ? true : undefined}
+              aria-describedby={wasteError ? "ingredient-waste-error" : undefined}
+              className="h-11 min-h-11 tabular-nums"
+            />
+            {wasteError ? <p id="ingredient-waste-error" role="alert" className="col-span-full text-sm text-danger">{wasteError}</p> : null}
           </div>
-        </div>
 
-        {/* Live preview */}
-        <div
-          className={cn(
-            "rounded-[var(--radius-lg)] border border-border bg-surface-2 p-4",
-            "transition-colors duration-150"
-          )}
-        >
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            {sr.create.ingredient.livePreview}
-          </p>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted">
-                {sr.create.ingredient.unitPriceHint}
-              </p>
-              {unitPricePreview !== null ? (
-                <p className="mt-1 flex flex-wrap items-baseline gap-1">
-                  <BigNumber
-                    value={roundDisplay(unitPricePreview)}
-                    fractionDigits={2}
-                    size="sm"
-                    label={sr.create.ingredient.unitPriceHint}
-                  />
-                  <span className="text-sm text-muted">
-                    {sr.recipes.foodCost.currency}/{UNIT_LABELS[unit]}
-                  </span>
-                </p>
-              ) : (
-                <p className="mt-1 text-lg font-semibold text-muted">—</p>
-              )}
-              <p className="mt-0.5 text-xs text-muted">
-                {sr.create.ingredient.packageHint}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted">
-                {sr.ingredients.effectivePrice}
-              </p>
-              {effectivePricePreview !== null ? (
-                <p className="mt-1 flex flex-wrap items-baseline gap-1">
-                  <BigNumber
-                    value={roundDisplay(effectivePricePreview)}
-                    fractionDigits={2}
-                    size="sm"
-                    className="text-accent"
-                    label={sr.ingredients.effectivePrice}
-                  />
-                  <span className="text-sm text-muted">
-                    {sr.recipes.foodCost.currency}/{UNIT_LABELS[unit]}
-                  </span>
-                </p>
-              ) : (
-                <p className="mt-1 text-lg font-semibold text-muted">—</p>
-              )}
-              <p className="mt-0.5 text-xs text-muted">
-                {sr.create.ingredient.withWaste} ·{" "}
-                {sr.ingredients.effectivePriceHint}
-              </p>
-            </div>
-          </div>
+          <AuthField
+            label={`${copy.notes} (${copy.notesOptional})`}
+            name="ingredientNotes"
+            value={notes}
+            onChange={event => setNotes(event.currentTarget.value)}
+            onBlur={() => touch("ingredientNotes")}
+            error={visibleError("ingredientNotes")}
+            className="max-md:min-h-12"
+          />
         </div>
-
-        {formError ? (
-          <p role="alert" className="text-sm text-danger">
-            {formError}
-          </p>
-        ) : null}
+        <IngredientPricePreview {...preview} />
       </form>
     </BottomSheet>
+  );
+}
+
+function IngredientPricePreview({
+  unit,
+  unitPricePreview,
+  effectivePricePreview,
+  compact = false,
+}: {
+  unit: IngredientUnitInput;
+  unitPricePreview: number | null;
+  effectivePricePreview: number | null;
+  compact?: boolean;
+}) {
+  const suffix = ` ${copy.pricePrefix}/${UNIT_LABELS[unit]}`;
+  const prices = [
+    { label: copy.unitPriceHint, value: unitPricePreview },
+    { label: sr.ingredients.effectivePrice, value: effectivePricePreview, adjusted: true },
+  ];
+
+  return (
+    <section
+      aria-label={copy.livePreview}
+      className={cn(
+        "min-w-0 rounded-lg border border-border bg-surface-2",
+        compact ? "p-2 md:hidden" : "hidden p-4 md:block"
+      )}
+    >
+      <p className="text-sm font-semibold text-text">{copy.livePreview}</p>
+      <dl className={cn("grid", compact ? "mt-1 grid-cols-2 gap-2" : "mt-3 gap-4")}>
+        {prices.map(({ label, value, adjusted }) => (
+          <div key={label} className="min-w-0">
+            <dt className="text-sm text-muted">{label}</dt>
+            <dd className="mt-1 min-w-0">
+              {value === null ? (
+                <span className="text-ui-lg font-semibold text-muted">—</span>
+              ) : (
+                <span className="flex min-w-0 flex-wrap items-baseline gap-x-1">
+                  <BigNumber
+                    value={roundDisplay(value)}
+                    fractionDigits={2}
+                    size="sm"
+                    durationMs={0}
+                    label={label}
+                    className={cn(compact && "text-ui-lg", adjusted && "text-accent")}
+                  />
+                  <span className="text-ui-xs text-muted">{suffix.trim()}</span>
+                </span>
+              )}
+              {adjusted && !compact ? (
+                <p className="mt-1 text-xs text-muted">{sr.ingredients.effectivePriceHint}</p>
+              ) : null}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }

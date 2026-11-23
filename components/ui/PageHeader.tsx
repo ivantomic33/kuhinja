@@ -19,21 +19,21 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "mb-5 flex flex-wrap items-end justify-between gap-4",
+        "mb-6 flex flex-wrap items-end justify-between gap-4",
         className
       )}
     >
       <div className="min-w-0 flex flex-col">
         {eyebrow ? <div className="app-eyebrow">{eyebrow}</div> : null}
-        <h1 className="app-h1">{title}</h1>
+        <h1>{title}</h1>
         {description ? (
-          <p className="mt-1.5 max-w-2xl text-[length:var(--fs-base)] text-[var(--text-2)]">
+          <p className="mt-2 max-w-2xl text-ui-base leading-normal text-text-2">
             {description}
           </p>
         ) : null}
       </div>
       {action ? (
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
           {action}
         </div>
       ) : null}

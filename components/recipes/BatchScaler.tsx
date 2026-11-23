@@ -7,7 +7,6 @@ import {
   FileDown,
   ShoppingCart,
 } from "lucide-react";
-import { useReducedMotion } from "framer-motion";
 import { BentoCard } from "@/components/ui/BentoCard";
 import { BigNumber } from "@/components/ui/BigNumber";
 import { NumericKeypad } from "@/components/ui/NumericKeypad";
@@ -63,7 +62,6 @@ export function BatchScaler({
   baseTimeMinutes,
   ingredients,
 }: BatchScalerProps) {
-  const reduceMotion = useReducedMotion();
   const safeBase = baseServings > 0 ? baseServings : 1;
 
   const [targetServings, setTargetServings] = useState(() =>
@@ -175,10 +173,7 @@ export function BatchScaler({
     try {
       await navigator.clipboard.writeText(shoppingText);
       setCopyState("done");
-      window.setTimeout(
-        () => setCopyState("idle"),
-        reduceMotion ? 0 : 1600
-      );
+      window.setTimeout(() => setCopyState("idle"), 1600);
     } catch {
       setCopyState("error");
       window.setTimeout(() => setCopyState("idle"), 2000);
@@ -192,7 +187,7 @@ export function BatchScaler({
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-1">
         <p className="text-sm text-muted">{sr.scaler.title}</p>
-        <h1 className="text-2xl font-semibold tracking-tight text-text">
+        <h1>
           {recipeName}
         </h1>
         <p className="text-sm text-muted">{sr.scaler.hint}</p>
@@ -256,8 +251,7 @@ export function BatchScaler({
               onChange={(event) => onSliderChange(event.target.value)}
               className={cn(
                 "h-2 w-full cursor-pointer appearance-none rounded-[var(--radius-pill)]",
-                "bg-surface-2 accent-[var(--accent)]",
-                reduceMotion && "transition-none"
+                "bg-surface-2 accent-[var(--accent)]"
               )}
             />
           </label>
@@ -316,10 +310,10 @@ export function BatchScaler({
                   className={cn(
                     "flex items-center justify-between gap-2 rounded-[var(--radius-input)]",
                     "border border-border bg-surface-2 px-2 py-2",
-                    !reduceMotion && "transition-colors"
+                    "motion-safe:transition-colors"
                   )}
                 >
-                  <div className="min-w-0 flex flex-col gap-0.5">
+                  <div className="min-w-0 flex flex-col gap-1">
                     <span className="truncate text-base font-medium text-text">
                       {item.name}
                     </span>
@@ -418,12 +412,7 @@ export function BatchScaler({
           </PrimaryButton>
 
           {showShopping ? (
-            <div
-              className={cn(
-                "flex flex-col gap-2",
-                !reduceMotion && "animate-in fade-in"
-              )}
-            >
+            <div className="flex flex-col gap-2">
               <p className="text-sm text-muted">{sr.scaler.shoppingListHint}</p>
 
               {result.shoppingList.length === 0 ? (

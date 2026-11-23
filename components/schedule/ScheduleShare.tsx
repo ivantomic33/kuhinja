@@ -150,7 +150,7 @@ export function ScheduleShare({
         </PrimaryButton>
       </div>
       {onRevoke ? (
-        <div className="r-share-link" style={{ marginTop: "0.75rem" }}>
+        <div className="r-share-link mt-3">
           <PrimaryButton
             variant="secondary"
             loading={revoking}

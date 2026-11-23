@@ -4,11 +4,12 @@
  * including when the device is offline.
  */
 import type { QueryClient } from "@tanstack/react-query";
-import { clearOfflineCache } from "@/lib/offline/cache";
-import { clearSyncQueue } from "@/lib/offline/idb";
+import { clearOfflineCache, OFFLINE_CACHE_DB_NAME } from "@/lib/offline/cache";
+import { clearSyncQueue, SYNC_QUEUE_DB_NAME } from "@/lib/offline/idb";
 import { resetBrowserClient } from "@/lib/supabase/client";
 
-const USER_IDB_NAMES = ["mise-offline", "webforum-offline"] as const;
+const USER_IDB_NAMES = [OFFLINE_CACHE_DB_NAME, SYNC_QUEUE_DB_NAME] as const;
+const RECIPE_FOOD_COST_ALERT_KEY = "treuplate.recipe-food-cost-alert";
 
 function deleteDatabase(name: string): Promise<void> {
   if (typeof indexedDB === "undefined") return Promise.resolve();
@@ -57,6 +58,7 @@ export async function clearUserIndexedDb(): Promise<void> {
  */
 export async function clearClientUserState(
   queryClient?: QueryClient | null,
+  { preserveSession = false }: { preserveSession?: boolean } = {},
 ): Promise<void> {
   if (typeof window === "undefined") return;
 
@@ -66,13 +68,14 @@ export async function clearClientUserState(
     // ignore
   }
 
-  // Local Supabase session (in-memory singleton) before dropping the client.
-  try {
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    await supabase.auth.signOut({ scope: "local" });
-  } catch {
-    // Server action still clears cookies.
+  // The sign-out server action needs the cookie to pass authenticated middleware.
+  if (!preserveSession) {
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      await createClient().auth.signOut({ scope: "local" });
+    } catch {
+      // Continue clearing local data.
+    }
   }
 
   try {
@@ -85,7 +88,7 @@ export async function clearClientUserState(
 
   // Ephemeral UI flags that can reference the prior session's data views.
   try {
-    sessionStorage.removeItem("mise.recipe-food-cost-alert");
+    sessionStorage.removeItem(RECIPE_FOOD_COST_ALERT_KEY);
   } catch {
     // ignore
   }

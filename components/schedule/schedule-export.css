@@ -15,14 +15,14 @@
 
 .rp-label {
   display: block;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   color: var(--text-2);
   font-size: var(--fs-xs);
   font-weight: 600;
 }
 
 .r-share-prev {
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--bg);
@@ -31,14 +31,14 @@
 .sp-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .sp-heading {
   display: grid;
   min-width: 0;
-  gap: 2px;
+  gap: var(--space-1);
   flex: 1;
   overflow-wrap: anywhere;
 }
@@ -64,7 +64,7 @@
   border-collapse: separate;
   border-spacing: 3px;
   table-layout: fixed;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -74,7 +74,7 @@
 }
 
 .sp-grid thead th {
-  padding: 4px 0;
+  padding: var(--space-1) 0;
   color: var(--text-2);
   white-space: nowrap;
 }
@@ -88,7 +88,7 @@
   left: 0;
   z-index: 1;
   width: 92px;
-  padding: 4px 3px;
+  padding: var(--space-1) var(--space-1);
   background: var(--bg);
   text-align: left;
   overflow-wrap: anywhere;
@@ -96,7 +96,7 @@
 
 .sp-grid td {
   height: 25px;
-  padding: 2px;
+  padding: var(--space-1);
   border: 1px dashed var(--sp-border, var(--border));
   border-radius: 6px;
   background: var(--sp-bg, transparent);
@@ -113,7 +113,7 @@
 }
 
 .sp-grid td[data-code="X"] {
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .r-share-btns,
@@ -121,11 +121,11 @@
 .r-export-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .r-share-btns {
-  margin: 12px 0 18px;
+  margin: var(--space-3) 0 var(--space-5);
 }
 
 .r-share-link .field-input {
@@ -155,11 +155,11 @@
 .r-public {
   width: min(100%, 820px);
   margin-inline: auto;
-  padding: clamp(12px, 4vw, 36px);
+  padding: var(--page-pad);
 }
 
 .r-public .r-share-prev {
-  padding: clamp(12px, 3vw, 22px);
+  padding: clamp(var(--space-3), 3vw, var(--space-6));
   background: var(--surface);
 }
 
@@ -182,8 +182,8 @@
 .r-rep-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 }
 
 .r-rep-kpis .fc-kpi span {
@@ -194,7 +194,7 @@
 
 .r-rep-kpis .fc-kpi strong {
   display: block;
-  margin-top: 2px;
+  margin-top: var(--space-1);
   font-size: var(--fs-xl);
   overflow-wrap: anywhere;
 }
@@ -217,7 +217,7 @@
 }
 
 .r-rep.tbl :is(th, td) {
-  padding: 9px 10px;
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border);
   text-align: right;
   white-space: nowrap;
@@ -248,7 +248,7 @@
 .r-rep-person {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   white-space: normal;
 }
 
@@ -260,7 +260,7 @@
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 700;
 }
 
@@ -277,7 +277,7 @@
 }
 
 .r-rep-note {
-  margin: 12px 0 0;
+  margin: var(--space-3) 0 0;
   font-size: var(--fs-xs);
 }
 

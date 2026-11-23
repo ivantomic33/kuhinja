@@ -21,11 +21,32 @@ Vrednosti se održavaju u [app/globals.css](app/globals.css).
 | `--success`, `--warning`, `--danger` | `#22C55E`, `#F59E0B`, `#EF4444` | Uspeh, upozorenje i destruktivne akcije. |
 | `--danger-text` | `#F87171` | Crveni tekst na tamnoj ili zatamnjenoj površini. |
 | `--radius-sm` do `--radius-xl` | `8`, `10`, `14`, `20px` | Kontrole, kartice i dijalozi. |
-| `--app-max`, `--tap` | `1440px`, `44px` | Maksimalna širina sadržaja i ciljna veličina dodira. |
+| `--app-max`, `--tap` | `1400px`, `44px` | Maksimalna širina sadržaja i ciljna veličina dodira. |
+| `--page-pad` | `24px`, `16px` ispod 720 px | Unutrašnji razmak stranice. Na mobilnom se pri dnu dodaje prostor za navigaciju. |
 
-Inter je osnovni font. Za telo teksta koristite `--fs-base` (14 px), a za
-novčane iznose i numeričke kolone tabularne cifre. `BigNumber` prikazuje ključne
-iznose i jedinice.
+Inter je osnovni font. Telo teksta je 14 px sa proredom 1,5. Naslovi koriste
+20, 24 ili 28 px, težinu 600 i `tracking-tight`. Naslov stranice je 28 px,
+odnosno 24 px ispod 720 px. Za prilagođene veličine koristite `text-ui-*`
+ili odgovarajuće `--fs-*` tokene iz CSS-a. Manje oznake i podnaslovi u
+gustim karticama mogu koristiti veličinu pomoćnog teksta.
+
+Za novčane iznose koristite tabularne cifre. Kolone sa novčanim iznosima
+poravnajte desno i prikažite dve decimale. `TableMoney` zadržava istu širinu
+oznake jedinice u svakom redu, pa decimalni zarezi ostaju poravnati.
+
+Razmaci koriste korake od 4 px, do 48 px. U Tailwind klasama koristite cele
+korake od 1 do 12, a u CSS-u `--space-1` do `--space-12`. Nula je dozvoljena.
+
+### Izuzeci
+
+- Uvodni naslovi i razmaci između velikih celina na javnoj strani koriste
+  veće, imenovane veličine. Ilustracija i promotivni naslov pored formulara
+  za prijavu takođe koriste prikazne veličine.
+- Položaj dijaloga, bezbedna zona ekrana, širina bočne navigacije i razmaci
+  za skrolovanje do fiksnih zaglavlja prate dimenzije ekrana i kontrola.
+  Javni pregled rasporeda prilagođava unutrašnji razmak širini ekrana.
+- Slike za društvene mreže i verzija rasporeda za štampu koriste mere
+  prilagođene platnu, odnosno papiru.
 
 ## Komponente i stanja
 
@@ -36,7 +57,7 @@ iznose i jedinice.
 | `Badge`, `PriceChange` | Neutralno, akcenat i semantička stanja. Promena cene koristi strelicu i predznak uz boju. |
 | `KpiCard`, `ProgressBar`, `LimitMeter` | Podaci, trend, zaključana funkcija, približavanje limitu i pun limit. |
 | `PageHeader`, `SectionCardHeader` | Naslov, opis, broj stavki ili primarna akcija u skladu sa ekranom. |
-| `DataTable` | Gusti redovi, hover, izbor i prazna lista. Široka tabela skroluje u sopstvenom kontejneru. |
+| `DataTable` | Gusti redovi, hover, izbor i prazna lista. Široka tabela skroluje u sopstvenom kontejneru. Ispod 768 px sastojci i recepti se prikazuju kao kartice sa cenom na vrhu. |
 | `Skeleton`, `EmptyState`, `RouteError` | Skelet pri učitavanju, prazno stanje sa sledećim korakom i poruka sa ponovnim pokušajem. |
 | `BottomSheet`, `ConfirmSheet` | Mobilni panel i desktop dijalog. Sadržaj skroluje između zaglavlja i podnožja sa akcijama. |
 | `PricingCard` | Obična, istaknuta, aktivna i prigušena ponuda. |
@@ -44,13 +65,15 @@ iznose i jedinice.
 
 ## Navigacija
 
-- **Desktop od 1200 px.** Bočna navigacija prikazuje ikonu i naziv, aktivnu
-  rutu i meni naloga. Korisnik može da je skupi na traku sa ikonama.
-- **Od 720 do 1199 px.** Bočna navigacija počinje skupljena i otvara se preko
-  sadržaja.
-- **Ispod 720 px.** Donja traka prikazuje Tabla, Recepti, Sastojci, Nalog i
-  Više. Više vodi do Skalera serije, Pripreme smene, Trebovanja, Rasporeda i
-  Premiuma, uz odjavu. Zaglavlje otvara bočnu navigaciju.
+- **Desktop od 1200 px.** Grupa Kuhinja sadrži Tablu, Recepte, Sastojke,
+  Raspored, Smenu, Trebovanje i Skaliranje. Grupa Račun sadrži Premium i
+  Podešavanja. Aktivna stavka ima akcentnu oznaku levo. Meni naloga sa odjavom
+  je pri dnu bočne navigacije. Korisnik može da skupi navigaciju na traku sa ikonama.
+- **Od 768 do 1199 px.** Bočna navigacija počinje skupljena. Nazivi se prikazuju
+  pri prelasku mišem ili fokusu tastature. Proširena navigacija se otvara preko sadržaja.
+- **Ispod 768 px.** Donja traka prikazuje Tabla, Recepti, Sastojci, Podešavanja i
+  Više. Traka ostavlja prostor za bezbednu zonu uređaja. Dugme Više otvara donji
+  panel sa dodatnim odredištima i odjavom. Zaglavlje otvara bočnu navigaciju.
 - Skaler serije i Priprema smene počinju izborom recepta ili šablona. Obe
   destinacije, Trebovanje i Raspored imaju direktne veze iz bočne navigacije
   i menija Više.
@@ -89,7 +112,7 @@ Status opisuje mogućnosti u kodu. Ograničenja paketa održavaju se u
 | Trebovanje | `/trebovanje` | Za prijavljene. Zalihe, dopuna, prodaja, otpis i inventura prema paketu. |
 | Raspored | `/raspored` | Raspored vlasnika od Starter paketa. Pristup zaposlenih zavisi od paketa poslodavca. |
 | Deljeni raspored | `/r/[token]` | Javni prikaz uz važeću vezu za deljenje. |
-| Podešavanja i naplata | `/settings`, `/settings/billing` | Za prijavljene. Nalog, ograničenja, bezbednost i naplata. |
+| Podešavanja i naplata | `/settings`, `/settings/billing` | Za prijavljene. Nalog, ograničenja, bezbednost i naplata. `/podesavanja` preusmerava na `/settings`. |
 | Premium | `/premium` | Poređenje paketa. Team i Business imaju liste čekanja. |
 | Offline fallback | `/~offline` | Javni ekran iz PWA precache-a. |
 

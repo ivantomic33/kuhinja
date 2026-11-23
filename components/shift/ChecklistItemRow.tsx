@@ -64,7 +64,7 @@ export function ChecklistItemRow({
             {item.label}
           </span>
           {hasTimer ? (
-            <span className="mt-0.5 block text-sm text-muted">
+            <span className="mt-1 block text-sm text-muted">
               {item.minutes} {sr.shift.minutesShort}
             </span>
           ) : null}

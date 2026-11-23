@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode, type RefObject } from "react";
 import {
   BookOpenText,
   Carrot,
@@ -10,55 +10,33 @@ import {
   LayoutDashboard,
   PanelLeft,
   Settings2,
+  X,
 } from "lucide-react";
 import { LogoMark } from "@/components/brand/LogoMark";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
+import { useDialogFocus } from "@/components/ui/useDialogFocus";
 import { APP_NAME } from "@/lib/config/app";
+import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 import { ProfileMenu } from "./ProfileMenu";
-import { matchesWorkspace, workspaceLinks } from "./workspace-links";
+import { matchesNavPath, workspaceLinks } from "./workspace-links";
 
-const MAIN_NAV = [
+const NAV_GROUPS = [
   {
-    href: "/dashboard",
-    label: "Kontrolna tabla",
-    tip: "Kontrolna tabla",
-    icon: LayoutDashboard,
-    match: (path: string) => path === "/dashboard",
+    title: "Kuhinja",
+    links: [
+      { href: "/dashboard", label: "Tabla", icon: LayoutDashboard },
+      { href: "/recipes", label: sr.recipes.title, icon: BookOpenText },
+      { href: "/ingredients", label: sr.ingredients.title, icon: Carrot },
+      ...workspaceLinks,
+    ],
   },
   {
-    href: "/recipes",
-    label: "Recepti",
-    tip: "Recepti",
-    icon: BookOpenText,
-    match: (path: string) => path.startsWith("/recipes"),
-  },
-  {
-    href: "/ingredients",
-    label: "Sastojci",
-    tip: "Sastojci",
-    icon: Carrot,
-    match: (path: string) => path.startsWith("/ingredients"),
-  },
-  ...workspaceLinks.map((link) => ({
-    ...link,
-    tip: link.label,
-    match: (path: string) => matchesWorkspace(path, link.href),
-  })),
-  {
-    href: "/premium",
-    label: "Premium",
-    tip: "Premium",
-    icon: Crown,
-    match: (path: string) => path.startsWith("/premium"),
-    trialPill: true,
-  },
-  {
-    href: "/settings",
-    label: "Podešavanja",
-    tip: "Podešavanja",
-    icon: Settings2,
-    match: (path: string) => path.startsWith("/settings"),
+    title: "Račun",
+    links: [
+      { href: "/premium", label: sr.premium.title, icon: Crown, trialPill: true },
+      { href: "/settings", label: sr.settings.title, icon: Settings2 },
+    ],
   },
 ] as const;
 
@@ -69,7 +47,8 @@ export type SidebarNavProps = {
   isPremium?: boolean;
   expanded?: boolean;
   collapsedDesktop?: boolean;
-  onToggleCollapse?: () => void;
+  returnFocusRef?: RefObject<HTMLButtonElement | null>;
+  onToggleCollapse?: (trigger: HTMLButtonElement) => void;
   onRequestClose?: () => void;
 };
 
@@ -89,11 +68,14 @@ export function SidebarNav({
   isPremium = false,
   expanded = false,
   collapsedDesktop = false,
+  returnFocusRef,
   onToggleCollapse,
   onRequestClose,
 }: SidebarNavProps) {
   const pathname = usePathname() || "/dashboard";
   const initials = initialsFrom(displayName, email);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus({ open: expanded, onClose: () => onRequestClose?.(), panelRef, returnFocusRef });
 
   // Desktop user-collapsed rail (≥1200)
   const desktopRail = collapsedDesktop;
@@ -101,48 +83,55 @@ export function SidebarNav({
   // Mobile always shows full labels when open (never rail mode)
 
   return (
-    <aside
+    <div
+      id="app-sidebar"
+      ref={panelRef}
+      role={expanded ? "dialog" : "complementary"}
+      aria-modal={expanded || undefined}
+      aria-label={expanded ? "Navigacioni meni" : "Bočna traka"}
+      tabIndex={expanded ? -1 : undefined}
       data-expanded={expanded ? "true" : "false"}
       data-collapsed={desktopRail ? "true" : "false"}
       className={cn(
         "fixed inset-y-0 left-0 z-40 flex flex-col border-r border-border",
         "bg-[var(--sidebar-bg)] px-3 py-4",
-        "transition-[width,transform] duration-200 ease-out",
+        "transition-[width] duration-200 ease-out",
         // ≥1200: expanded or user-collapsed rail
         desktopRail
           ? "min-[1200px]:w-[var(--sidebar-rail)]"
           : "min-[1200px]:w-[var(--sidebar)]",
-        // 720–1199: rail by default, overlay when expanded
+        // Tablet: rail by default, overlay when expanded.
         expanded
-          ? "max-[1199px]:w-[var(--sidebar)] max-[1199px]:shadow-[16px_0_48px_rgba(0,0,0,.5)]"
-          : "max-[1199px]:w-[var(--sidebar-rail)]",
-        // ≤719: off-canvas unless expanded; always full width when open
+          ? "max-[1200px]:w-[var(--sidebar)] max-[1200px]:shadow-[var(--shadow-sidebar)]"
+          : "max-[1200px]:w-[var(--sidebar-rail)]",
+        // Mobile: remove the closed drawer from the tab order.
         expanded
-          ? "max-[719px]:translate-x-0 max-[719px]:w-[var(--sidebar)]"
-          : "max-[719px]:-translate-x-full max-[719px]:w-[var(--sidebar)]"
+          ? "max-md:w-[var(--sidebar)]"
+          : "max-md:hidden"
       )}
     >
       {/* Brand row */}
       <div
         className={cn(
-          "flex min-h-14 items-center gap-3 px-2 pb-[18px] pt-1.5",
+          "flex min-h-14 items-center gap-3 px-2 pb-5 pt-2",
           // Rail stacking: desktop collapsed OR mid-width not expanded
           desktopRail && "min-[1200px]:flex-col min-[1200px]:items-center min-[1200px]:gap-2",
           !expanded &&
-            "max-[1199px]:flex-col max-[1199px]:items-center max-[1199px]:gap-2 max-[719px]:flex-row max-[719px]:items-center"
+            "max-[1200px]:flex-col max-[1200px]:items-center max-[1200px]:gap-2"
         )}
       >
         <Link
           href="/dashboard"
+          aria-label={APP_NAME}
           onClick={onRequestClose}
-          className="flex min-w-0 items-center gap-3 rounded-[10px] outline-none"
+          className="focus-ring flex min-h-11 min-w-11 items-center gap-3 rounded-lg max-[1200px]:justify-center"
         >
           <LogoMark className="size-9" />
           <span
             className={cn(
-              "truncate text-[length:var(--fs-lg)] font-bold tracking-[-0.01em] text-text",
+              "truncate text-ui-lg font-bold tracking-[-0.01em] text-text",
               desktopRail && "min-[1200px]:hidden",
-              !expanded && "max-[1199px]:hidden max-[719px]:inline"
+              !expanded && "max-[1200px]:hidden"
             )}
           >
             {APP_NAME}
@@ -153,24 +142,25 @@ export function SidebarNav({
           className={cn(
             "ml-auto flex items-center gap-1",
             desktopRail && "min-[1200px]:ml-0",
-            !expanded && "max-[1199px]:ml-0 max-[719px]:ml-auto"
+            !expanded && "max-[1200px]:ml-0"
           )}
         >
           <span
             className={cn(
               desktopRail && "min-[1200px]:hidden",
-              !expanded && "max-[1199px]:hidden"
+              !expanded && "max-[1200px]:hidden"
             )}
           >
             <OfflineIndicator />
           </span>
           <button
             type="button"
-            aria-label="Skupi / proširi meni"
-            onClick={onToggleCollapse}
-            className="icon-btn size-10"
+            aria-label={expanded ? "Zatvori meni" : "Skupi ili proširi meni"}
+            aria-expanded={expanded ? true : undefined}
+            onClick={(event) => expanded ? onRequestClose?.() : onToggleCollapse?.(event.currentTarget)}
+            className="icon-btn focus-ring min-h-11 min-w-11"
           >
-            <PanelLeft className="size-5" aria-hidden="true" />
+            {expanded ? <X className="size-5" aria-hidden="true" /> : <PanelLeft className="size-5" aria-hidden="true" />}
           </button>
         </div>
       </div>
@@ -178,92 +168,103 @@ export function SidebarNav({
       {/* Nav */}
       <nav
         aria-label="Glavna navigacija"
-        className="flex flex-1 flex-col gap-1 overflow-y-auto"
+        className="-mx-1 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-1 py-1"
       >
-        {MAIN_NAV.map((item) => {
-          const active = item.match(pathname);
-          const Icon = item.icon;
-          const isRailVisual =
-            (desktopRail && true) || (!expanded && true);
-          // Labels hidden in rail modes; always shown when mobile drawer open
-          void isRailVisual;
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              data-tip={item.tip}
-              data-screen={item.href === "/raspored" ? "raspored" : undefined}
-              aria-current={active ? "page" : undefined}
-              onClick={onRequestClose}
+        {NAV_GROUPS.map(({ title, links }) => (
+          <div
+            key={links[0].href}
+            role="group"
+            aria-label={title}
+            className="flex flex-col gap-1 border-t border-border pt-1"
+          >
+            <p
+              aria-hidden="true"
               className={cn(
-                "group relative flex h-11 items-center gap-2 rounded-[10px] px-2 text-[length:var(--fs-base)] font-medium no-underline",
-                "transition-colors duration-150 outline-none",
-                active
-                  ? "bg-[var(--accent-soft)] text-accent"
-                  : "text-[var(--text-2)] hover:bg-surface-2 hover:text-text",
-                desktopRail && "min-[1200px]:justify-center min-[1200px]:px-0",
-                !expanded &&
-                  "max-[1199px]:justify-center max-[1199px]:px-0 max-[719px]:justify-start max-[719px]:px-3"
+                "px-2 pt-1 text-xs font-medium text-muted",
+                desktopRail && "min-[1200px]:hidden",
+                !expanded && "max-[1200px]:hidden"
               )}
             >
-              {active ? (
-                <span
-                  aria-hidden="true"
+              {title}
+            </p>
+            {links.map((item) => {
+              const active = matchesNavPath(pathname, item.href);
+              const showTrial = "trialPill" in item && item.trialPill && !isPremium;
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  data-screen={item.href === "/raspored" ? "raspored" : undefined}
+                  aria-current={active ? "page" : undefined}
+                  onClick={onRequestClose}
                   className={cn(
-                    "absolute top-2.5 bottom-2.5 left-[-12px] w-[3px] rounded-r-[3px] bg-accent",
-                    desktopRail && "min-[1200px]:hidden",
-                    !expanded && "max-[1199px]:hidden max-[719px]:block"
-                  )}
-                />
-              ) : null}
-              <span
-                className={cn(
-                  "grid size-7 shrink-0 place-items-center rounded-[7px]",
-                  active && "bg-[var(--accent-soft)]"
-                )}
-                aria-hidden="true"
-              >
-                <Icon className="size-5" strokeWidth={active ? 2.2 : 1.8} />
-              </span>
-              <span
-                className={cn(
-                  "truncate",
-                  desktopRail && "min-[1200px]:hidden",
-                  !expanded && "max-[1199px]:hidden max-[719px]:inline"
-                )}
-              >
-                {item.label}
-              </span>
-              {"trialPill" in item && item.trialPill && !isPremium ? (
-                <span
-                  className={cn(
-                    "ml-auto rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[11.5px] font-semibold text-accent",
-                    desktopRail && "min-[1200px]:hidden",
-                    !expanded && "max-[1199px]:hidden max-[719px]:inline-flex"
+                    "focus-ring group relative flex min-h-11 items-center gap-2 rounded-lg px-2 text-ui-base font-medium no-underline",
+                    "transition-colors duration-150",
+                    active
+                      ? "bg-[var(--accent-soft)] text-accent"
+                      : "text-text-2 hover:bg-surface-2 hover:text-text",
+                    desktopRail && "min-[1200px]:justify-center min-[1200px]:px-0",
+                    !expanded && "max-[1200px]:justify-center max-[1200px]:px-0"
                   )}
                 >
-                  14 dana
-                </span>
-              ) : null}
+                  {active ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-accent"
+                    />
+                  ) : null}
+                  <span
+                    className={cn(
+                      "grid size-7 shrink-0 place-items-center rounded-[7px]",
+                      active && "bg-[var(--accent-soft)]"
+                    )}
+                    aria-hidden="true"
+                  >
+                    <Icon className="size-5" strokeWidth={active ? 2.2 : 1.8} />
+                  </span>
+                  <span
+                    className={cn(
+                      "truncate",
+                      desktopRail && "min-[1200px]:sr-only",
+                      !expanded && "max-[1200px]:sr-only"
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                  {showTrial ? (
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "ml-auto rounded-full bg-[var(--accent-soft)] px-2 py-1 text-ui-xs font-semibold text-accent",
+                        desktopRail && "min-[1200px]:hidden",
+                        !expanded && "max-[1200px]:hidden"
+                      )}
+                    >
+                      14 dana
+                    </span>
+                  ) : null}
 
-              {/* Rail tooltip */}
-              <span
-                role="tooltip"
-                className={cn(
-                  "pointer-events-none absolute left-[calc(100%+12px)] z-50 whitespace-nowrap rounded-lg border border-border-strong bg-surface-3 px-2.5 py-1.5 text-[length:var(--fs-sm)] text-text shadow-lg",
-                  "hidden",
-                  desktopRail &&
-                    "min-[1200px]:group-hover:block min-[1200px]:group-focus-visible:block",
-                  !expanded &&
-                    "max-[1199px]:group-hover:block max-[1199px]:group-focus-visible:block max-[719px]:!hidden"
-                )}
-              >
-                {item.tip}
-              </span>
-            </Link>
-          );
-        })}
+                  {/* Rail tooltip */}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "pointer-events-none fixed left-[var(--sidebar-rail)] z-50 whitespace-nowrap rounded-lg border border-border-strong bg-surface-3 px-3 py-2 text-ui-sm text-text shadow-lg",
+                      "hidden",
+                      desktopRail &&
+                        "min-[1200px]:group-hover:block min-[1200px]:group-focus-visible:block",
+                      !expanded &&
+                        "md:max-[1200px]:group-hover:block md:max-[1200px]:group-focus-visible:block"
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Footer */}
@@ -271,15 +272,15 @@ export function SidebarNav({
         {/* Plan card — hidden in rail */}
         <div
           className={cn(
-            "rounded-xl border border-border bg-surface p-3.5",
+            "rounded-xl border border-border bg-surface p-4",
             desktopRail && "min-[1200px]:hidden",
-            !expanded && "max-[1199px]:hidden max-[719px]:block"
+            !expanded && "max-[1200px]:hidden"
           )}
         >
           {isPremium ? (
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-bold text-text">Premium</p>
-              <span className="text-[length:var(--fs-xs)] text-[var(--text-3)]">
+              <span className="text-ui-xs text-text-3">
                 Aktivan
               </span>
             </div>
@@ -290,8 +291,8 @@ export function SidebarNav({
                 href="/premium"
                 onClick={onRequestClose}
                 className={cn(
-                  "mt-3 flex h-9 w-full items-center justify-center rounded-[10px] border border-border-strong",
-                  "bg-surface-2 text-[length:var(--fs-sm)] font-semibold text-text no-underline",
+                  "focus-ring mt-3 flex min-h-11 w-full items-center justify-center rounded-lg border border-border-strong",
+                  "bg-surface-2 text-ui-sm font-semibold text-text no-underline",
                   "transition-colors hover:bg-surface-3"
                 )}
               >
@@ -306,23 +307,22 @@ export function SidebarNav({
           className={cn(
             desktopRail && "min-[1200px]:flex min-[1200px]:justify-center",
             !expanded &&
-              "max-[1199px]:flex max-[1199px]:justify-center max-[719px]:block"
+              "max-[1200px]:flex max-[1200px]:justify-center"
           )}
         >
           <ProfileMenu
             email={email}
             displayName={displayName}
             initials={initials}
-            compact={false}
             forceCompactClass={cn(
               desktopRail &&
-                "min-[1200px]:[&_.user-meta]:hidden min-[1200px]:[&_.user-chip]:border-0 min-[1200px]:[&_.user-chip]:bg-transparent min-[1200px]:[&_.user-chip]:p-0 min-[1200px]:[&_.user-chip]:min-h-0 min-[1200px]:[&_.user-chip]:justify-center",
+                "min-[1200px]:[&_.user-meta]:sr-only min-[1200px]:[&_.user-chip]:border-0 min-[1200px]:[&_.user-chip]:bg-transparent min-[1200px]:[&_.user-chip]:p-0 min-[1200px]:[&_.user-chip]:min-h-11 min-[1200px]:[&_.user-chip]:justify-center",
               !expanded &&
-                "max-[1199px]:[&_.user-meta]:hidden max-[1199px]:[&_.user-chip]:border-0 max-[1199px]:[&_.user-chip]:bg-transparent max-[1199px]:[&_.user-chip]:p-0 max-[1199px]:[&_.user-chip]:min-h-0 max-[1199px]:[&_.user-chip]:justify-center max-[719px]:[&_.user-meta]:!flex max-[719px]:[&_.user-chip]:!border max-[719px]:[&_.user-chip]:!bg-surface max-[719px]:[&_.user-chip]:!p-2.5 max-[719px]:[&_.user-chip]:!min-h-14"
+                "max-[1200px]:[&_.user-meta]:sr-only max-[1200px]:[&_.user-chip]:border-0 max-[1200px]:[&_.user-chip]:bg-transparent max-[1200px]:[&_.user-chip]:p-0 max-[1200px]:[&_.user-chip]:min-h-11 max-[1200px]:[&_.user-chip]:justify-center"
             )}
           />
         </div>
       </div>
-    </aside>
+    </div>
   );
 }

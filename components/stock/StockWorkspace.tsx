@@ -46,6 +46,7 @@ import { StockMinimum } from "@/components/stock/StockMinimum";
 import { usePlan } from "@/lib/hooks/usePlan";
 import { stockAlertsSr as alertsText } from "@/lib/i18n/stock-alerts";
 import { stockSr as t } from "@/lib/i18n/stock";
+import { sr } from "@/lib/i18n/sr";
 import {
   canAddStockItem,
   hasMinPlan,
@@ -166,6 +167,7 @@ export function StockWorkspace({
   const [modal, setModal] = useState<ModalKind>(null);
   const [saleMounted, setSaleMounted] = useState(false);
   const refreshLiveStock = useRef<() => void>(() => {});
+  const saleTrigger = useRef<HTMLButtonElement>(null);
   const stockVersion = useRef(0);
   const [removeTarget, setRemoveTarget] = useState<StockRow | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -301,7 +303,6 @@ export function StockWorkspace({
   const usedValue = useMemo(() => usedTodayValue(rows), [rows]);
   const maxStockItems = entitlements.maxStockItems;
   const stockUnlimited = isUnlimited(maxStockItems);
-  const showUsage = !loadError;
   const overStockLimit = !stockUnlimited && stockItemCount > maxStockItems;
 
   function refresh() {
@@ -438,12 +439,14 @@ export function StockWorkspace({
     ? `${stockItemCount} · ${t.kpiUnlimited}`
     : `${stockItemCount} od ${maxStockItems} na ${planDisplayName(plan)} planu`;
 
-  if (!venueId) {
+  if (!venueId || loadError) {
     return (
       <div className="stock-page">
         <PageHeader title={t.title} description={t.subtitle} />
-        {loadError ? <RouteError message={t.loadError} /> : <EmptyState title={t.noVenue}
-          action={<StateLink href="/dashboard">Otvori tablu</StateLink>} />}
+        {loadError ? <RouteError message={sr.listStates.stock.error} /> : (
+          <EmptyState icon={<Package />} title={sr.listStates.stock.noVenue}
+            action={<StateLink href="/settings">{sr.listStates.openSettings}</StateLink>} />
+        )}
       </div>
     );
   }
@@ -454,14 +457,13 @@ export function StockWorkspace({
         title={t.title}
         description={t.subtitle}
         className="mb-5 [&>div:last-child]:max-w-full"
-        action={
+        action={stockItemCount > 0 ? (
           <>
             {canPush ? (
               <button
                 id="btnStockBell"
                 type="button"
                 className="icon-btn bordered stock-bell"
-                aria-label={`${alertsText.notifications} (${notifications.length})`}
                 disabled={notifications.length === 0}
                 onClick={() =>
                   toast(notifications.join(", "), {
@@ -471,8 +473,9 @@ export function StockWorkspace({
                 }
               >
                 <Bell className="size-5" aria-hidden="true" />
+                <span className="sr-only">{alertsText.notifications}</span>
                 {notifications.length > 0 ? (
-                  <span className="stock-bell-count" aria-hidden="true">
+                  <span className="stock-bell-count">
                     {notifications.length}
                   </span>
                 ) : null}
@@ -495,7 +498,8 @@ export function StockWorkspace({
             <PrimaryButton
               variant="secondary"
               leftIcon={<Utensils aria-hidden="true" />}
-              onClick={() => {
+              onClick={(event) => {
+                saleTrigger.current = event.currentTarget;
                 setSaleMounted(true);
                 setModal("sale");
               }}
@@ -509,22 +513,20 @@ export function StockWorkspace({
               {t.restockPrimary}
             </PrimaryButton>
           </>
-        }
+        ) : undefined}
       />
 
-      {showUsage ? (
-        <UsageStrip
-          label={t.kpiItems}
-          used={stockItemCount}
-          max={stockUnlimited ? Math.max(stockItemCount, 1) : maxStockItems}
-          isPremium={stockUnlimited}
-          planLabel={planDisplayName(plan)}
-          className="stock-usage !mb-0 !gap-x-4"
-        />
-      ) : null}
+      <UsageStrip
+        label={t.kpiItems}
+        used={stockItemCount}
+        max={stockUnlimited ? Math.max(stockItemCount, 1) : maxStockItems}
+        isPremium={stockUnlimited}
+        planLabel={planDisplayName(plan)}
+        className="stock-usage !mb-0 !gap-x-4"
+      />
 
       {overStockLimit ? (
-        <p className="rounded-[10px] border border-warning/40 bg-[var(--warning-soft)] px-4 py-3 text-sm text-[var(--text-2)]">
+        <p className="rounded-[10px] border border-warning/40 bg-[var(--warning-soft)] px-4 py-3 text-sm text-text-2">
           {t.overLimitBanner}
         </p>
       ) : null}
@@ -543,7 +545,7 @@ export function StockWorkspace({
                   ? alertsText.soonTitle(runoutSoon.length)
                   : alertsText.goneTitle(gone.length)}
               </p>
-              <p className="text-[var(--text-2)]">
+              <p className="text-text-2">
                 {leadAlert.soon ? soonNames.join(", ") : `${goneNames.join(", ")} — ${alertsText.stockZero}`}
               </p>
             </div>
@@ -570,11 +572,11 @@ export function StockWorkspace({
                     ? alertsText.pushSoon(leadAlert.row.name, shiftEta(leadAlert.remainingShifts, ""))
                     : alertsText.pushGone(leadAlert.row.name)}
                 </p>
-                <p className="text-[var(--text-2)]">
+                <p className="text-text-2">
                   {notifications.length > 1 ? notifications.slice(1).join(", ") : alertsText.projection}
                 </p>
               </div>
-              <span className="self-start text-[var(--text-3)]">{alertsText.pushTime}</span>
+              <span className="self-start text-text-3">{alertsText.pushTime}</span>
             </aside>
           ) : null}
         </div>
@@ -657,8 +659,6 @@ export function StockWorkspace({
         />
       </div>
 
-      {loadError ? <RouteError message={t.loadError} /> : null}
-      {(!loadError || rows.length > 0) && (
         <BentoCard
           id="stock-levels"
           className="scroll-mt-24"
@@ -709,7 +709,7 @@ export function StockWorkspace({
                   {alertsText.clearFilter}
                 </PrimaryButton>
               ) : null}
-              <span className="ml-auto text-[length:var(--fs-sm)] text-[var(--text-3)]">
+              <span className="ml-auto text-ui-sm text-text-3">
                 {t.sortHint}
               </span>
             </div>
@@ -728,12 +728,14 @@ export function StockWorkspace({
             </>
           }
         >
-          {filtered.length === 0 ? (
+          {rows.length === 0 ? (
+            <EmptyState icon={<Package />} title={sr.listStates.stock.noIngredients}
+              action={<StateLink href="/ingredients">{sr.listStates.openIngredients}</StateLink>} />
+          ) : filtered.length === 0 ? (
             <EmptyState
               icon={<Package className="size-6" />}
-              title={filterRunout ? alertsText.filteredEmpty : query.trim() ? "Nema rezultata pretrage." : t.emptyTitle}
-              description={filterRunout || query.trim() ? undefined : t.emptyHint}
-              actionLabel={filterRunout || query.trim() ? alertsText.clearFilter : t.restockPrimary}
+              title={filterRunout ? sr.listStates.stock.filteredEmpty : query.trim() ? sr.listStates.noResults : sr.listStates.stock.empty}
+              actionLabel={filterRunout || query.trim() ? sr.listStates.clearFilter : t.restockPrimary}
               onAction={() => {
                 if (filterRunout || query.trim()) {
                   setOnlyRunout(false);
@@ -781,7 +783,7 @@ export function StockWorkspace({
                               <p className="font-semibold text-text">
                                 {row.name}
                               </p>
-                              <p className="text-[length:var(--fs-sm)] text-[var(--text-3)] max-sm:!text-xs">
+                              <p className="text-ui-sm text-text-3 max-sm:!text-xs">
                                 {formatMoney(row.price, {
                                   fractionDigits: 2,
                                 })}{" "}
@@ -800,7 +802,7 @@ export function StockWorkspace({
                               <span className="stock-qty-unit">{row.unit}</span>
                             </>
                           ) : (
-                            <span className="text-[var(--text-3)]">—</span>
+                            <span className="text-text-3">—</span>
                           )}
                         </td>
                         <td className="num col-min">
@@ -820,7 +822,7 @@ export function StockWorkspace({
                               {formatQty(used)} {row.unit}
                             </>
                           ) : (
-                            <span className="text-[var(--text-3)]">—</span>
+                            <span className="text-text-3">—</span>
                           )}
                         </td>
                         <td>
@@ -859,7 +861,7 @@ export function StockWorkspace({
               </table>
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="motion-card-list grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {visibleStock.map(({ row, status, soon, remainingShifts }) => {
                 return (
                   <article
@@ -876,7 +878,7 @@ export function StockWorkspace({
                           <p className="truncate font-semibold text-text">
                             {row.name}
                           </p>
-                          <p className="text-[length:var(--fs-sm)] text-[var(--text-3)]">
+                          <p className="text-ui-sm text-text-3">
                             min {row.hasLevel && row.min > 0 ? `${formatQty(row.min)} ${row.unit}` : "—"}
                           </p>
                           {soon ? <p className="shift-eta">{shiftEta(remainingShifts)}</p> : null}
@@ -893,7 +895,7 @@ export function StockWorkspace({
                           <span className="stock-qty-unit">{row.unit}</span>
                         </>
                       ) : (
-                        <span className="text-[var(--text-3)]">—</span>
+                        <span className="text-text-3">—</span>
                       )}
                     </p>
                     <StockLevel row={row} status={status} />
@@ -923,7 +925,6 @@ export function StockWorkspace({
             </div>
           )}
         </BentoCard>
-      )}
 
       <BentoCard
         id="stock-buy-list"
@@ -933,11 +934,11 @@ export function StockWorkspace({
         header={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="flex flex-wrap items-center gap-2 text-[length:var(--fs-md)] font-semibold text-text">
+              <p className="flex flex-wrap items-center gap-2 text-ui-md font-semibold text-text">
                 {t.buyTitle}
                 <span className="count-pill">{buyList.length}</span>
               </p>
-              <p className="mt-0.5 text-[length:var(--fs-sm)] text-[var(--text-2)]">
+              <p className="mt-1 text-ui-sm text-text-2">
                 {t.buySub}
               </p>
             </div>
@@ -961,7 +962,7 @@ export function StockWorkspace({
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-text">{t.setupMinsTitle}</p>
-                <p className="mt-1 text-sm text-[var(--text-2)]">
+                <p className="mt-1 text-sm text-text-2">
                   {t.setupMinsMissing}
                 </p>
               </div>
@@ -988,14 +989,14 @@ export function StockWorkspace({
                     <p className="text-sm font-semibold text-text">
                       {item.name}
                     </p>
-                    <p className="text-[length:var(--fs-sm)] text-[var(--text-3)]">
+                    <p className="text-ui-sm text-text-3">
                       {t.buyOnHand} {formatQty(item.qty)} {item.unit} ·{" "}
                       {t.buyMin} {formatQty(item.min)} {item.unit}
                     </p>
                   </div>
                   <StatusBadge status={statusById.get(item.ingredientId) ?? "ok"} canWarn={canWarn} />
                 </div>
-                <p className="ml-auto text-right text-[length:var(--fs-base)] font-semibold tabular-nums text-warning">
+                <p className="ml-auto text-right text-ui-base font-semibold tabular-nums text-warning">
                   + {formatQty(item.need)} {item.unit}
                 </p>
               </li>
@@ -1017,13 +1018,14 @@ export function StockWorkspace({
       />
       {saleMounted ? (
         <Suspense fallback={modal === "sale" ? (
-          <BottomSheet open onClose={() => setModal(null)} title={t.saleTitle} size="lg">
+          <BottomSheet open onClose={() => setModal(null)} title={t.saleTitle} size="lg" returnFocusRef={saleTrigger}>
             <FormSkeleton fields={2} />
           </BottomSheet>
         ) : null}>
           <SaleModal
             open={modal === "sale"}
             onClose={() => setModal(null)}
+            returnFocusRef={saleTrigger}
             venueId={venueId}
             recipes={recipes}
             stockRows={rows}
@@ -1033,42 +1035,44 @@ export function StockWorkspace({
           />
         </Suspense>
       ) : null}
-      {modal === "restock" ? <RestockModal
-        open={modal === "restock"}
-        onClose={() => setModal(null)}
-        venueId={venueId}
-        rows={rows}
-        preferIngredientId={restockPrefer}
-        userId={entitlements.stockMoveAudit ? userId : null}
-        canSetPrice={entitlements.stockRestock}
-        maxStockItems={stockUnlimited ? undefined : maxStockItems}
-        stockItemCount={stockItemCount}
-        onLimitReached={openStockLimit}
-        onSaved={refresh}
-      /> : null}
-      {modal === "writeoff" ? <WriteOffModal
-        open={modal === "writeoff"}
-        onClose={() => setModal(null)}
-        venueId={venueId}
-        rows={rows.filter((row) => row.hasLevel)}
-        userId={entitlements.stockMoveAudit ? userId : null}
-        onSaved={() => refreshLiveStock.current()}
-      /> : null}
-      {modal === "inventory" ? <InventoryModal
-        open={modal === "inventory"}
-        onClose={() => setModal(null)}
-        venueId={venueId}
-        rows={rows}
-        userId={entitlements.stockMoveAudit ? userId : null}
-        onSaved={() => refreshLiveStock.current()}
-      /> : null}
-      {modal === "history" ? <HistorySheet
-        open={modal === "history"}
-        onClose={() => setModal(null)}
-        venueId={venueId}
-        ingredientId={historyIngredientId}
-        ingredientName={historyName}
-      /> : null}
+      <Suspense fallback={null}>
+        {modal === "restock" ? <RestockModal
+          open={modal === "restock"}
+          onClose={() => setModal(null)}
+          venueId={venueId}
+          rows={rows}
+          preferIngredientId={restockPrefer}
+          userId={entitlements.stockMoveAudit ? userId : null}
+          canSetPrice={entitlements.stockRestock}
+          maxStockItems={stockUnlimited ? undefined : maxStockItems}
+          stockItemCount={stockItemCount}
+          onLimitReached={openStockLimit}
+          onSaved={refresh}
+        /> : null}
+        {modal === "writeoff" ? <WriteOffModal
+          open={modal === "writeoff"}
+          onClose={() => setModal(null)}
+          venueId={venueId}
+          rows={rows.filter((row) => row.hasLevel)}
+          userId={entitlements.stockMoveAudit ? userId : null}
+          onSaved={() => refreshLiveStock.current()}
+        /> : null}
+        {modal === "inventory" ? <InventoryModal
+          open={modal === "inventory"}
+          onClose={() => setModal(null)}
+          venueId={venueId}
+          rows={rows}
+          userId={entitlements.stockMoveAudit ? userId : null}
+          onSaved={() => refreshLiveStock.current()}
+        /> : null}
+        {modal === "history" ? <HistorySheet
+          open={modal === "history"}
+          onClose={() => setModal(null)}
+          venueId={venueId}
+          ingredientId={historyIngredientId}
+          ingredientName={historyName}
+        /> : null}
+      </Suspense>
     </div>
   );
 }
@@ -1087,12 +1091,12 @@ const ingredientThumbs = [
   {
     pattern: /\b(luk|luka)\b/i,
     Icon: Vegan,
-    color: "[--stock-tint:#c5a7ff]",
+    color: "[--stock-tint:var(--stock-tint-onion)]",
   },
   {
     pattern: /\bparadajz\w*/i,
     Icon: Apple,
-    color: "[--stock-tint:#ff829f]",
+    color: "[--stock-tint:var(--stock-tint-tomato)]",
   },
   {
     pattern: /(?:^|\s)[šs]argarep\w*/i,

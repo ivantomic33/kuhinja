@@ -158,9 +158,10 @@ function WeekGrid({
   function employeeName(employee: Employee) {
     const content = <EmployeeIdentity employee={employee} />;
     return onEditEmployee ? (
-      <button type="button" className="r-emp r-emp-edit" aria-haspopup="dialog" aria-label={`Izmeni zaposlenog · ${employee.full_name}`}
+      <button type="button" className="r-emp r-emp-edit" aria-haspopup="dialog"
         onClick={() => { if (!saving.current) onEditEmployee(employee); }}>
         {content}
+        <span className="sr-only"> · Izmeni zaposlenog</span>
       </button>
     ) : <span className="r-emp">{content}</span>;
   }
@@ -172,16 +173,22 @@ function WeekGrid({
       <div className="r-m-names">
         <h3>{label}</h3>
         <div className="r-names">
-          {rows.map(({ employee, assignment }) => (
-            <button key={employee.id} type="button" className={`r-name ${assignment ? shifts[assignment.code].className : "empty"}`} data-r-target={targetName(day, employee.id)} aria-haspopup="dialog"
-              aria-label={`${employee.full_name} · ${dayLong[day]} ${shortDate(dates[day])} · ${assignmentDescription(assignment)}`}
-              onClick={event => openEditor(event, employee, day)}>
-              {employee.full_name.trim().split(/\s+/)[0]}
-              {assignment?.code === "B" && <><span aria-hidden="true">·</span><Thermometer size={14} aria-hidden="true" />Bolovanje</>}
-              {assignment?.code === "G" && <><span aria-hidden="true">·</span><Sun size={14} aria-hidden="true" />Godišnji</>}
-              {!assignment && <Plus size={14} aria-hidden="true" />}
-            </button>
-          ))}
+          {rows.map(({ employee, assignment }) => {
+            const [firstName, ...lastName] = employee.full_name.trim().split(/\s+/);
+            return (
+              <button key={employee.id} type="button" className={`r-name ${assignment ? shifts[assignment.code].className : "empty"}`} data-r-target={targetName(day, employee.id)} aria-haspopup="dialog"
+                onClick={event => openEditor(event, employee, day)}>
+                {firstName}
+                <span className="sr-only">{` ${lastName.join(" ")} · ${dayLong[day]} ${shortDate(dates[day])} · `}</span>
+                {assignment?.code === "B" && <><span aria-hidden="true">·</span><Thermometer size={14} aria-hidden="true" />Bolovanje</>}
+                {assignment?.code === "G" && <><span aria-hidden="true">·</span><Sun size={14} aria-hidden="true" />Godišnji</>}
+                {assignment?.code !== "B" && assignment?.code !== "G" && (
+                  <span className="sr-only">{assignmentDescription(assignment)}</span>
+                )}
+                {!assignment && <Plus size={14} aria-hidden="true" />}
+              </button>
+            );
+          })}
         </div>
       </div>
     );
@@ -252,8 +259,10 @@ function WeekGrid({
                           <button type="button" className={`r-cell ${assignment ? shifts[assignment.code].className : "empty"}${level ? ` w-${level}` : ""}`}
                             data-r-target={targetName(index, employee.id)}
                             aria-haspopup="dialog"
-                            aria-label={`${employee.full_name} · ${dayLong[index]} ${shortDate(date)} · ${assignmentDescription(assignment)}`}
                             onClick={event => openEditor(event, employee, index)} {...hintProps(messages)}>
+                            <span className="sr-only">
+                              {`${employee.full_name} · ${dayLong[index]} ${shortDate(date)} · ${assignment ? "" : assignmentDescription()}`}
+                            </span>
                             <ShiftCellContent assignment={assignment} />
                             {level && <span className="wdot"><WarningIcon size={12} aria-hidden="true" /></span>}
                           </button>
@@ -305,6 +314,7 @@ function WeekGrid({
       </div>
 
       <div className="r-mobile">
+        <h2 className="sr-only">Nedeljni pregled</h2>
         {mode === "shift" && <div className="r-days" role="group" aria-label="Dan u nedelji">
           {dates.map((date, index) => {
             const dailyWarnings = warnings.filter(warning => warning.day === index || warning.cellMessages?.some(message => message.day === index));
@@ -312,7 +322,7 @@ function WeekGrid({
             return (
               <button type="button" key={date} className={`${day === index ? "on" : ""}${date === today ? " today" : ""}`}
                 aria-pressed={day === index} aria-current={date === today ? "date" : undefined}
-                aria-label={`${dayLong[index]} ${shortDate(date)}${hasGap ? " · Rupa" : dailyWarnings.length ? " · Upozorenja" : ""}`}
+                aria-label={`${dayShort[index]} ${date.slice(8)}. · ${dayLong[index]} ${shortDate(date)}${hasGap ? " · Rupa" : dailyWarnings.length ? " · Upozorenja" : ""}`}
                 onClick={() => setDay(index)}>
                 {dayShort[index]} <b>{date.slice(8)}.</b>
                 {!!dailyWarnings.length && <span className={`gd${hasGap ? "" : " warn"}`} aria-hidden="true" />}
@@ -382,10 +392,12 @@ function WeekGrid({
                       return (
                         <button type="button" className={date === today ? "today" : undefined} key={date}
                           aria-haspopup="dialog"
-                          aria-label={`${employee.full_name} · ${dayLong[index]} ${shortDate(date)} · ${assignmentDescription(assignment)}`}
                           onClick={event => openEditor(event, employee, index)}>
-                          <span className={`bar ${assignment ? shifts[assignment.code].className : "empty"}`} />
-                          {dayShort[index].charAt(0)}
+                          <span className={`bar ${assignment ? shifts[assignment.code].className : "empty"}`} aria-hidden="true" />
+                          <span aria-hidden="true">{dayShort[index].charAt(0)}</span>
+                          <span className="sr-only">
+                            {`${employee.full_name} · ${dayLong[index]} ${shortDate(date)} · ${assignmentDescription(assignment)}`}
+                          </span>
                         </button>
                       );
                     })}

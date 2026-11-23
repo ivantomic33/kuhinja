@@ -51,13 +51,13 @@ export function Chip({
       }
       onClick={handleClick}
       className={cn(
-        "inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-pill)] px-3",
+        "inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] px-3",
         "border text-sm font-medium transition-colors outline-none",
-        "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "focus-ring",
         "disabled:cursor-not-allowed disabled:border-dashed",
         selected
-          ? "border-accent bg-[var(--accent-muted)] text-accent"
-          : "border-border bg-surface-2 text-muted hover:text-text",
+          ? "border-accent bg-accent text-text-on-accent enabled:hover:bg-accent-hover enabled:active:bg-accent-pressed"
+          : "border-border bg-surface-2 text-muted enabled:hover:text-text",
         className
       )}
       {...rest}

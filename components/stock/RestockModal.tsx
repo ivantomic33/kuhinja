@@ -231,7 +231,7 @@ export function RestockModal({
       className="md:w-[min(100%-32px,820px)]"
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <p className="text-sm tabular-nums text-[var(--text-2)]">
+          <p className="text-sm tabular-nums text-text-2">
             {t.restockCount}:{" "}
             <span className="font-semibold text-text">{validCount}</span>
           </p>
@@ -275,6 +275,7 @@ export function RestockModal({
               <label className="restock-field restock-ing">
                 <span>{t.restockIngredient}</span>
                 <select
+                  aria-label={t.restockIngredient}
                   className="field-control"
                   value={draft.ingredientId}
                   onChange={(e) =>
@@ -306,6 +307,7 @@ export function RestockModal({
               <label className="restock-field">
                 <span>{t.restockQty}</span>
                 <input
+                  aria-label={t.restockQty}
                   className="field-control tabular-nums"
                   inputMode="decimal"
                   value={draft.qty}
@@ -318,13 +320,14 @@ export function RestockModal({
 
               <label className="restock-field">
                 <span>{t.restockUnit}</span>
-                <input className="field-control" value={unit} disabled />
+                <input aria-label={t.restockUnit} className="field-control" value={unit} disabled />
               </label>
 
               <label className="restock-field restock-price">
                 <span>{t.restockPrice}</span>
                 {canSetPrice ? (
                   <input
+                    aria-label={t.restockPrice}
                     className="field-control tabular-nums"
                     inputMode="decimal"
                     placeholder={pricePlaceholder}
@@ -374,13 +377,13 @@ export function RestockModal({
         </button>
 
         {!canSetPrice ? (
-          <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-2)]">
+          <p className="flex flex-wrap items-center gap-2 text-sm text-text-2">
             <Lock className="size-3.5 shrink-0" aria-hidden="true" />
             <span>{t.restockPriceLocked}</span>
             <button
               type="button"
               onClick={goUpgrade}
-              className="font-semibold text-accent hover:text-[var(--accent-hover)]"
+              className="font-semibold text-accent hover:text-accent-hover"
             >
               {t.restockUpgrade}
             </button>
@@ -388,11 +391,11 @@ export function RestockModal({
         ) : null}
 
         {!canAddNew ? (
-          <p className="text-sm text-[var(--text-2)]">{t.overLimitBanner}</p>
+          <p className="text-sm text-text-2">{t.overLimitBanner}</p>
         ) : null}
 
         {!canAddAnotherRow && drafts.length > 0 ? (
-          <p className="text-sm text-[var(--text-3)]">{t.restockNoMore}</p>
+          <p className="text-sm text-text-3">{t.restockNoMore}</p>
         ) : null}
 
         {error ? (

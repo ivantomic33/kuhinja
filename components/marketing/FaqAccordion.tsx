@@ -1,8 +1,7 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
-import { useReducedMotion } from "framer-motion";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
@@ -16,26 +15,27 @@ const FAQS = [
 
 type FaqItem = {
   q: string;
-  a: string;
+  a: ReactNode;
 };
 
 type FaqAccordionProps = {
   items?: readonly FaqItem[];
   title?: string;
+  initiallyOpen?: boolean;
 };
 
 export function FaqAccordion({
   items = FAQS,
   title = sr.marketing.faqTitle,
+  initiallyOpen = true,
 }: FaqAccordionProps) {
   const baseId = useId();
-  const reduceMotion = useReducedMotion();
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openIndex, setOpenIndex] = useState<number | null>(initiallyOpen ? 0 : null);
 
   return (
     <section className="w-full">
       {title ? (
-        <h2 className="mb-5 text-center text-[length:var(--fs-xl)] font-semibold text-text">
+        <h2 className="mb-5 text-center text-ui-xl font-semibold text-text">
           {title}
         </h2>
       ) : null}
@@ -48,7 +48,7 @@ export function FaqAccordion({
           return (
             <div
               key={item.q}
-              className="mb-3 overflow-hidden rounded-xl border border-border bg-surface last:mb-0"
+              className="mb-3 rounded-xl border border-border bg-surface last:mb-0"
             >
               <h3>
                 <button
@@ -58,15 +58,15 @@ export function FaqAccordion({
                   aria-controls={panelId}
                   onClick={() => setOpenIndex(isOpen ? null : index)}
                   className={cn(
-                    "flex min-h-[60px] w-full items-center justify-between gap-3 px-5 text-left",
-                    "text-[length:var(--fs-base)] font-semibold text-text outline-none"
+                    "focus-ring flex min-h-[60px] w-full items-center justify-between gap-3 rounded-xl px-5 text-left",
+                    "text-ui-base font-semibold text-text outline-none"
                   )}
                 >
                   <span>{item.q}</span>
                   <ChevronDown
                     className={cn(
-                      "size-5 shrink-0 text-[var(--text-2)]",
-                      !reduceMotion && "transition-transform duration-200",
+                      "size-5 shrink-0 text-text-2",
+                      "motion-safe:transition-transform motion-safe:duration-200",
                       isOpen && "rotate-180"
                     )}
                     aria-hidden
@@ -79,7 +79,7 @@ export function FaqAccordion({
                 aria-labelledby={buttonId}
                 hidden={!isOpen}
                 className={cn(
-                  "px-5 pb-5 text-[length:var(--fs-base)] text-[var(--text-2)]",
+                  "px-5 pb-5 text-ui-base text-text-2",
                   !isOpen && "hidden"
                 )}
               >

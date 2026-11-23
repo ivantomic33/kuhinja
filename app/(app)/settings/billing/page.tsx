@@ -3,7 +3,7 @@ import { PortalButton } from "@/components/billing/PortalButton";
 import { Badge } from "@/components/ui/Badge";
 import { BentoCard } from "@/components/ui/BentoCard";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { StateLink } from "@/components/ui/RouteStates";
 import { sr } from "@/lib/i18n/sr";
 import { isPremium } from "@/lib/supabase/plan";
 import { getPlanDetails } from "@/lib/supabase/plan-server";
@@ -102,11 +102,7 @@ export default async function BillingPage({
           </div>
         ) : (
           <div className="max-w-xs">
-            <Link href="/premium" className="block">
-              <PrimaryButton fullWidth type="button">
-                {sr.settings.upgrade}
-              </PrimaryButton>
-            </Link>
+            <StateLink href="/premium" fullWidth>{sr.settings.upgrade}</StateLink>
           </div>
         )}
       </BentoCard>

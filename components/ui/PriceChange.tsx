@@ -33,8 +33,8 @@ export function PriceChange({ percent, className }: PriceChangeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 text-sm font-medium tabular-nums",
-        direction === "up" && "text-danger",
+        "inline-flex items-center gap-1 text-sm font-medium tabular-nums",
+        direction === "up" && "text-danger-text",
         direction === "down" && "text-success",
         direction === "flat" && "text-muted",
         className

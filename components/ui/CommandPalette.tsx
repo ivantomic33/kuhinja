@@ -10,10 +10,12 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Search, X } from "lucide-react";
 import { sr } from "@/lib/i18n/sr";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { cn } from "@/lib/utils/cn";
+import { useDialogFocus } from "./useDialogFocus";
 
 export type CommandItem = {
   id: string;
@@ -40,7 +42,7 @@ export function CommandPalette({
   onOpenChange,
   className,
 }: CommandPaletteProps) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const isControlled = openProp !== undefined;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = isControlled ? openProp : uncontrolledOpen;
@@ -56,6 +58,8 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus({ open, onClose: () => setOpen(false), panelRef, initialFocusRef: inputRef });
   const listRef = useRef<HTMLUListElement>(null);
   const titleId = useId();
   const listboxId = useId();
@@ -85,14 +89,6 @@ export function CommandPalette({
       if (isToggle) {
         event.preventDefault();
         setOpen(!open);
-        return;
-      }
-
-      if (!open) return;
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setOpen(false);
       }
     };
 
@@ -101,20 +97,7 @@ export function CommandPalette({
   }, [open, setOpen]);
 
   useEffect(() => {
-    if (!open) {
-      setQuery("");
-      return;
-    }
-    const previous = document.activeElement as HTMLElement | null;
-    const t = window.setTimeout(() => inputRef.current?.focus(), 0);
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      window.clearTimeout(t);
-      document.body.style.overflow = originalOverflow;
-      previous?.focus?.();
-    };
+    if (!open) setQuery("");
   }, [open]);
 
   const selectItem = useCallback(
@@ -162,9 +145,11 @@ export function CommandPalette({
   return (
     <AnimatePresence>
       {open ? (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center p-2 pt-[12vh] sm:pt-[15vh]">
+        <div className="command-palette-position fixed inset-0 z-[60] flex items-start justify-center p-2">
           <motion.button
+            data-motion-surface
             type="button"
+            tabIndex={-1}
             aria-label={sr.ui.commandPalette.closeAria}
             className="absolute inset-0 border-0 bg-background/60"
             initial={reduceMotion ? false : { opacity: 0 }}
@@ -175,9 +160,12 @@ export function CommandPalette({
           />
 
           <motion.div
+            data-motion-surface
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
+            tabIndex={-1}
             className={cn(
               "relative z-10 flex w-full max-w-lg flex-col overflow-hidden",
               "rounded-[var(--radius-card)] border border-border bg-surface text-text shadow-xl",
@@ -196,6 +184,9 @@ export function CommandPalette({
               <input
                 ref={inputRef}
                 type="search"
+                role="combobox"
+                aria-label={sr.ui.commandPalette.placeholder}
+                aria-expanded="true"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={onInputKeyDown}
@@ -208,7 +199,7 @@ export function CommandPalette({
                     : undefined
                 }
                 className={cn(
-                  "min-h-[44px] w-full flex-1 bg-transparent text-base text-text outline-none",
+                  "focus-ring min-h-[44px] w-full flex-1 rounded-lg bg-transparent text-base text-text outline-none",
                   "placeholder:text-muted"
                 )}
               />
@@ -234,7 +225,7 @@ export function CommandPalette({
               className="max-h-80 overflow-y-auto p-1"
             >
               {filtered.length === 0 ? (
-                <li className="px-2 py-3 text-sm text-muted" role="presentation">
+                <li className="px-2 py-3 text-sm text-muted" role="option" aria-disabled="true" aria-selected="false">
                   {sr.ui.commandPalette.noResults}
                 </li>
               ) : (
@@ -247,31 +238,26 @@ export function CommandPalette({
                       role="option"
                       aria-selected={isActive}
                       data-index={index}
+                      className={cn(
+                        "flex w-full cursor-pointer items-center gap-2 rounded-[var(--radius-input)] px-2 py-2 text-left",
+                        isActive ? "bg-surface-2 text-text" : "text-muted hover:bg-surface-2 hover:text-text"
+                      )}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => selectItem(item)}
                     >
-                      <button
-                        type="button"
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-[var(--radius-input)] px-2 py-2 text-left",
-                          "outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                          isActive ? "bg-surface-2 text-text" : "text-muted hover:bg-surface-2 hover:text-text"
-                        )}
-                        onMouseEnter={() => setActiveIndex(index)}
-                        onClick={() => selectItem(item)}
-                      >
-                        {item.icon ? (
-                          <span className="shrink-0 text-text">{item.icon}</span>
-                        ) : null}
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-text">
-                            {item.label}
-                          </span>
-                          {item.hint ? (
-                            <span className="block truncate text-xs text-muted">
-                              {item.hint}
-                            </span>
-                          ) : null}
+                      {item.icon ? (
+                        <span className="shrink-0 text-text">{item.icon}</span>
+                      ) : null}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-text">
+                          {item.label}
                         </span>
-                      </button>
+                        {item.hint ? (
+                          <span className="block truncate text-xs text-muted">
+                            {item.hint}
+                          </span>
+                        ) : null}
+                      </span>
                     </li>
                   );
                 })

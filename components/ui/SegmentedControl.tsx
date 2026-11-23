@@ -62,10 +62,15 @@ export function SegmentedControl<T extends string>({
                   : -1;
               const next =
                 enabled[(index + direction + enabled.length) % enabled.length];
-              if (next) onChange(next.value);
+              if (next) {
+                const radios =
+                  event.currentTarget.parentElement?.querySelectorAll("button");
+                radios?.[options.indexOf(next)]?.focus();
+                onChange(next.value);
+              }
             }}
             className={cn(
-              "inline-flex items-center justify-center gap-1.5",
+              "focus-ring inline-flex items-center justify-center gap-2",
               selected && "on",
               option.disabled && "cursor-not-allowed"
             )}
@@ -73,7 +78,12 @@ export function SegmentedControl<T extends string>({
             {option.icon}
             {option.label}
             {option.badge ? (
-              <span className="rounded-full bg-[var(--success-soft)] px-1.5 py-0.5 text-[11.5px] font-semibold leading-none text-success">
+              <span
+                className={cn(
+                  "rounded-full px-2 py-1 text-ui-xs font-semibold leading-none text-success",
+                  selected ? "bg-background" : "bg-[var(--success-soft)]"
+                )}
+              >
                 {option.badge}
               </span>
             ) : null}

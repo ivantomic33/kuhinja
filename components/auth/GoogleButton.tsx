@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AuthError } from "@/components/auth/AuthError";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { getGoogleOAuthUrl } from "@/lib/auth/actions";
 import { sr } from "@/lib/i18n/sr";
@@ -14,18 +15,22 @@ export function GoogleButton({ nextPath = "/dashboard" }: GoogleButtonProps) {
   const [error, setError] = useState<string | undefined>();
 
   async function handleGoogle() {
+    if (loading) return;
     setLoading(true);
     setError(undefined);
 
-    const result = await getGoogleOAuthUrl(nextPath);
-
-    if (!result.success || !result.url) {
-      setError(result.message ?? sr.auth.errors.oauthFailed);
+    try {
+      const result = await getGoogleOAuthUrl(nextPath);
+      if (!result.success || !result.url) {
+        setError(result.message ?? sr.auth.errors.oauthFailed);
+        setLoading(false);
+        return;
+      }
+      window.location.assign(result.url);
+    } catch {
+      setError(sr.auth.errors.oauthFailed);
       setLoading(false);
-      return;
     }
-
-    window.location.assign(result.url);
   }
 
   return (
@@ -39,11 +44,7 @@ export function GoogleButton({ nextPath = "/dashboard" }: GoogleButtonProps) {
       >
         {sr.auth.continueWithGoogle}
       </PrimaryButton>
-      {error ? (
-        <p role="alert" className="text-center text-sm text-danger">
-          {error}
-        </p>
-      ) : null}
+      <AuthError message={error} />
     </div>
   );
 }

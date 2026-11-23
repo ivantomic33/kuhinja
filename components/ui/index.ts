@@ -33,5 +33,6 @@ export {
   DataTable,
   type DataTableProps,
   type DataTableColumn,
+  type DataTableSort,
 } from "./DataTable";
 export { Tabs, type TabsProps, type TabItem } from "./Tabs";

@@ -1,4 +1,5 @@
 import { APP_NAME } from "@/lib/config/app";
+import { sr } from "./sr";
 
 /** Serbian copy for Trebovanje / Stanje. */
 export const stockSr = {
@@ -52,7 +53,7 @@ export const stockSr = {
   statusOk: "OK",
   statusNone: "Bez stanja",
   restock: "Dopuni",
-  restockPrimary: "Dopuni stanje",
+  restockPrimary: sr.listStates.stock.restock,
   history: "Istorija",
   remove: "Obriši sa stanja",
   removeConfirm: (name: string) => `Stavka „${name}” biće obrisana sa stanja zajedno sa količinom i minimumom. Sastojak možeš ponovo dodati dopunom.`,
@@ -64,7 +65,6 @@ export const stockSr = {
   sale: "Unesi prodaju",
   writeOff: "Otpis / kalo",
   inventory: "Inventura",
-  emptyTitle: "Nema stanja",
   emptyHint: "Dodaj prvu dopunu da pratiš zalihe.",
   footerShown: "od",
   footerItems: "stavki",
@@ -77,7 +77,6 @@ export const stockSr = {
   buyOnHand: "na stanju",
   buyMin: "min",
   loadError: "Stanje nije učitano. Osvežite stranicu.",
-  noVenue: "Prvo dodajte lokal u podešavanjima.",
   upsellRestock: "Dopuna sa nabavnom cenom je dostupna od Starter plana.",
   upsellWriteOff: "Otpis je dostupan od Starter plana.",
   upsellInventory: "Inventura je dostupna od Pro plana.",

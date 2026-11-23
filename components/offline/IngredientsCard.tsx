@@ -5,9 +5,7 @@ import { Carrot } from "lucide-react";
 import { CreateIngredientSheet } from "@/components/create/CreateIngredientSheet";
 import { DeleteIngredientButton } from "@/components/create/DeleteIngredientButton";
 import { usePlanUi } from "@/components/plan/PlanProvider";
-import { BentoCard } from "@/components/ui/BentoCard";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { SectionCardHeader } from "@/components/ui/SectionCardHeader";
+import { DashboardPreviewCard, dashboardRowClass } from "@/components/dashboard/DashboardLayout";
 import { useOnline } from "@/lib/hooks/useOnline";
 import { usePlan } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
@@ -16,15 +14,17 @@ import {
   type CachedIngredient,
 } from "@/lib/offline/cache";
 import { FREE_MAX_INGREDIENTS } from "@/lib/plan/limits";
-import { formatMoney } from "@/lib/utils/format";
+import { TableMoney } from "@/components/ui/TableMoney";
 
 export type IngredientsCardProps = {
   initialIngredients: CachedIngredient[];
+  initialCount: number | null;
   venueId?: string | null;
 };
 
 export function IngredientsCard({
   initialIngredients,
+  initialCount,
   venueId = null,
 }: IngredientsCardProps) {
   const online = useOnline(true);
@@ -38,7 +38,7 @@ export function IngredientsCard({
   }, [initialIngredients]);
 
   useEffect(() => {
-    if (online && initialIngredients.length > 0) return;
+    if (online) return;
     void getCachedIngredients().then((cached) => {
       if (cached.length === 0) return;
       setItems(cached);
@@ -51,7 +51,7 @@ export function IngredientsCard({
   }, [venueId, items]);
 
   function openCreate() {
-    if (isFree && items.length >= FREE_MAX_INGREDIENTS) {
+    if (isFree && (count ?? items.length) >= FREE_MAX_INGREDIENTS) {
       showFreeLimit("FREE_LIMIT_INGREDIENTS");
       return;
     }
@@ -62,94 +62,42 @@ export function IngredientsCard({
     setItems((prev) => prev.filter((row) => row.id !== ingredientId));
   }
 
-  const shown = items.slice(0, 8);
+  const count = online
+    ? initialCount === null ? null : initialCount + items.length - initialIngredients.length
+    : items.length;
+  const shown = items.slice(0, 3);
 
   return (
     <>
-      <BentoCard
-        header={
-          <SectionCardHeader
-            title={sr.ingredients.title}
-            count={items.length}
-            href="/ingredients"
-            onAdd={openCreate}
-            addLabel={sr.create.ingredient.add}
-            subtitle="Trenutne cene i škart"
-          />
-        }
+      <DashboardPreviewCard
+        title={sr.ingredients.title}
+        count={count}
+        href="/ingredients"
+        onAdd={openCreate}
+        addLabel={sr.create.ingredient.add}
+        emptyTitle={sr.listStates.ingredients.empty}
+        emptyIcon={<Carrot />}
+        hasItems={shown.length > 0}
       >
-        {shown.length > 0 ? (
-          <div className="max-h-80 overflow-auto app-scroll -mx-6 -mb-6">
-            <table className="app-table">
-              <thead className="sticky top-0 z-10">
-                <tr>
-                  <th>Naziv</th>
-                  <th>Jedinica</th>
-                  <th>Trenutna cena</th>
-                  <th>Škart %</th>
-                  <th className="hide-sm">Ažurirano</th>
-                  <th>
-                    <span className="sr-only">Akcije</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-[var(--text-2)]">
-                          <Carrot className="size-5" aria-hidden="true" />
-                        </span>
-                        <span className="font-semibold text-text">{item.name}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="unit-chip">{item.unit}</span>
-                    </td>
-                    <td>
-                      <span className="font-semibold tabular-nums">
-                        {formatMoney(item.price, { fractionDigits: 2 })}
-                      </span>{" "}
-                      <span className="text-[var(--text-3)]">
-                        din/{item.unit}
-                      </span>
-                    </td>
-                    <td className="tabular-nums">
-                      {formatMoney(item.waste_percent, { fractionDigits: 0 })}%
-                    </td>
-                    <td className="hide-sm text-[var(--text-3)]">—</td>
-                    <td>
-                      <div className="flex justify-end">
-                        <DeleteIngredientButton
-                          compact
-                          ingredientId={item.id}
-                          ingredientName={item.name}
-                          onDeleted={handleDeleted}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <EmptyState
-            icon={<Carrot className="size-7" aria-hidden="true" />}
-            title="Još nema sastojaka"
-            description="Dodajte prvi sastojak."
-            actionLabel="Dodaj sastojak"
-            onAction={openCreate}
-          />
-        )}
-      </BentoCard>
+        {shown.map((item) => (
+          <li key={item.id} className={dashboardRowClass}>
+            <Carrot className="size-4 shrink-0 text-text-2" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-text">{item.name}</p>
+              <p className="truncate text-ui-xs text-text-2">
+                <TableMoney value={item.price} unit={item.unit} />
+              </p>
+            </div>
+            <DeleteIngredientButton compact ingredientId={item.id} ingredientName={item.name} onDeleted={handleDeleted} />
+          </li>
+        ))}
+      </DashboardPreviewCard>
 
       <CreateIngredientSheet
         open={open}
         onClose={() => setOpen(false)}
         venueId={resolvedVenueId}
-        currentCount={items.length}
+        currentCount={count ?? items.length}
         existing={items}
         onCreated={(ingredient) => {
           setItems((prev) =>

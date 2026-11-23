@@ -420,7 +420,7 @@ export function FoodCostCalculator({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="text-sm text-muted">{sr.recipes.foodCost.title}</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-text">
+            <h1>
               {header.name}
             </h1>
             <p className="text-sm text-muted">{sr.recipes.foodCost.hint}</p>

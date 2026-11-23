@@ -32,19 +32,19 @@ export function EmptyState({
     >
       {icon ? (
         <div
-          className="flex size-16 items-center justify-center rounded-2xl bg-surface-2 text-[var(--text-2)] [&_svg]:size-6"
+          className="flex size-16 items-center justify-center rounded-2xl bg-surface-2 text-text-2 [&_svg]:size-6"
           aria-hidden="true"
         >
           {icon}
         </div>
       ) : null}
 
-      <div className="flex max-w-[40ch] flex-col gap-1.5">
-        <p className="text-[length:var(--fs-md)] font-semibold text-text">
+      <div className="flex max-w-[40ch] flex-col gap-2">
+        <p className="text-ui-md font-semibold text-text">
           {title}
         </p>
         {description ? (
-          <p className="text-[length:var(--fs-sm)] text-[var(--text-2)]">
+          <p className="text-ui-sm text-text-2">
             {description}
           </p>
         ) : null}

@@ -137,7 +137,6 @@ export function DeleteTemplateButton({
         type="button"
         onClick={openConfirm}
         disabled={loading}
-        aria-label={sr.create.template.delete}
         className={cn(
           "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[var(--radius-input)]",
           "border border-danger/40 px-3 text-sm font-medium text-danger-text",

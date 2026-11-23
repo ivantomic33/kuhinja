@@ -77,9 +77,10 @@ export async function fetchPlanDetails(): Promise<PlanQueryResult> {
  * When AppShell seeds PLAN_QUERY_KEY from the server, the first paint skips a
  * client round-trip (cache hit + staleTime).
  */
-export function usePlan() {
+export function usePlan(enabled = true) {
   const query = useQuery({
     queryKey: PLAN_QUERY_KEY,
+    enabled,
     queryFn: fetchPlanDetails,
     staleTime: 60_000,
     refetchOnWindowFocus: false,

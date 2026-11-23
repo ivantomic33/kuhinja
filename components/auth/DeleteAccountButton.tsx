@@ -1,8 +1,9 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { FunctionsHttpError } from "@supabase/supabase-js";
+import { useState } from "react";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { clearClientUserState } from "@/lib/auth/clear-client-state";
@@ -11,20 +12,19 @@ import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
 export function DeleteAccountButton() {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [needsSignIn, setNeedsSignIn] = useState(false);
   const [confirmWord, setConfirmWord] = useState("");
 
-  const canDelete = useMemo(() => {
-    return confirmWord.trim().toUpperCase() === sr.settings.deleteConfirmWord;
-  }, [confirmWord]);
+  const canDelete = confirmWord === sr.settings.deleteConfirmWord && !needsSignIn;
 
   function openConfirm() {
     if (loading) return;
     setError(undefined);
+    setNeedsSignIn(false);
     setConfirmWord("");
     setConfirmOpen(true);
   }
@@ -42,35 +42,28 @@ export function DeleteAccountButton() {
     setError(undefined);
 
     try {
-      const supabase = createClient();
-      const { data, error: invokeError } = await supabase.functions.invoke(
+      const { data, error: invokeError } = await createClient().functions.invoke<{ success: boolean }>(
         "delete-account",
-        { method: "POST" }
+        { body: { confirmation: confirmWord } }
       );
 
-      if (invokeError) {
+      if (invokeError instanceof FunctionsHttpError &&
+          [401, 403].includes(invokeError.context.status)) {
+        setNeedsSignIn(true);
+        setError(sr.auth.deleteAccountSignIn);
+        return;
+      }
+      if (invokeError || data?.success !== true) {
         setError(sr.auth.errors.deleteFailed);
-        setLoading(false);
-        setConfirmOpen(false);
         return;
       }
 
-      if (data && typeof data === "object" && "error" in data && data.error) {
-        setError(sr.auth.errors.deleteFailed);
-        setLoading(false);
-        setConfirmOpen(false);
-        return;
-      }
-
-      setConfirmOpen(false);
       await clearClientUserState(queryClient);
-      await supabase.auth.signOut();
-      router.replace("/login");
-      router.refresh();
+      window.location.replace("/#nalog-obrisan");
     } catch {
       setError(sr.auth.errors.deleteFailed);
+    } finally {
       setLoading(false);
-      setConfirmOpen(false);
     }
   }
 
@@ -88,12 +81,6 @@ export function DeleteAccountButton() {
           {sr.auth.deleteAccount}
         </PrimaryButton>
       </div>
-      {error ? (
-        <p role="alert" className="text-sm text-danger">
-          {error}
-        </p>
-      ) : null}
-
       <BottomSheet
         open={confirmOpen}
         onClose={closeConfirm}
@@ -124,6 +111,9 @@ export function DeleteAccountButton() {
       >
         <div className="flex flex-col gap-3">
           <p className="text-base text-muted">{sr.auth.deleteAccountConfirm}</p>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-text">
+            {sr.auth.deleteAccountData.map((item) => <li key={item}>{item}</li>)}
+          </ul>
           <p className="text-sm text-muted">{sr.settings.deleteConfirmHint}</p>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-text">
@@ -134,6 +124,9 @@ export function DeleteAccountButton() {
               onChange={(e) => setConfirmWord(e.target.value)}
               placeholder={sr.settings.deleteConfirmPlaceholder}
               autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              disabled={loading || needsSignIn}
               className={cn(
                 "min-h-11 w-full rounded-[var(--radius-md)] border border-border bg-surface-2 px-3",
                 "text-base text-text outline-none",
@@ -141,6 +134,8 @@ export function DeleteAccountButton() {
               )}
             />
           </label>
+          {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
+          {needsSignIn ? <SignOutButton /> : null}
         </div>
       </BottomSheet>
     </div>

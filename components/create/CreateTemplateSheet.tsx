@@ -2,8 +2,9 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Plus, Trash2, X } from "lucide-react";
+import { Check, Plus, Trash2 } from "lucide-react";
 import { usePlanUi } from "@/components/plan/PlanProvider";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useToast } from "@/components/ui/Toast";
 import { parseDecimal } from "@/lib/domain/parse";
@@ -15,10 +16,7 @@ import {
   saveChecklistTemplate,
   type CachedTemplateSummary,
 } from "@/lib/offline/cache";
-import {
-  canCreateTemplate,
-  FREE_MAX_TEMPLATES,
-} from "@/lib/plan/entitlements";
+import { FREE_MAX_TEMPLATES } from "@/lib/plan/entitlements";
 import {
   checklistTemplateInsertSchema,
   type ChecklistItemInput,
@@ -65,7 +63,8 @@ export function CreateTemplateSheet({
   const { isFree } = usePlan();
   const { showFreeLimit, handleError } = usePlanUi();
   const { toast } = useToast();
-  const titleId = useId();
+  const formId = useId();
+  const nameId = useId();
   const nameRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState("");
@@ -94,26 +93,7 @@ export function CreateTemplateSheet({
     reset();
     const t = window.setTimeout(() => nameRef.current?.focus(), 50);
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        handleClose();
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, loading]);
 
   function updateItem(key: string, patch: Partial<DraftItem>) {
     setItems((prev) =>
@@ -289,211 +269,183 @@ export function CreateTemplateSheet({
     }
   }
 
-  if (!open) return null;
-
   return (
-    <div
-      className="app-overlay"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) handleClose();
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="flex w-full max-w-[720px] max-h-[88vh] flex-col overflow-hidden rounded-[20px] border border-border-strong bg-surface shadow-[var(--shadow-modal)]"
-      >
-        <header className="flex items-start justify-between gap-3 border-b border-border px-6 pb-5 pt-6">
-          <div>
-            <h2
-              id={titleId}
-              className="text-[length:var(--fs-xl)] font-semibold text-text"
+    <BottomSheet
+      open={open}
+      onClose={handleClose}
+      title="Novi šablon smene"
+      description="Lista zadataka koju tim prolazi pre servisa."
+      size="lg"
+      footer={
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-ui-sm text-text-2">
+            Ukupno:{" "}
+            <span className="font-semibold tabular-nums text-text">
+              {Math.round(totalMinutes)} min
+            </span>
+          </p>
+          <div className="flex items-center gap-2">
+            <PrimaryButton
+              type="button"
+              variant="secondary"
+              onClick={handleClose}
+              disabled={loading}
             >
-              Novi šablon smene
-            </h2>
-            <p className="mt-1 text-[length:var(--fs-sm)] text-[var(--text-2)]">
-              Lista zadataka koju tim prolazi pre servisa.
-            </p>
+              Otkaži
+            </PrimaryButton>
+            <PrimaryButton
+              type="submit"
+              form={formId}
+              loading={loading}
+              leftIcon={<Check className="size-4" aria-hidden="true" />}
+            >
+              Sačuvaj šablon
+            </PrimaryButton>
           </div>
-          <button
-            type="button"
-            aria-label="Zatvori"
-            onClick={handleClose}
-            className="icon-btn"
+        </div>
+      }
+    >
+      <form id={formId} className="flex flex-col gap-6" onSubmit={onSubmit} noValidate>
+        <div>
+          <label className="field-label" htmlFor={nameId}>
+            Naziv šablona
+          </label>
+          <div
+            className={cn("field-input", nameError && "invalid")}
           >
-            <X className="size-5" aria-hidden="true" />
-          </button>
-        </header>
+            <input
+              ref={nameRef}
+              id={nameId}
+              aria-invalid={nameError ? true : undefined}
+              aria-describedby={nameError ? nameId + "-error" : undefined}
+              name="templateName"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (nameError) setNameError(undefined);
+              }}
+              placeholder="npr. Jutarnja priprema"
+              autoComplete="off"
+              required
+            />
+          </div>
+          {nameError ? (
+            <p id={nameId + "-error"} className="mt-2 text-ui-sm text-danger">
+              {nameError}
+            </p>
+          ) : null}
+        </div>
 
-        <form
-          className="flex min-h-0 flex-1 flex-col"
-          onSubmit={onSubmit}
-          noValidate
-        >
-          <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 app-scroll">
-            <div>
-              <label className="field-label" htmlFor="template-name">
-                Naziv šablona
-              </label>
-              <div
-                className={cn("field-input", nameError && "invalid")}
-              >
-                <input
-                  ref={nameRef}
-                  id="template-name"
-                  name="templateName"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if (nameError) setNameError(undefined);
-                  }}
-                  placeholder="npr. Jutarnja priprema"
-                  autoComplete="off"
-                  required
-                />
-              </div>
-              {nameError ? (
-                <p className="mt-1.5 text-[length:var(--fs-sm)] text-danger">
-                  {nameError}
-                </p>
-              ) : null}
-            </div>
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <h3 className="text-ui-md font-semibold text-text">
+              Stavke pripreme
+            </h3>
+            <span className="count-pill">{items.length}</span>
+          </div>
 
-            <div>
-              <div className="mb-3 flex items-center gap-2">
-                <h3 className="text-[length:var(--fs-md)] font-semibold text-text">
-                  Stavke pripreme
-                </h3>
-                <span className="count-pill">{items.length}</span>
-              </div>
+          <div className="mb-2 hidden grid-cols-[32px_minmax(0,1fr)_110px_minmax(0,.8fr)_44px] gap-3 px-1 text-ui-xs font-semibold uppercase tracking-[0.06em] text-text-3 min-[720px]:grid">
+            <span>#</span>
+            <span>Naziv stavke</span>
+            <span>Minuti</span>
+            <span>Grupa (opciono)</span>
+            <span />
+          </div>
 
-              <div className="mb-2 hidden grid-cols-[32px_minmax(0,1fr)_110px_minmax(0,.8fr)_44px] gap-2.5 px-1 text-[length:var(--fs-xs)] font-semibold uppercase tracking-[0.06em] text-[var(--text-3)] min-[720px]:grid">
-                <span>#</span>
-                <span>Naziv stavke</span>
-                <span>Minuti</span>
-                <span>Grupa (opciono)</span>
-                <span />
-              </div>
-
-              <ul className="flex flex-col gap-2.5">
-                {items.map((item, index) => (
-                  <li
-                    key={item.key}
-                    className={cn(
-                      "grid items-center gap-2.5",
-                      "grid-cols-[32px_minmax(0,1fr)_44px]",
-                      "min-[720px]:grid-cols-[32px_minmax(0,1fr)_110px_minmax(0,.8fr)_44px]",
-                      "max-[719px]:rounded-xl max-[719px]:bg-surface-2 max-[719px]:p-3"
-                    )}
-                  >
-                    <span className="inline-flex size-8 items-center justify-center rounded-full bg-surface-3 text-[length:var(--fs-xs)] font-semibold text-[var(--text-2)]">
-                      {index + 1}
-                    </span>
-                    <div className="contents min-[720px]:contents max-[719px]:col-span-1 max-[719px]:flex max-[719px]:flex-col max-[719px]:gap-2">
-                      <div
-                        className={cn(
-                          "field-input",
-                          fieldErrors[`label-${item.key}`] && "invalid",
-                          "max-[719px]:col-auto"
-                        )}
-                      >
-                        <input
-                          name={`item-label-${item.key}`}
-                          value={item.label}
-                          onChange={(e) =>
-                            updateItem(item.key, { label: e.target.value })
-                          }
-                          placeholder="Naziv stavke"
-                        />
-                      </div>
-                      <div className="field-input max-[719px]:w-full">
-                        <input
-                          name={`item-minutes-${item.key}`}
-                          type="number"
-                          min={0}
-                          inputMode="decimal"
-                          value={item.minutes}
-                          onChange={(e) =>
-                            updateItem(item.key, { minutes: e.target.value })
-                          }
-                          placeholder="Minuti"
-                        />
-                      </div>
-                      <div className="field-input max-[719px]:w-full min-[720px]:block">
-                        <input
-                          name={`item-group-${item.key}`}
-                          value={item.group}
-                          onChange={(e) =>
-                            updateItem(item.key, { group: e.target.value })
-                          }
-                          placeholder="Grupa (opciono)"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      aria-label="Ukloni stavku"
-                      onClick={() => removeItem(item.key)}
-                      className={cn(
-                        "icon-btn danger",
-                        items.length <= 1 && "invisible pointer-events-none"
-                      )}
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                type="button"
-                onClick={addItem}
+          <ul className="flex flex-col gap-3">
+            {items.map((item, index) => (
+              <li
+                key={item.key}
                 className={cn(
-                  "mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong",
-                  "bg-transparent text-[length:var(--fs-base)] font-semibold text-[var(--text-2)]",
-                  "transition-colors hover:border-accent hover:bg-[var(--accent-soft)] hover:text-accent"
+                  "grid items-center gap-3",
+                  "grid-cols-[32px_minmax(0,1fr)_44px]",
+                  "min-[720px]:grid-cols-[32px_minmax(0,1fr)_110px_minmax(0,.8fr)_44px]",
+                  "max-[720px]:rounded-xl max-[720px]:bg-surface-2 max-[720px]:p-3"
                 )}
               >
-                <Plus className="size-4" aria-hidden="true" />
-                Dodaj stavku
-              </button>
-            </div>
+                <span className="inline-flex size-8 items-center justify-center rounded-full bg-surface-3 text-ui-xs font-semibold text-text-2">
+                  {index + 1}
+                </span>
+                <div className="contents min-[720px]:contents max-[720px]:col-span-1 max-[720px]:flex max-[720px]:flex-col max-[720px]:gap-2">
+                  <div
+                    className={cn(
+                      "field-input",
+                      fieldErrors[`label-${item.key}`] && "invalid",
+                      "max-[720px]:col-auto"
+                    )}
+                  >
+                    <input
+                      name={`item-label-${item.key}`}
+                      aria-label={`Naziv stavke ${index + 1}`}
+                      aria-invalid={fieldErrors[`label-${item.key}`] ? true : undefined}
+                      value={item.label}
+                      onChange={(e) =>
+                        updateItem(item.key, { label: e.target.value })
+                      }
+                      placeholder="Naziv stavke"
+                    />
+                  </div>
+                  <div className="field-input max-[720px]:w-full">
+                    <input
+                      name={`item-minutes-${item.key}`}
+                      aria-label={`Minuti za stavku ${index + 1}`}
+                      type="number"
+                      min={0}
+                      inputMode="decimal"
+                      value={item.minutes}
+                      onChange={(e) =>
+                        updateItem(item.key, { minutes: e.target.value })
+                      }
+                      placeholder="Minuti"
+                    />
+                  </div>
+                  <div className="field-input max-[720px]:w-full min-[720px]:block">
+                    <input
+                      name={`item-group-${item.key}`}
+                      aria-label={`Grupa za stavku ${index + 1} (opciono)`}
+                      value={item.group}
+                      onChange={(e) =>
+                        updateItem(item.key, { group: e.target.value })
+                      }
+                      placeholder="Grupa (opciono)"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Ukloni stavku ${index + 1}`}
+                  onClick={() => removeItem(item.key)}
+                  className={cn(
+                    "icon-btn danger",
+                    items.length <= 1 && "invisible pointer-events-none"
+                  )}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
 
-            {formError ? (
-              <p role="alert" className="text-[length:var(--fs-sm)] text-danger">
-                {formError}
-              </p>
-            ) : null}
-          </div>
+          <button
+            type="button"
+            onClick={addItem}
+            className={cn(
+              "mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong",
+              "bg-transparent text-ui-base font-semibold text-text-2",
+              "transition-colors hover:border-accent hover:bg-[var(--accent-soft)] hover:text-accent"
+            )}
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            Dodaj stavku
+          </button>
+        </div>
 
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-surface-2 px-6 py-4 rounded-b-[20px]">
-            <p className="text-[length:var(--fs-sm)] text-[var(--text-2)]">
-              Ukupno:{" "}
-              <span className="font-semibold tabular-nums text-text">
-                {Math.round(totalMinutes)} min
-              </span>
-            </p>
-            <div className="flex items-center gap-2">
-              <PrimaryButton
-                type="button"
-                variant="secondary"
-                onClick={handleClose}
-                disabled={loading}
-              >
-                Otkaži
-              </PrimaryButton>
-              <PrimaryButton
-                type="submit"
-                loading={loading}
-                leftIcon={<Check className="size-4" aria-hidden="true" />}
-              >
-                Sačuvaj šablon
-              </PrimaryButton>
-            </div>
-          </footer>
-        </form>
-      </div>
-    </div>
+        {formError ? (
+          <p role="alert" className="text-ui-sm text-danger">
+            {formError}
+          </p>
+        ) : null}
+      </form>
+    </BottomSheet>
   );
 }

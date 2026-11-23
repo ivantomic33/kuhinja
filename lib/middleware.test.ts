@@ -38,6 +38,8 @@ describe("isPublicPath (default-deny allow-list)", () => {
     expect(isPublicPath("/register")).toBe(true);
     expect(isPublicPath("/forgot-password")).toBe(true);
     expect(isPublicPath("/premium")).toBe(true);
+    expect(isPublicPath("/opengraph-image")).toBe(true);
+    expect(isPublicPath("/twitter-image")).toBe(true);
     expect(isPublicPath("/r/share-token")).toBe(true);
     expect(isPublicPath("/~offline")).toBe(true);
     expect(isPublicPath("/auth/callback")).toBe(true);

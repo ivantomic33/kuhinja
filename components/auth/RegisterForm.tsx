@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { AuthDivider } from "@/components/auth/AuthDivider";
+import { AuthError } from "@/components/auth/AuthError";
 import { AuthField } from "@/components/auth/AuthField";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -23,6 +24,7 @@ export function RegisterForm() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return;
     setFormError(undefined);
     setSuccessMessage(undefined);
 
@@ -133,11 +135,7 @@ export function RegisterForm() {
           required
         />
 
-        {formError ? (
-          <p role="alert" className="text-sm text-danger">
-            {formError}
-          </p>
-        ) : null}
+        <AuthError message={formError} />
 
         <PrimaryButton type="submit" fullWidth loading={loading}>
           {formError ? sr.common.retry : sr.auth.signUp}

@@ -147,8 +147,11 @@ repozitorijum već sadrži `supabase/config.toml`, uklonite korak `supabase init
 4. Za naplatu postavite Stripe tajne i objavite odgovarajuće funkcije.
    [Podešavanje Edge Functions](supabase/functions/README.md)
 
-Kada izmenite PWA ikone, promenite verziju imena u `lib/config/pwa-icons.json`
-i `public/manifest.json`, pa pokrenite `node scripts/generate-pwa-icons.mjs`.
+Znak TreuPlate uređujte u `components/brand/mark.mjs`. Zatim pokrenite
+`node scripts/generate-pwa-icons.mjs <verzija>` (npr. `v3`). Skripta ažurira
+`lib/config/pwa-icons.json` i `public/manifest.json`, generiše SVG i PNG ikone
+i briše stare verzionisane ikone iz `public/icons/`. CI proverava da verzije u oba fajla
+ostanu usklađene (`pnpm check:pwa-icons`).
 
 ## Struktura foldera
 

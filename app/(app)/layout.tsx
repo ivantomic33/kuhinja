@@ -19,7 +19,7 @@ function RecipeUsage({ count }: { count?: number }) {
     <>
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-bold text-text">Free plan</p>
-        <p className="text-[length:var(--fs-xs)] text-[var(--text-2)] tabular-nums">
+        <p className="text-ui-xs text-text-2 tabular-nums">
           Recepti {count ?? "—"} / {FREE_MAX_RECIPES}
         </p>
       </div>

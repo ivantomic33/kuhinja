@@ -68,8 +68,8 @@ export function BentoCard({
       {footer ? (
         <div
           className={cn(
-            "flex items-center justify-between gap-3 border-t border-border text-[length:var(--fs-sm)] text-[var(--text-3)]",
-            dense ? "px-4 py-3" : "px-5 py-3.5",
+            "flex items-center justify-between gap-3 border-t border-border text-ui-sm text-text-3",
+            dense ? "px-4 py-3" : "px-5 py-4",
             footerClassName
           )}
         >

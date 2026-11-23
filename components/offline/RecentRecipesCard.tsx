@@ -9,17 +9,14 @@ import {
 } from "@/components/create/CreateRecipeSheet";
 import { usePlanUi } from "@/components/plan/PlanProvider";
 import { DeleteRecipeButton } from "@/components/recipes/DeleteRecipeButton";
-import { BentoCard } from "@/components/ui/BentoCard";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { FoodCostCell } from "@/components/ui/FoodCostCell";
-import { SectionCardHeader } from "@/components/ui/SectionCardHeader";
+import { DashboardPreviewCard, dashboardRowClass } from "@/components/dashboard/DashboardLayout";
 import { useOnline } from "@/lib/hooks/useOnline";
 import { usePlan } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
 import { getRecentRecipes, type CachedRecipe } from "@/lib/offline/cache";
 import { FREE_MAX_RECIPES } from "@/lib/plan/limits";
-import { formatMoney } from "@/lib/utils/format";
-import { formatPortions } from "@/lib/utils/portions";
+import { TableMoney } from "@/components/ui/TableMoney";
+import { formatPercent } from "@/lib/utils/format";
 
 export type RecipePreview = {
   id: string;
@@ -36,6 +33,7 @@ export type RecipeFoodCosts = Map<string, { percent: number; amount: number }>;
 
 export type RecentRecipesCardProps = {
   initialRecipes: RecipePreview[];
+  initialCount: number | null;
   recipeFoodCosts: Promise<RecipeFoodCosts>;
   venueId?: string | null;
 };
@@ -47,12 +45,16 @@ function RecipePreviewCost({
   recipeId: string;
   costs: Promise<RecipeFoodCosts>;
 }) {
-  const cost = use(costs).get(recipeId);
-  return <FoodCostCell percent={cost?.percent} cost={cost?.amount} />;
+  return formatPreviewCost(use(costs).get(recipeId)?.percent);
+}
+
+function formatPreviewCost(percent: number | null | undefined) {
+  return percent == null ? "—" : formatPercent(percent, { fractionDigits: 0 });
 }
 
 export function RecentRecipesCard({
   initialRecipes,
+  initialCount,
   recipeFoodCosts,
   venueId = null,
 }: RecentRecipesCardProps) {
@@ -67,7 +69,7 @@ export function RecentRecipesCard({
   }, [initialRecipes]);
 
   useEffect(() => {
-    if (online && initialRecipes.length > 0) return;
+    if (online) return;
     void getRecentRecipes().then((cached: CachedRecipe[]) => {
       if (cached.length === 0) return;
       setRecipes(
@@ -89,7 +91,7 @@ export function RecentRecipesCard({
   }, [venueId, recipes]);
 
   function openCreate() {
-    if (isFree && recipes.length >= FREE_MAX_RECIPES) {
+    if (isFree && (count ?? recipes.length) >= FREE_MAX_RECIPES) {
       showFreeLimit("FREE_LIMIT_RECIPES");
       return;
     }
@@ -107,112 +109,51 @@ export function RecentRecipesCard({
     setRecipes((prev) => prev.filter((row) => row.id !== recipeId));
   }
 
-  const shown = recipes.slice(0, 8);
+  const count = online
+    ? initialCount === null ? null : initialCount + recipes.length - initialRecipes.length
+    : recipes.length;
+  const shown = recipes.slice(0, 3);
 
   return (
     <>
-      <BentoCard
-        header={
-          <SectionCardHeader
-            title="Poslednji recepti"
-            count={recipes.length}
-            href="/recipes"
-            onAdd={openCreate}
-            addLabel={sr.create.recipe.add}
-            subtitle="Food cost i prodajna cena"
-          />
-        }
+      <DashboardPreviewCard
+        title={sr.dashboard.recentRecipes}
+        count={count}
+        href="/recipes"
+        onAdd={openCreate}
+        addLabel={sr.create.recipe.add}
+        emptyTitle={sr.listStates.recipes.empty}
+        emptyIcon={<BookOpen />}
+        hasItems={shown.length > 0}
       >
-        {shown.length > 0 ? (
-          <div className="max-h-80 overflow-auto app-scroll -mx-6 -mb-6">
-            <table className="app-table">
-              <thead className="sticky top-0 z-10">
-                <tr>
-                  <th>Recept</th>
-                  <th className="hide-sm">Porcije</th>
-                  <th>Food cost %</th>
-                  <th className="num">Cena</th>
-                  <th>
-                    <span className="sr-only">Akcije</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.map((recipe) => (
-                  <tr key={recipe.id}>
-                    <td>
-                      <Link
-                        href={`/recipes/${recipe.id}`}
-                        className="flex items-center gap-3 no-underline text-inherit"
-                      >
-                        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-[var(--text-2)]">
-                          <BookOpen className="size-5" aria-hidden="true" />
-                        </span>
-                        <span className="font-semibold text-text line-clamp-1">
-                          {recipe.name}
-                        </span>
-                      </Link>
-                    </td>
-                    <td className="hide-sm text-[var(--text-2)]">
-                      {formatPortions(recipe.portions)}
-                    </td>
-                    <td>
-                      {initialRecipes.includes(recipe) ? (
-                        <Suspense
-                          fallback={
-                            <span
-                              aria-hidden="true"
-                              className="inline-block h-3 w-24 rounded bg-surface-2 align-middle motion-safe:animate-pulse min-[901px]:w-40"
-                            />
-                          }
-                        >
-                          <RecipePreviewCost
-                            recipeId={recipe.id}
-                            costs={recipeFoodCosts}
-                          />
-                        </Suspense>
-                      ) : (
-                        <FoodCostCell
-                          percent={recipe.foodCostPercent}
-                          cost={recipe.foodCostAmount}
-                        />
-                      )}
-                    </td>
-                    <td className="num font-semibold">
-                      {formatMoney(recipe.selling_price, { fractionDigits: 0 })}{" "}
-                      din
-                    </td>
-                    <td className="w-12">
-                      <div className="flex justify-end">
-                        <DeleteRecipeButton
-                          compact
-                          recipeId={recipe.id}
-                          recipeName={recipe.name}
-                          onDeleted={handleDeleted}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <EmptyState
-            icon={<BookOpen className="size-7" aria-hidden="true" />}
-            title="Još nema recepata"
-            description="Dodajte prvi recept."
-            actionLabel="Dodaj recept"
-            onAction={openCreate}
-          />
-        )}
-      </BentoCard>
+        {shown.map((recipe) => (
+          <li key={recipe.id} className={dashboardRowClass}>
+            <BookOpen className="size-4 shrink-0 text-text-2" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <Link href={`/recipes/${recipe.id}`} className="block truncate font-semibold text-text hover:underline">
+                {recipe.name}
+              </Link>
+              <p className="truncate text-ui-xs text-text-2">
+                {recipe.selling_price > 0 ? <TableMoney value={recipe.selling_price} /> : "—"} · Food cost{" "}
+                <span className="tabular-nums">
+                  {initialRecipes.includes(recipe) ? (
+                    <Suspense fallback={<span aria-hidden="true" className="inline-block h-3 w-8 rounded bg-surface-3 align-middle motion-safe:animate-pulse" />}>
+                      <RecipePreviewCost recipeId={recipe.id} costs={recipeFoodCosts} />
+                    </Suspense>
+                  ) : formatPreviewCost(recipe.foodCostPercent)}
+                </span>
+              </p>
+            </div>
+            <DeleteRecipeButton compact recipeId={recipe.id} recipeName={recipe.name} onDeleted={handleDeleted} />
+          </li>
+        ))}
+      </DashboardPreviewCard>
 
       <CreateRecipeSheet
         open={open}
         onClose={() => setOpen(false)}
         venueId={resolvedVenueId}
-        currentCount={recipes.length}
+        currentCount={count ?? recipes.length}
         onCreated={handleCreated}
       />
     </>

@@ -10,11 +10,10 @@ export function formatMoney(
   options?: { fractionDigits?: number }
 ): string {
   const fractionDigits = options?.fractionDigits ?? 0;
-  if (!Number.isFinite(value)) return "0";
   return new Intl.NumberFormat(LOCALE, {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
-  }).format(value);
+  }).format(Number.isFinite(value) ? value : 0);
 }
 
 /** Format a percent with optional sign (+/−). */

@@ -42,3 +42,25 @@ Subscribe to:
 - `checkout.session.completed`
 - `customer.subscription.updated`
 - `customer.subscription.deleted`
+
+## Account deletion
+
+Apply the database migrations before deploying the Edge Function.
+
+```bash
+supabase db push
+supabase functions deploy delete-account
+```
+
+The function verifies the caller with Supabase Auth and uses the service role
+to invoke the deletion transaction. Token refresh does not reset the five-minute
+sign-in window.
+
+To run the integration test, start local Supabase, run
+`supabase functions serve delete-account`, and use a test environment file with
+the local Supabase URL, anon key, and service role key. The test requires `psql`
+and defaults to the local database on port 54322.
+
+```bash
+node --env-file=.env.local --test supabase/tests/delete-account.mjs
+```

@@ -34,8 +34,9 @@ export function DeleteRecipeButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
+  const actionLabel = compact ? sr.common.delete : sr.create.recipe.delete;
   const ariaLabel = recipeName?.trim()
-    ? `Obriši ${recipeName}`
+    ? `${actionLabel} ${recipeName}`
     : sr.create.recipe.delete;
 
   function openConfirm(event: MouseEvent<HTMLButtonElement>) {
@@ -140,7 +141,7 @@ export function DeleteRecipeButton({
         type="button"
         onClick={openConfirm}
         disabled={loading}
-        aria-label={ariaLabel}
+        aria-label={loading ? undefined : ariaLabel}
         className={cn(
           "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl",
           "border border-danger/40 px-3 text-sm font-medium text-danger-text",

@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import { Download, FileText, Send } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { TableMoney } from "@/components/ui/TableMoney";
 import { useToast } from "@/components/ui/Toast";
 import { downloadScheduleFile } from "@/lib/schedule/exports-browser";
 import { printScheduleContent } from "@/lib/schedule/exports-print";
@@ -36,8 +37,12 @@ function values(row: ReportTotals) {
 
 function ReportCells({ row }: { row: ReportTotals }) {
   return values(row).map((value, index) => {
-    const text = index < 3 ? `${formatHours(value)} h` : index < 5 ? `${value} d` : `${formatMoney(value)} din`;
-    return <td className={value ? undefined : "r-rep-zero"} key={headers[index]}>{value ? text : "—"}</td>;
+    const text = index < 3 ? `${formatHours(value)} h` : `${value} d`;
+    return (
+      <td className={value ? undefined : "r-rep-zero"} key={headers[index]}>
+        {value ? (index === 5 ? <TableMoney value={value} /> : text) : "—"}
+      </td>
+    );
   });
 }
 

@@ -11,10 +11,12 @@ import { RecipeFoodCostDialog } from "@/components/recipes/RecipeFoodCostDialog"
 import { usePlanUi } from "@/components/plan/PlanProvider";
 import { Badge } from "@/components/ui/Badge";
 import { BentoCard } from "@/components/ui/BentoCard";
+import { DataTable, sortTableRows, type DataTableColumn, type DataTableSort } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FoodCostCell } from "@/components/ui/FoodCostCell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import RouteError from "@/components/ui/RouteError";
 import { useToast } from "@/components/ui/Toast";
 import { UsageStrip } from "@/components/ui/UsageStrip";
 import { useWorkspacePagination, WorkspacePagination } from "@/components/ui/WorkspacePagination";
@@ -27,7 +29,7 @@ import {
 import { usePlan } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
 import { FREE_MAX_RECIPES } from "@/lib/plan/limits";
-import { formatMoney } from "@/lib/utils/format";
+import { TableMoney } from "@/components/ui/TableMoney";
 import { formatPortions } from "@/lib/utils/portions";
 
 const RecipeFoodCostCell = memo(FoodCostCell);
@@ -63,6 +65,9 @@ export function RecipesWorkspace({
   const [recipes, setRecipes] = useState(initialRecipes);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const hasQuery = Boolean(query.trim());
+  const [sort, setSort] = useState<DataTableSort>();
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const didShowAlert = useRef(false);
   const selectedRecipe = recipes.find((recipe) => recipe.id === selectedRecipeId);
@@ -80,8 +85,8 @@ export function RecipesWorkspace({
 
     didShowAlert.current = true;
     try {
-      if (sessionStorage.getItem("mise.recipe-food-cost-alert")) return;
-      sessionStorage.setItem("mise.recipe-food-cost-alert", "1");
+      if (sessionStorage.getItem("treuplate.recipe-food-cost-alert")) return;
+      sessionStorage.setItem("treuplate.recipe-food-cost-alert", "1");
     } catch {
       // Keep the alert usable if browser storage is blocked.
     }
@@ -99,8 +104,87 @@ export function RecipesWorkspace({
     if (!q) return recipes;
     return recipes.filter((row) => row.name.toLowerCase().includes(q));
   }, [recipes, query]);
-  const { page, pageCount, goToPage, scrollRef, visible } = useWorkspacePagination(filtered);
-  const paginated = pageCount > 1;
+  const columns: DataTableColumn<RecipeListItem>[] = [
+    {
+      id: "name",
+      header: "Recept",
+      compare: (a, b) => a.name.localeCompare(b.name, "sr-Latn"),
+      cell: recipe => {
+        const percent = recipe.foodCost?.percent ?? null;
+        return (
+          <div className="flex items-center gap-3">
+            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-text-2">
+              <BookOpen className="size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-semibold text-text md:line-clamp-1">{recipe.name}</p>
+              {recipe.updatedLabel || recipe.description ? (
+                <p className="text-ui-sm text-text-3 md:line-clamp-1">{recipe.updatedLabel ?? recipe.description}</p>
+              ) : null}
+              {percent !== null && percent > FOOD_COST_TARGET_MAX ? (
+                <div className="mt-1 flex flex-wrap gap-2">
+                  <Badge variant={percent >= FOOD_COST_FAR_OVER ? "danger" : "warning"}>
+                    {percent >= FOOD_COST_FAR_OVER ? "Znatno iznad cilja" : "Iznad cilja"}
+                  </Badge>
+                  {canSeeInsights ? null : <Badge variant="accent">Dostupno na Pro</Badge>}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      id: "portions",
+      header: "Porcije",
+      mobileLabel: "Porcije",
+      compare: (a, b) => a.portions - b.portions,
+      className: "whitespace-nowrap text-text-2",
+      cell: recipe => formatPortions(recipe.portions),
+    },
+    {
+      id: "cost",
+      header: "Food cost %",
+      mobileLabel: "Food cost %",
+      cell: recipe => <RecipeFoodCostCell percent={recipe.foodCost?.percent} cost={recipe.foodCost?.amount} className="max-md:flex-wrap" />,
+    },
+    {
+      id: "price",
+      header: "Prodajna cena",
+      mobileLabel: "Prodajna cena",
+      compare: (a, b) => a.selling_price - b.selling_price,
+      align: "right",
+      price: true,
+      className: "font-semibold",
+      cell: recipe => <TableMoney value={recipe.selling_price} />,
+    },
+    {
+      id: "actions",
+      header: "Akcije",
+      mobileLabel: null,
+      cell: recipe => {
+        const openRecipe = () => setSelectedRecipeId(recipe.id);
+        return (
+          <div className="flex flex-wrap items-center gap-2 md:flex-nowrap md:justify-end">
+            <button
+              type="button"
+              className="icon-btn size-11"
+              aria-label={`Food cost: ${recipe.name}`}
+              aria-haspopup="dialog"
+              onClick={openRecipe}
+            >
+              <Info className="size-4" aria-hidden="true" />
+            </button>
+            <PrimaryButton variant="secondary" size="sm" className="max-md:min-h-11 max-md:min-w-11" aria-haspopup="dialog" onClick={openRecipe}>
+              Otvori
+            </PrimaryButton>
+            <DeleteRecipeButton compact recipeId={recipe.id} recipeName={recipe.name} onDeleted={handleDeleted} />
+          </div>
+        );
+      },
+    },
+  ];
+  const { page, pageCount, goToPage, scrollRef, visible } = useWorkspacePagination(sortTableRows(filtered, columns, sort));
 
   function openCreate() {
     if (isFree && recipes.length >= FREE_MAX_RECIPES) {
@@ -122,43 +206,41 @@ export function RecipesWorkspace({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <PageHeader
         title={sr.recipes.title}
-        description="Food cost i skaliranje serija."
-        action={
+        description={sr.listStates.recipes.description}
+        action={!loadError && recipes.length > 0 ? (
           <PrimaryButton
             type="button"
             leftIcon={<Plus className="size-4" aria-hidden="true" />}
             onClick={openCreate}
           >
-            Dodaj recept
+            {sr.create.recipe.add}
           </PrimaryButton>
-        }
+        ) : undefined}
       />
 
-      <UsageStrip
-        label="Recepti"
+      {!loadError ? <UsageStrip
+        label={sr.recipes.title}
         used={recipes.length}
         max={FREE_MAX_RECIPES}
         isPremium={isPremium}
-      />
+      /> : null}
 
-      {loadError && recipes.length === 0 ? (
-        <p
-          role="alert"
-          className="rounded-xl border border-danger/30 bg-[var(--danger-soft)] p-5 text-danger"
-        >
-          Recepti nisu učitani. Proverite vezu i osvežite stranicu.
-        </p>
+      {loadError ? (
+        <RouteError message={sr.listStates.recipes.error} />
       ) : (
         <BentoCard
+          flush={filtered.length > 0}
+          bodyClassName="min-w-0"
           header={
-            <div className="flex w-full flex-col gap-3">
-              <label className="field-input w-full min-w-[240px] max-w-[480px] max-[900px]:max-w-none">
+            <div className="flex w-full min-w-0 flex-col gap-3">
+              <label className="field-input w-full min-w-0 max-w-[480px] max-[900px]:max-w-none">
                 <Search className="size-4" aria-hidden="true" />
                 <span className="sr-only">{sr.common.search}</span>
                 <input
+                  ref={searchRef}
                   type="search"
                   onChange={(event) => {
                     const value = event.currentTarget.value;
@@ -187,136 +269,34 @@ export function RecipesWorkspace({
           {filtered.length === 0 ? (
             <EmptyState
               icon={<BookOpen className="size-7" aria-hidden="true" />}
-              title={
-                query
-                  ? `Nema rezultata za „${query}”`
-                  : "Još nema recepata"
-              }
-              description={
-                query
-                  ? "Proverite pravopis ili probajte drugi naziv."
-                  : "Dodajte prvi recept i odmah vidite food cost i maržu."
-              }
-              actionLabel={query ? undefined : "Dodaj recept"}
-              onAction={query ? undefined : openCreate}
-              action={
-                query ? undefined : (
-                  <PrimaryButton onClick={openCreate}>Dodaj recept</PrimaryButton>
-                )
-              }
+              title={hasQuery ? sr.listStates.noResults : sr.listStates.recipes.empty}
+              actionLabel={hasQuery ? sr.listStates.clearSearch : sr.create.recipe.add}
+              onAction={hasQuery ? () => {
+                setQuery("");
+                goToPage(0);
+                if (searchRef.current) {
+                  searchRef.current.value = "";
+                  searchRef.current.focus();
+                }
+              } : openCreate}
             />
           ) : (
-            <div
-              ref={scrollRef}
-              className={paginated
-                ? "app-scroll -mx-6 -mb-6 max-h-[70dvh] overflow-auto"
-                : "-mx-6 -mb-6 overflow-x-auto"}
-              role={paginated ? "region" : undefined}
-              aria-label={paginated ? sr.recipes.title : undefined}
-              tabIndex={paginated ? 0 : undefined}
-            >
-              <table className="app-table">
-                <thead className={paginated ? "sticky top-0 z-10 shadow-[0_1px_0_var(--border)]" : undefined}>
-                  <tr>
-                    <th>Recept</th>
-                    <th>Porcije</th>
-                    <th>Food cost %</th>
-                    <th className="num">Prodajna cena</th>
-                    <th>
-                      <span className="sr-only">Akcije</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visible.map((recipe) => {
-                    const percent = recipe.foodCost?.percent ?? null;
-                    const openRecipe = () => setSelectedRecipeId(recipe.id);
-
-                    return (
-                      <tr
-                        key={recipe.id}
-                        className="cursor-pointer"
-                        onClick={(event) => {
-                          if (event.target instanceof Element && !event.target.closest("button, a, [role='dialog']")) {
-                            openRecipe();
-                          }
-                        }}
-                      >
-                        <td>
-                          <div className="flex items-center gap-3">
-                            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-[var(--text-2)]">
-                              <BookOpen className="size-5" aria-hidden="true" />
-                            </span>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-text line-clamp-1">
-                                {recipe.name}
-                              </p>
-                              {recipe.updatedLabel ? (
-                                <p className="text-[length:var(--fs-sm)] text-[var(--text-3)]">
-                                  {recipe.updatedLabel}
-                                </p>
-                              ) : recipe.description ? (
-                                <p className="text-[length:var(--fs-sm)] text-[var(--text-3)] line-clamp-1">
-                                  {recipe.description}
-                                </p>
-                              ) : null}
-                              {percent !== null && percent > FOOD_COST_TARGET_MAX ? (
-                                <div className="mt-1 flex flex-wrap gap-1.5">
-                                  <Badge variant={percent >= FOOD_COST_FAR_OVER ? "danger" : "warning"}>Iznad cilja</Badge>
-                                  {canSeeInsights ? null : <Badge variant="accent">Dostupno na Pro</Badge>}
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="text-[var(--text-2)]">
-                          {formatPortions(recipe.portions)}
-                        </td>
-                        <td>
-                          <RecipeFoodCostCell
-                            percent={percent}
-                            cost={recipe.foodCost?.amount}
-                          />
-                        </td>
-                        <td className="num font-semibold">
-                          {formatMoney(recipe.selling_price, {
-                            fractionDigits: 0,
-                          })}{" "}
-                          din
-                        </td>
-                        <td>
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              className="icon-btn size-11"
-                              aria-label={`Food cost: ${recipe.name}`}
-                              aria-haspopup="dialog"
-                              onClick={openRecipe}
-                            >
-                              <Info className="size-4" aria-hidden="true" />
-                            </button>
-                            <PrimaryButton
-                              variant="secondary"
-                              size="sm"
-                              aria-haspopup="dialog"
-                              onClick={openRecipe}
-                            >
-                              Otvori
-                            </PrimaryButton>
-                            <DeleteRecipeButton
-                              compact
-                              recipeId={recipe.id}
-                              recipeName={recipe.name}
-                              onDeleted={handleDeleted}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={columns}
+              rows={visible}
+              rowKey={recipe => recipe.id}
+              rowLabel={recipe => recipe.name}
+              label={sr.recipes.title}
+              scrollRef={scrollRef}
+              sort={sort}
+              onSortChange={next => {
+                setSort(next);
+                goToPage(0);
+              }}
+              onRowClick={recipe => setSelectedRecipeId(recipe.id)}
+              selectable
+              stacked
+            />
           )}
         </BentoCard>
       )}

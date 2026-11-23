@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
+    <main className="page-gutter mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-4 text-center">
       <p className="text-sm font-medium text-muted">404</p>
       <h1 className="text-2xl font-semibold tracking-tight text-text">
         {sr.notFound.title}

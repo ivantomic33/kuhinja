@@ -39,7 +39,7 @@ export function ProgressBar({
     <div className={cn("flex w-full flex-col gap-1", className)}>
       {(label || showValue) && (
         <div className="flex items-center justify-between gap-2 text-xs">
-          {label ? <span className="text-[var(--text-2)]">{label}</span> : <span />}
+          {label ? <span className="text-text-2">{label}</span> : <span />}
           {showValue ? (
             <span
               className={cn(
@@ -48,7 +48,7 @@ export function ProgressBar({
                   ? "text-danger"
                   : resolvedTone === "warning"
                     ? "text-warning"
-                    : "text-[var(--text-2)]"
+                    : "text-text-2"
               )}
             >
               {Math.round(clamped)}%

@@ -1,7 +1,10 @@
 "use client";
 
-import type { InputHTMLAttributes } from "react";
+import { useId, useState, type InputHTMLAttributes } from "react";
+import { Eye, EyeOff } from "lucide-react";
+import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
+import { AuthError } from "./AuthError";
 
 export type AuthFieldProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
@@ -13,10 +16,18 @@ export function AuthField({
   error,
   id,
   className,
+  type,
+  "aria-describedby": description,
+  "aria-invalid": invalid,
   ...rest
 }: AuthFieldProps) {
-  const fieldId = id ?? rest.name;
-  const errorId = error && fieldId ? `${fieldId}-error` : undefined;
+  const fallbackId = useId();
+  const fieldId = id ?? rest.name ?? fallbackId;
+  const errorId = `${fieldId}-error`;
+  const describedBy = [description, error && errorId].filter(Boolean).join(" ");
+  const [visible, setVisible] = useState(false);
+  const password = type === "password";
+  const Icon = visible ? EyeOff : Eye;
 
   return (
     <div className="flex flex-col gap-1">
@@ -26,25 +37,35 @@ export function AuthField({
       >
         {label}
       </label>
-      <input
-        id={fieldId}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={errorId}
-        className={cn(
-          "min-h-[52px] w-full rounded-[var(--radius-input)] border bg-surface-2 px-3",
-          "text-base text-text outline-none transition-opacity",
-          "placeholder:text-muted",
-          "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
-          error ? "border-danger" : "border-border",
-          className
-        )}
-        {...rest}
-      />
-      {error ? (
-        <p id={errorId} role="alert" className="text-sm text-danger">
-          {error}
-        </p>
-      ) : null}
+      <div className="relative">
+        <input
+          {...rest}
+          id={fieldId}
+          type={password && visible ? "text" : type}
+          autoCapitalize={password ? "none" : rest.autoCapitalize}
+          spellCheck={password ? false : rest.spellCheck}
+          aria-invalid={error ? true : invalid}
+          aria-describedby={describedBy || undefined}
+          className={cn(
+            "focus-ring min-h-13 w-full rounded-[var(--radius-input)] border bg-surface-2 px-3 text-base text-text placeholder:text-muted",
+            error || invalid ? "border-danger" : "border-border",
+            password && "pr-14",
+            className
+          )}
+        />
+        {password ? (
+          <button
+            type="button"
+            aria-label={`${visible ? sr.auth.hidePassword : sr.auth.showPassword} (${label})`}
+            aria-controls={fieldId}
+            onClick={() => setVisible(value => !value)}
+            className="focus-ring absolute top-1/2 right-1 inline-flex size-11 -translate-y-1/2 items-center justify-center rounded-md text-text-2 hover:bg-surface-3"
+          >
+            <Icon className="size-5" aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
+      <AuthError id={errorId} message={error} />
     </div>
   );
 }

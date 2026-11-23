@@ -4,6 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } f
 import { createPortal } from "react-dom";
 import { AlertTriangle, Check, ChevronDown, Clock, Minus, Plus, Sun, Thermometer, Trash2, X } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { useDialogFocus } from "@/components/ui/useDialogFocus";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { assignmentTime, dayLong, dayShort, shifts, shortDate } from "@/lib/schedule/math";
 import type { Assignment, Employee, ShiftCode, TemplateCode } from "@/lib/schedule/types";
@@ -190,6 +191,7 @@ function EditorPopover({
   const titleId = useId();
   const descriptionId = useId();
   close.current = onClose;
+  useDialogFocus({ open: true, onClose, panelRef: ref, returnFocusTo: anchor, lockScroll: false });
 
   useLayoutEffect(() => {
     const panel = ref.current;
@@ -208,29 +210,18 @@ function EditorPopover({
     const observer = new ResizeObserver(update);
     observer.observe(panel);
     update();
-    panel.focus({ preventScroll: true });
 
     const outside = (event: Event) => {
       if (event.target instanceof Node && !panel.contains(event.target) && !anchor.contains(event.target)) close.current();
     };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.preventDefault(); close.current(); }
-    };
     document.addEventListener("pointerdown", outside);
-    document.addEventListener("focusin", outside);
-    document.addEventListener("keydown", escape);
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
       observer.disconnect();
       document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("focusin", outside);
-      document.removeEventListener("keydown", escape);
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
-      if (panel.contains(document.activeElement) || document.activeElement === document.body) {
-        anchor.focus({ preventScroll: true });
-      }
     };
   }, [anchor]);
 

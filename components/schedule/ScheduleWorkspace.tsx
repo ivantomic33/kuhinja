@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, CreditCard, FileText, Lock, MapPin, MoreHorizontal, Percent, Plus, Printer, Send, Share2, UserRound, Users } from "lucide-react";
+import { AlertTriangle, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, CreditCard, FileText, Lock, MapPin, MoreHorizontal, Percent, Plus, Printer, Send, Share2, UserRound, Users } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { BentoCard } from "@/components/ui/BentoCard";
 import { BottomSheet } from "@/components/ui/BottomSheet";
@@ -12,6 +12,7 @@ import { KpiCard } from "@/components/ui/KpiCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useToast } from "@/components/ui/Toast";
+import { sr } from "@/lib/i18n/sr";
 import { hasMinPlan, planDisplayName, type PlanId } from "@/lib/plan/entitlements";
 import { loadScheduleReport, updateSchedule } from "@/lib/schedule/actions";
 import type { ScheduleAction } from "@/lib/schemas/schedule";
@@ -28,6 +29,7 @@ const todayTime = new Intl.DateTimeFormat("sr-Latn-RS", { hour: "2-digit", minut
 const publishDate = new Intl.DateTimeFormat("sr-Latn-RS", { day: "2-digit", month: "2-digit", timeZone: "Europe/Belgrade" });
 const avgHours = new Intl.NumberFormat("sr-RS", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const templates = ["J", "P", "N", "D"] as const;
+const copy = sr.listStates.schedule;
 
 type Dialog = { type: "employee"; employee?: Employee } | { type: "location" } | { type: "templates" };
 
@@ -210,9 +212,9 @@ export function ScheduleWorkspace({ data }: { data: ScheduleWeek }) {
   return <section className="screen r-screen" id="s-raspored">
     <div id="rRoot">
       <header className="page-head r-header">
-        <div><h1 className="app-h1">{mine ? "Moje smene" : "Raspored"}</h1>
+        <div><h1>{mine ? "Moje smene" : copy.title}</h1>
           {mine ? <p>{[employee?.full_name, employee?.role, data.venue.name].filter(Boolean).join(" · ")}</p>
-            : <p>Ko radi koju smenu ove nedelje.<span className="r-sub-desk"> Klikni na polje da dodeliš smenu.</span></p>}
+            : <p>{copy.description}<span className="r-sub-desk"> {copy.editHint}</span></p>}
         </div>
         {!mine ? <div className="actions r-actions">
           {business ? <div className="r-loc-btn"><ScheduleMenu label={<>{data.venue.name}<ChevronDown size={15} aria-hidden="true" /></>} icon={<MapPin size={17} aria-hidden="true" />}>
@@ -227,7 +229,15 @@ export function ScheduleWorkspace({ data }: { data: ScheduleWeek }) {
             <hr /><button type="button" disabled={busy} onClick={openReport}><FileText size={16} /> Mesečni izveštaj sati {!business ? <Locked plan="Business" /> : null}</button>
             <button type="button" onClick={() => setDialog({ type: "templates" })}><Clock3 size={16} /> Šabloni smena</button>
           </ScheduleMenu>
-          <PrimaryButton variant="secondary" aria-label="Podeli" disabled={busy} leftIcon={<Share2 aria-hidden="true" />} onClick={openShare}><span className="r-share-label">Podeli</span></PrimaryButton>
+          <PrimaryButton
+            variant="secondary"
+            aria-label="Podeli"
+            aria-disabled={busy || undefined}
+            leftIcon={<Share2 aria-hidden="true" />}
+            onClick={() => { if (!busy) openShare(); }}
+          >
+            <span className="r-share-label">Podeli</span>
+          </PrimaryButton>
           <PrimaryButton className="r-publish" leftIcon={<Send aria-hidden="true" />} disabled={busy} onClick={publish}>Objavi raspored</PrimaryButton>
         </div> : null}
       </header>
@@ -257,14 +267,14 @@ export function ScheduleWorkspace({ data }: { data: ScheduleWeek }) {
 
         <div className="r-week-card">
           {weekNav}
-          {!data.employees.length ? <EmptyState title="Nema zaposlenih u rasporedu."
-            actionLabel="Dodaj zaposlenog" onAction={() => setDialog({ type: "employee" })} />
-            : !data.assignments.length ? <EmptyState title="Nedelja je prazna."
-                action={<PrimaryButton variant="secondary" disabled={busy} onClick={copyWeek}>Kopiraj prošlu nedelju</PrimaryButton>} />
+          {!data.employees.length ? <EmptyState icon={<Users />} title={copy.noEmployees}
+            actionLabel={copy.addEmployee} onAction={() => setDialog({ type: "employee" })} />
+            : !data.assignments.length ? <EmptyState icon={<CalendarDays />} title={copy.emptyWeek}
+                action={<PrimaryButton disabled={busy} onClick={copyWeek}>{copy.copyWeek}</PrimaryButton>} />
             : null}
-          <ScheduleGrid monday={data.monday} today={data.today} employees={data.employees} assignments={data.assignments} analysis={analysis} showPro={pro}
+          {data.employees.length > 0 ? <ScheduleGrid monday={data.monday} today={data.today} employees={data.employees} assignments={data.assignments} analysis={analysis} showPro={pro}
             onAddEmployee={() => setDialog({ type: "employee" })} onEditEmployee={(employee) => setDialog({ type: "employee", employee })}
-            onSave={saveAssignment} focus={focus} />
+            onSave={saveAssignment} focus={focus} /> : null}
         </div>
 
         <div className="r-bottom">

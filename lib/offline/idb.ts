@@ -3,8 +3,8 @@
  * No external dependency — uses the browser IDB API directly.
  */
 
-// Keep this database name so queued writes survive upgrades.
-const DB_NAME = "webforum-offline";
+/** IndexedDB database for the offline sync queue. */
+export const SYNC_QUEUE_DB_NAME = "treuplate-offline";
 const DB_VERSION = 1;
 const STORE_QUEUE = "sync_queue";
 
@@ -43,7 +43,7 @@ function openDb(): Promise<IDBDatabase> {
       return;
     }
 
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(SYNC_QUEUE_DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = () => {
       const db = request.result;

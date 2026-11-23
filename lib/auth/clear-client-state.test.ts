@@ -5,8 +5,14 @@ const clearSyncQueue = vi.fn(async () => undefined);
 const resetBrowserClient = vi.fn();
 const signOut = vi.fn(async () => undefined);
 
-vi.mock("@/lib/offline/cache", () => ({ clearOfflineCache }));
-vi.mock("@/lib/offline/idb", () => ({ clearSyncQueue }));
+vi.mock("@/lib/offline/cache", () => ({
+  clearOfflineCache,
+  OFFLINE_CACHE_DB_NAME: "treuplate-cache",
+}));
+vi.mock("@/lib/offline/idb", () => ({
+  clearSyncQueue,
+  SYNC_QUEUE_DB_NAME: "treuplate-offline",
+}));
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({ auth: { signOut } }),
   resetBrowserClient,
@@ -18,6 +24,17 @@ afterEach(() => {
 });
 
 describe("clearClientUserState", () => {
+  it("keeps the session cookie available for the sign-out server action", async () => {
+    vi.stubGlobal("window", {});
+    const { clearClientUserState } = await import("@/lib/auth/clear-client-state");
+
+    await clearClientUserState(null, { preserveSession: true });
+
+    expect(signOut).not.toHaveBeenCalled();
+    expect(clearOfflineCache).toHaveBeenCalledOnce();
+    expect(clearSyncQueue).toHaveBeenCalledOnce();
+  });
+
   it("clears query cache, IDB helpers, cache storage, and local auth", async () => {
     const deletedCaches: string[] = [];
     const queryClient = { clear: vi.fn() };

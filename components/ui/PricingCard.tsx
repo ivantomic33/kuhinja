@@ -57,7 +57,7 @@ export function PricingCard({
               {name}
             </h3>
             {description ? (
-              <p className="mt-0.5 text-sm text-muted">{description}</p>
+              <p className="mt-1 text-sm text-muted">{description}</p>
             ) : null}
           </div>
           {badge ? (
@@ -65,7 +65,7 @@ export function PricingCard({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-1">
           <div
             className={cn(
               "font-semibold tracking-tight tabular-nums",
@@ -88,7 +88,7 @@ export function PricingCard({
             >
               <span
                 className={cn(
-                  "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full",
+                  "mt-1 inline-flex size-5 shrink-0 items-center justify-center rounded-full",
                   highlighted && "bg-[var(--accent-muted)] text-accent",
                   active && "bg-[var(--success-muted)] text-success",
                   !highlighted && !active && "bg-surface-2 text-muted"

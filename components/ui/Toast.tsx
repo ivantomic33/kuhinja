@@ -4,13 +4,15 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 import { AlertTriangle, Check } from "lucide-react";
-import { cn } from "@/lib/utils/cn";
+import { AnimatePresence, motion, useIsPresent } from "framer-motion";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 
 type ToastAction = {
   label: string;
@@ -50,6 +52,14 @@ export function useToast(): ToastContextValue {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const timers = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    const activeTimers = timers.current;
+    return () => {
+      activeTimers.forEach(timer => window.clearTimeout(timer));
+      activeTimers.clear();
+    };
+  }, []);
 
   const dismiss = useCallback((id: string) => {
     const timer = timers.current.get(id);
@@ -93,41 +103,53 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div
-        className={cn(
-          "app-toast",
-          current
-            ? "pointer-events-auto opacity-100 translate-y-0"
-            : "pointer-events-none opacity-0 translate-y-5"
-        )}
-        role="status"
-        aria-live="polite"
-      >
-        {current ? (
-          <>
-            {current.tone === "warning" ? (
-              <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
-            ) : current.tone !== "danger" ? (
-              <Check className="size-4 shrink-0 text-success" aria-hidden="true" />
-            ) : null}
-            <span className="min-w-0 flex-1">{current.message}</span>
-            {current.action ? (
-              <button
-                type="button"
-                className="shrink-0 rounded-lg px-2 py-1 text-[length:var(--fs-sm)] font-semibold text-accent hover:bg-[var(--accent-soft)]"
-                onClick={() => {
-                  current.action?.onClick();
-                  dismiss(current.id);
-                }}
-              >
-                {current.action.label}
-              </button>
-            ) : null}
-          </>
-        ) : (
-          <span className="opacity-0">.</span>
-        )}
+      <div className="sr-only">
+        <div role="status" aria-atomic="true">
+          {current && current.tone !== "danger" ? <span key={current.id}>{current.message}</span> : null}
+        </div>
+        <div role="alert" aria-atomic="true">
+          {current?.tone === "danger" ? <span key={current.id}>{current.message}</span> : null}
+        </div>
       </div>
+      <AnimatePresence initial={false}>
+        {current ? <ToastView key="toast" item={current} dismiss={dismiss} /> : null}
+      </AnimatePresence>
     </ToastContext.Provider>
+  );
+}
+
+function ToastView({ item, dismiss }: { item: ToastItem; dismiss: (id: string) => void }) {
+  const reduced = usePrefersReducedMotion();
+  const present = useIsPresent();
+  return (
+    <motion.div
+      className="app-toast"
+      data-motion-surface
+      inert={!present || undefined}
+      aria-hidden={!present || undefined}
+      initial={reduced ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={reduced ? undefined : { opacity: 0, y: 6 }}
+      transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
+    >
+      {item.tone === "warning" ? (
+        <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
+      ) : item.tone !== "danger" ? (
+        <Check className="size-4 shrink-0 text-success" aria-hidden="true" />
+      ) : null}
+      <p className="min-w-0 flex-1" aria-hidden="true">{item.message}</p>
+      {item.action ? (
+        <button
+          type="button"
+          className="focus-ring shrink-0 rounded-lg px-2 py-1 text-ui-sm font-semibold text-accent hover:bg-[var(--accent-soft)]"
+          onClick={() => {
+            item.action?.onClick();
+            dismiss(item.id);
+          }}
+        >
+          {item.action.label}
+        </button>
+      ) : null}
+    </motion.div>
   );
 }

@@ -15,6 +15,7 @@ export type SectionCardHeaderProps = {
   className?: string;
   /** Show ghost "Otvori" link */
   showOpen?: boolean;
+  singleLine?: boolean;
 };
 
 export function SectionCardHeader({
@@ -27,22 +28,23 @@ export function SectionCardHeader({
   children,
   className,
   showOpen = true,
+  singleLine = false,
 }: SectionCardHeaderProps) {
   return (
     <div className={cn("flex w-full min-w-0 items-start gap-2", className)}>
       <div className="min-w-0 flex-1">
-        <div className="flex min-h-11 flex-wrap items-center gap-2">
-          <h2 className="truncate text-[length:var(--fs-md)] font-semibold text-text">
+        <div className={cn("flex min-h-11 items-center gap-2", !singleLine && "flex-wrap")}>
+          <h2 className="min-w-0 truncate text-ui-xl font-semibold text-text">
             {title}
           </h2>
           {typeof count === "number" ? (
-            <span className="count-pill">{count}</span>
+            <span className="count-pill shrink-0">{count}</span>
           ) : null}
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             {href && showOpen ? (
               <Link
                 href={href}
-                className="inline-flex h-9 items-center gap-1 rounded-[10px] px-3 text-[length:var(--fs-sm)] font-semibold text-[var(--text-2)] no-underline hover:bg-surface-2 hover:text-text"
+                className="inline-flex h-9 items-center gap-1 rounded-[10px] px-3 text-ui-sm font-semibold text-text-2 no-underline hover:bg-surface-2 hover:text-text"
               >
                 {sr.common.open}
                 <ArrowRight className="size-4" aria-hidden="true" />
@@ -61,7 +63,7 @@ export function SectionCardHeader({
           </div>
         </div>
         {subtitle ? (
-          <p className="text-[length:var(--fs-sm)] text-[var(--text-2)]">{subtitle}</p>
+          <p className="text-ui-sm text-text-2">{subtitle}</p>
         ) : null}
         {children}
       </div>

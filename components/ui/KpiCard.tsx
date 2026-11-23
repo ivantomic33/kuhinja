@@ -10,10 +10,6 @@ export type KpiCardProps = {
   hint?: ReactNode;
   icon?: ReactNode;
   highlight?: boolean;
-  trend?: {
-    direction: "up" | "down" | "flat";
-    label: string;
-  };
   locked?: boolean;
   lockedTitle?: string;
   lockedHref?: string;
@@ -28,7 +24,6 @@ export function KpiCard({
   hint,
   icon,
   highlight = false,
-  trend,
   locked = false,
   lockedTitle,
   lockedHref = "/premium",
@@ -43,12 +38,12 @@ export function KpiCard({
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[length:var(--fs-sm)] font-medium text-[var(--text-2)]">
+        <p className="text-ui-sm font-medium text-text-2">
           {label}
         </p>
         {locked ? (
           <span
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-[var(--text-2)]"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-text-2"
             aria-hidden="true"
           >
             <Lock className="size-4" />
@@ -59,7 +54,7 @@ export function KpiCard({
               "inline-flex size-9 shrink-0 items-center justify-center rounded-[10px]",
               highlight
                 ? "bg-[var(--accent-soft)] text-accent"
-                : "bg-surface-2 text-[var(--text-2)]"
+                : "bg-surface-2 text-text-2"
             )}
             aria-hidden="true"
           >
@@ -68,53 +63,30 @@ export function KpiCard({
         ) : null}
       </div>
 
+      <p className="flex items-baseline text-ui-kpi font-semibold leading-none tracking-tight text-text tabular-nums">
+        {value}
+        {suffix ? (
+          <span className="ml-1 text-ui-base font-medium text-text-2">
+            {suffix}
+          </span>
+        ) : null}
+      </p>
+
       {locked ? (
-        <div className="flex flex-1 flex-col justify-between gap-2">
-          <p className="text-sm font-medium leading-snug text-text">
-            {lockedTitle ?? value}
-          </p>
+        <div className="flex flex-1 flex-col gap-2">
+          {lockedTitle ? <p className="text-ui-sm leading-snug text-text-2">{lockedTitle}</p> : null}
           {lockedLinkLabel ? (
             <Link
               href={lockedHref}
-              className="text-xs font-semibold text-accent hover:text-[var(--accent-hover)]"
+              className="text-xs font-semibold text-accent hover:text-accent-hover"
             >
               {lockedLinkLabel}
             </Link>
           ) : null}
         </div>
-      ) : (
-        <>
-          <p className="flex items-baseline text-[length:var(--fs-kpi)] font-semibold leading-none tracking-[-0.02em] text-text tabular-nums">
-            {value}
-            {suffix ? (
-              <span className="ml-1 text-[length:var(--fs-base)] font-medium text-[var(--text-2)]">
-                {suffix}
-              </span>
-            ) : null}
-          </p>
-          {trend ? (
-            <p
-              className={cn(
-                "text-[13px] font-medium",
-                trend.direction === "up" && "text-success",
-                trend.direction === "down" && "text-success",
-                trend.direction === "flat" && "text-[var(--text-2)]"
-              )}
-            >
-              {trend.direction !== "flat" ? (
-                <span className="font-bold">{trend.label.split(" ")[0]}</span>
-              ) : null}{" "}
-              <span className="text-[var(--text-2)]">
-                {trend.direction === "flat"
-                  ? trend.label
-                  : trend.label.split(" ").slice(1).join(" ")}
-              </span>
-            </p>
-          ) : hint ? (
-            <p className="text-[13px] text-[var(--text-2)]">{hint}</p>
-          ) : null}
-        </>
-      )}
+      ) : hint ? (
+        <p className="text-ui-sm text-text-2">{hint}</p>
+      ) : null}
     </article>
   );
 }

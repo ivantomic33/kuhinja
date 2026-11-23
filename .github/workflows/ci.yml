@@ -20,6 +20,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Check PWA icon versions match
+        run: pnpm check:pwa-icons
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build

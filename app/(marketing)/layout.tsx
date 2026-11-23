@@ -11,7 +11,7 @@ export default function MarketingLayout({
   return (
     <div className="min-h-dvh bg-background text-text">
       <header className="sticky top-0 z-40 border-b border-border/80 bg-background/85 backdrop-blur-md">
-        <div className="mx-auto flex h-20 max-w-[1240px] items-center justify-between gap-4 px-5 sm:px-8">
+        <div className="page-gutter mx-auto flex h-20 max-w-app items-center justify-between gap-4">
           <Link
             href="/"
             className="flex items-center gap-3 text-2xl font-semibold tracking-tight text-text"

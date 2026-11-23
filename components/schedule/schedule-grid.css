@@ -8,7 +8,7 @@
 }
 
 .r-grid-wrap {
-  --surface-zebra: #141416;
+  --surface-zebra: var(--surface-zebra-solid);
   overflow: auto;
   max-height: calc(100dvh - 120px);
   scroll-padding: 52px 0 0 214px;
@@ -25,7 +25,7 @@
 }
 
 .r-grid :is(th, td) {
-  padding: 8px 6px;
+  padding: var(--space-2) var(--space-2);
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
@@ -42,7 +42,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  padding-block: 10px;
+  padding-block: var(--space-3);
   color: var(--text-3);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -59,7 +59,7 @@
   left: 0;
   z-index: 1;
   width: 214px;
-  padding-inline: 14px;
+  padding-inline: var(--space-4);
   border-right: 1px solid var(--border);
 }
 
@@ -69,7 +69,7 @@
 
 .r-grid .c-sum {
   width: 112px;
-  padding-right: 14px;
+  padding-right: var(--space-4);
   text-align: right;
 }
 
@@ -77,7 +77,7 @@
 .r-sum,
 .r-covs {
   display: grid;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .r-dh {
@@ -116,7 +116,7 @@
 .r-legend > span {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .r-emp {
@@ -162,7 +162,7 @@
   border-radius: 50%;
   color: var(--text-2);
   background: var(--surface-3);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 700;
 }
 
@@ -185,8 +185,8 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 2px;
-  padding: 4px;
+  gap: var(--space-1);
+  padding: var(--space-1);
   border: 1px solid color-mix(in srgb, var(--shift-tint, var(--shift, var(--border-strong))) var(--shift-border, 28%), transparent);
   border-radius: var(--r-md);
   background: color-mix(in srgb, var(--shift-tint, var(--shift, var(--border-strong))) var(--shift-bg, 12%), transparent);
@@ -198,7 +198,7 @@
 .r-cell .n {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   font-weight: 650;
 }
 
@@ -279,17 +279,17 @@ button.r-cell:not(:disabled):hover,
 }
 
 .r-grid .r-addrow td {
-  padding: 6px 14px;
+  padding: var(--space-2) var(--space-4);
 }
 
 .r-grid tfoot :is(th, td) {
   vertical-align: top;
-  padding-block: 12px;
+  padding-block: var(--space-3);
   border-bottom: none;
 }
 
 .r-grid tfoot :is(th, td) small {
-  margin-top: 2px;
+  margin-top: var(--space-1);
   font-weight: 400;
 }
 
@@ -297,8 +297,8 @@ button.r-cell:not(:disabled):hover,
 .r-gap {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: var(--space-1);
+  font-size: var(--fs-xs);
 }
 
 .r-cov b {
@@ -313,7 +313,7 @@ button.r-cell:not(:disabled):hover,
 
 .r-gap {
   width: fit-content;
-  padding: 2px 6px;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
   border-radius: var(--radius-pill);
   background: var(--danger-soft);
@@ -346,18 +346,18 @@ button.r-cell:not(:disabled):hover,
 }
 
 .r-foot {
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-4);
 }
 
 .r-legend {
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: var(--space-2) var(--space-4);
   color: var(--text-2);
   font-size: var(--fs-xs);
 }
 
 .r-legend > span {
-  gap: 5px;
+  gap: var(--space-1);
 }
 
 .r-pop,
@@ -374,7 +374,7 @@ button.r-cell:not(:disabled):hover,
   width: 300px;
   max-height: calc(100dvh - 16px);
   overflow: auto;
-  padding: 14px;
+  padding: var(--space-4);
   outline: none;
   color: var(--text);
 }
@@ -382,8 +382,8 @@ button.r-cell:not(:disabled):hover,
 .rp-head {
   display: flex;
   justify-content: space-between;
-  gap: 4px;
-  margin-bottom: 10px;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
 }
 
 .rp-head h2 {
@@ -399,11 +399,11 @@ button.r-cell:not(:disabled):hover,
 
 .rp-head button {
   flex: none;
-  margin: -8px -8px 0 0;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0 0;
 }
 
 .rp-label {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   color: var(--text-2);
   font-size: var(--fs-xs);
   font-weight: 650;
@@ -425,7 +425,7 @@ button.r-cell:not(:disabled):hover,
 .rp-custom,
 .r-picker {
   display: grid;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .rp-tpls,
@@ -434,7 +434,7 @@ button.r-cell:not(:disabled):hover,
 }
 
 .rp-custom {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
 }
 
 .rp-custom label {
@@ -447,7 +447,7 @@ button.r-cell:not(:disabled):hover,
   display: block;
   width: 100%;
   min-height: var(--tap);
-  padding: 6px;
+  padding: var(--space-2);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-md);
   color: var(--text);
@@ -463,7 +463,7 @@ button.r-cell:not(:disabled):hover,
 .rp-opt {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
   min-height: var(--tap);
   border-radius: var(--r-md);
@@ -485,7 +485,7 @@ button.r-cell:not(:disabled):hover,
 
 .rp-abs {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding-top: 8px;
+  padding-top: var(--space-2);
   border-top: 1px solid var(--border);
 }
 
@@ -495,16 +495,16 @@ button.r-cell:not(:disabled):hover,
 }
 
 .rp-remove {
-  margin-top: 6px;
+  margin-top: var(--space-2);
 }
 
 .rp-warn,
 .rp-error {
   display: flex;
   align-items: start;
-  gap: 6px;
-  margin-bottom: 8px;
-  padding: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding: var(--space-2);
   border-radius: var(--r-sm);
   background: var(--warning-bg, var(--danger-soft));
   color: var(--warning-ink, #fca5a5);
@@ -517,7 +517,7 @@ button.r-cell:not(:disabled):hover,
 
 .r-pick {
   min-height: var(--tap);
-  padding: 6px 8px;
+  padding: var(--space-2) var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   color: var(--text-2);
@@ -530,10 +530,10 @@ button.r-cell:not(:disabled):hover,
 
 .r-tip {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
   width: max-content;
   max-width: 270px;
-  padding: 8px;
+  padding: var(--space-2);
   pointer-events: none;
   font-size: var(--fs-xs);
 }
@@ -545,7 +545,7 @@ button.r-cell:not(:disabled):hover,
 .r-tip .ln {
   display: flex;
   align-items: baseline;
-  gap: 5px;
+  gap: var(--space-1);
   color: var(--warning-ink);
 }
 
@@ -575,15 +575,15 @@ button.r-cell:not(:disabled):hover,
   .r-m-cards {
     display: grid;
     min-width: 0;
-    gap: 10px;
+    gap: var(--space-3);
   }
 
   .r-days {
     display: grid;
     grid-template-columns: repeat(7, minmax(var(--tap), 1fr));
     overflow-x: auto;
-    gap: 2px;
-    padding: 2px;
+    gap: var(--space-1);
+    padding: var(--space-1);
   }
 
   .r-days button {
@@ -594,7 +594,7 @@ button.r-cell:not(:disabled):hover,
     border: 1px solid transparent;
     border-radius: var(--r-md);
     color: var(--text-2);
-    font-size: 11px;
+    font-size: var(--fs-xs);
     line-height: 1.3;
   }
 
@@ -635,7 +635,7 @@ button.r-cell:not(:disabled):hover,
   .r-scard,
   .r-pcard {
     min-width: 0;
-    padding: 10px 12px;
+    padding: var(--space-3) var(--space-3);
     border: 1px solid var(--warning-tone, var(--border));
     border-radius: var(--r-lg);
     background: var(--surface);
@@ -651,7 +651,7 @@ button.r-cell:not(:disabled):hover,
   .r-gap-body {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     color: var(--text-2);
     font-size: var(--fs-xs);
   }
@@ -676,18 +676,18 @@ button.r-cell:not(:disabled):hover,
 
   .r-gap-body {
     justify-content: space-between;
-    margin-top: 8px;
+    margin-top: var(--space-2);
   }
 
   .r-gap-body button {
-    padding-inline: 10px;
+    padding-inline: var(--space-3);
   }
 
   .r-prow {
     width: 100%;
     min-height: 50px;
-    margin-top: 5px;
-    padding: 5px 0;
+    margin-top: var(--space-1);
+    padding: var(--space-1) 0;
     border-top: 1px solid var(--border);
     color: var(--text-2);
     text-align: left;
@@ -699,16 +699,16 @@ button.r-cell:not(:disabled):hover,
   }
 
   .wb {
-    padding: 2px 5px;
+    padding: var(--space-1) var(--space-1);
     border-radius: var(--radius-pill);
     background: var(--warning-bg);
     color: var(--warning-ink);
     white-space: nowrap;
-    font-size: 10px;
+    font-size: var(--fs-xs);
   }
 
   .r-m-names h3 {
-    margin-bottom: 4px;
+    margin-bottom: var(--space-1);
     color: var(--text-2);
     font-size: var(--fs-xs);
     font-weight: 600;
@@ -717,16 +717,16 @@ button.r-cell:not(:disabled):hover,
   .r-names {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .r-name {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-1);
     min-height: var(--tap);
     min-width: var(--tap);
-    padding-inline: 8px;
+    padding-inline: var(--space-2);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-pill);
     font-size: var(--fs-xs);
@@ -749,19 +749,19 @@ button.r-cell:not(:disabled):hover,
     display: grid;
     grid-template-columns: repeat(7, minmax(var(--tap), 1fr));
     overflow-x: auto;
-    margin: 5px -3px 0;
-    padding: 2px 3px;
+    margin: var(--space-1) calc(-1 * var(--space-1)) 0;
+    padding: var(--space-1) var(--space-1);
   }
 
   .r-bars button {
     display: grid;
     align-content: center;
-    gap: 4px;
+    gap: var(--space-1);
     min-height: var(--tap);
-    padding-inline: 3px;
+    padding-inline: var(--space-1);
     border-radius: 4px;
     color: var(--text-2);
-    font-size: 11px;
+    font-size: var(--fs-xs);
   }
 
   .r-bars .bar {
@@ -780,7 +780,7 @@ button.r-cell:not(:disabled):hover,
   }
 
   .r-pline {
-    margin-top: 6px;
+    margin-top: var(--space-2);
     color: var(--warning-ink);
     font-size: var(--fs-xs);
   }

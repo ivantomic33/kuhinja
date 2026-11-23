@@ -5,7 +5,9 @@ import { clear, createStore, del, get, set } from "idb-keyval";
 import type { IngredientUnit } from "@/lib/supabase/database.types";
 import type { ChecklistItemInput } from "@/lib/schemas/domain";
 
-const store = createStore("mise-offline", "cache");
+/** IndexedDB database for the offline read cache. */
+export const OFFLINE_CACHE_DB_NAME = "treuplate-cache";
+const store = createStore(OFFLINE_CACHE_DB_NAME, "cache");
 
 const KEYS = {
   recipes: "recent-recipes",

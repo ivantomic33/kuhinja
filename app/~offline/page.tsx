@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function OfflineFallbackPage() {
   return (
-    <div className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-4 bg-background px-5 py-8 text-text">
+    <main className="page-gutter mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-4 bg-background py-8 text-text">
       <BentoCard>
         <div className="flex flex-col items-center gap-4 py-4 text-center">
           <CloudOff className="size-8 text-muted" aria-hidden="true" />
@@ -25,6 +25,6 @@ export default function OfflineFallbackPage() {
           </Link>
         </div>
       </BentoCard>
-    </div>
+    </main>
   );
 }

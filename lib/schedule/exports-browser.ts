@@ -1,5 +1,6 @@
 import { APP_NAME } from "@/lib/config/app";
 import icons from "@/lib/config/pwa-icons.json";
+import { tokens } from "@/lib/design/tokens";
 import { getSchedulePreview, shiftColors } from "./exports-preview";
 import type { PublicSchedule } from "./types";
 
@@ -24,7 +25,7 @@ export async function createSchedulePng(schedule: PublicSchedule): Promise<Blob>
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Canvas unavailable");
 
-  context.fillStyle = "#18181b";
+  context.fillStyle = tokens.surface;
   context.fillRect(0, 0, canvas.width, canvas.height);
   const logo = new Image();
   logo.src = icons.svg;
@@ -34,10 +35,10 @@ export async function createSchedulePng(schedule: PublicSchedule): Promise<Blob>
   const right = canvas.width - padding;
   context.textBaseline = "middle";
   context.font = "700 28px Inter, system-ui, sans-serif";
-  context.fillStyle = "#fafafa";
+  context.fillStyle = tokens.text;
   context.fillText(title, 94, 46, right - 205);
   context.font = "18px Inter, system-ui, sans-serif";
-  context.fillStyle = "#a1a1aa";
+  context.fillStyle = tokens.text2;
   context.fillText(week, 94, 74);
   context.textAlign = "right";
   context.fillText(APP_NAME, right, 46);
@@ -47,19 +48,21 @@ export async function createSchedulePng(schedule: PublicSchedule): Promise<Blob>
   context.textAlign = "center";
   context.font = "600 18px Inter, system-ui, sans-serif";
   days.forEach((day, index) => {
-    context.fillStyle = day.today ? "#ff6b35" : "#a1a1aa";
+    context.fillStyle = day.today ? tokens.accent : tokens.text2;
     context.fillText(day.label, columnLeft(index) + columnWidth / 2, 107);
   });
 
   rows.forEach((row, index) => {
     const top = 127 + index * rowHeight;
     const middle = top + (rowHeight - gap) / 2;
-    context.fillStyle = "#fafafa";
+    context.fillStyle = tokens.text;
     context.textAlign = "left";
     context.fillText(row.name, padding + 8, middle, employeeWidth - 16);
     context.textAlign = "center";
     row.cells.forEach((cell, column) => {
-      const [background, border, color] = cell ? shiftColors[cell.code] : ["transparent", "#27272a", "#fafafa"];
+      const [background, border, color] = cell
+        ? shiftColors[cell.code]
+        : ["transparent", tokens.border, tokens.text];
       const left = columnLeft(column);
       context.beginPath();
       context.roundRect(left, top, columnWidth, rowHeight - gap, 7);

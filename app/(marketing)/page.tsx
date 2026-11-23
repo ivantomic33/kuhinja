@@ -14,6 +14,7 @@ import { PricingCard } from "@/components/ui/PricingCard";
 import { sr } from "@/lib/i18n/sr";
 import { PLAN_PRICES } from "@/lib/plan/entitlements";
 import { getSiteUrl } from "@/lib/seo/site";
+import { openGraphCard, twitterCard } from "@/lib/seo/social-card";
 import { cn } from "@/lib/utils/cn";
 
 const priceFormat = new Intl.NumberFormat("sr-Latn", {
@@ -31,10 +32,13 @@ export const metadata: Metadata = {
     title: sr.marketing.metaTitle,
     description: sr.marketing.metaDescription,
     url: "/",
+    images: [openGraphCard],
   },
   twitter: {
+    card: "summary_large_image",
     title: sr.marketing.metaTitle,
     description: sr.marketing.metaDescription,
+    images: [twitterCard],
   },
   robots: {
     index: true,
@@ -104,13 +108,20 @@ export default function MarketingPage() {
     <>
       <MarketingJsonLd siteUrl={getSiteUrl()} />
 
-      <main className="mx-auto flex w-full max-w-[1240px] flex-col gap-20 px-5 py-12 sm:px-8 lg:gap-24 lg:py-20">
+      <main className="page-gutter mx-auto flex w-full max-w-app flex-col gap-20 py-12 lg:gap-24 lg:py-20">
+        <p
+          id="nalog-obrisan"
+          role="status"
+          className="hidden scroll-mt-24 rounded-lg border border-border bg-surface-2 px-4 py-3 text-sm text-text target:block"
+        >
+          {sr.auth.deleteAccountSuccess}
+        </p>
         <section aria-labelledby="hero-title" className="grid items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-16">
           <div className="flex flex-col gap-7">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent">
               {sr.marketing.heroEyebrow}
             </p>
-            <h1 id="hero-title" className="max-w-xl text-balance text-[44px] font-semibold leading-[1.08] tracking-[-0.05em] text-text sm:text-6xl xl:text-[68px]">
+            <h1 id="hero-title" className="max-w-xl text-balance text-ui-hero font-semibold leading-[1.08] tracking-[-0.05em] text-text sm:text-6xl xl:text-ui-hero-wide">
               {sr.marketing.heroTitle}
             </h1>
             <p className="max-w-lg text-pretty text-lg leading-relaxed text-muted">
@@ -143,7 +154,7 @@ export default function MarketingPage() {
         >
           <h2
             id="features-title"
-            className="text-3xl font-semibold tracking-tight text-text"
+            className="text-ui-kpi font-semibold tracking-tight text-text"
           >
             {sr.marketing.featuresTitle}
           </h2>
@@ -215,7 +226,7 @@ export default function MarketingPage() {
 
         <section className="flex flex-col items-start justify-between gap-6 rounded-2xl border border-border bg-surface p-7 sm:flex-row sm:items-center sm:p-10">
           <div>
-            <h2 className="text-3xl font-semibold tracking-tight">{sr.marketing.closingTitle}</h2>
+            <h2 className="text-ui-kpi font-semibold tracking-tight">{sr.marketing.closingTitle}</h2>
             <p className="mt-3 text-base text-muted">{sr.marketing.closingBody}</p>
           </div>
           <CtaLink href="/register">{sr.marketing.ctaRegister}</CtaLink>
