@@ -1,7 +1,9 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { expect, it, vi } from "vitest";
 import { createClient } from "@/lib/supabase/client";
-import { applySale, removeStockLevel } from "./actions";
+import { PLANS } from "@/lib/billing/plans";
+import { applyRestock, applySale, removeStockLevel } from "./actions";
+import { belgradeToday } from "./math";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: vi.fn() }));
 
@@ -12,6 +14,55 @@ function mockStockResponse(fetch: typeof globalThis.fetch) {
     { global: { fetch }, auth: { persistSession: false, autoRefreshToken: false } }
   ));
 }
+
+it.each([0, -1, 1.001, Number.NaN])("rejects an invalid restock price %s before writing stock", async (unitCost) => {
+  const fetch = vi.fn<typeof globalThis.fetch>();
+  mockStockResponse(fetch);
+  await expect(applyRestock({
+    venueId: "venue-a",
+    updatePrices: true,
+    lines: [{ ingredientId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", qty: 1, unitCost }],
+  })).rejects.toThrow();
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+it("sends one price restock RPC per priced ingredient", async () => {
+  const ingredientId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const fetch = vi.fn<typeof globalThis.fetch>().mockImplementation(async (_url, request) => {
+    if (new URL(String(_url)).pathname.endsWith("/get_entitlements")) {
+      return Response.json({
+        plan: "starter", status: "active", grace: false, trial_ends_at: null,
+        features: PLANS.starter.features, limits: PLANS.starter.limits,
+      });
+    }
+    if (request?.method === "GET") {
+      return Response.json([{
+        id: "level-a", venue_id: "venue-a", ingredient_id: ingredientId,
+        qty: 5, min_qty: 2, used_today: 0, used_on: belgradeToday(),
+      }]);
+    }
+    return new Response(null, { status: 204 });
+  });
+  mockStockResponse(fetch);
+  vi.spyOn(createClient().auth, "getUser").mockResolvedValue({
+    data: { user: { id: ingredientId, app_metadata: {}, user_metadata: {}, aud: "authenticated", created_at: "" } },
+    error: null,
+  });
+
+  await applyRestock({
+    venueId: "venue-a", updatePrices: true,
+    lines: [{ ingredientId, qty: 1, unitCost: 5.25 }],
+  });
+
+  const writes = fetch.mock.calls.filter(([url, request]) =>
+    request?.method !== "GET" && !String(url).endsWith("/get_entitlements"));
+  expect(writes.map(([url]) => new URL(String(url)).pathname)).toEqual([
+    "/rest/v1/stock_levels", "/rest/v1/stock_moves", "/rest/v1/rpc/restock_ingredient",
+  ]);
+  expect(JSON.parse(String(writes[2][1]?.body))).toEqual({
+    p_ingredient_id: ingredientId, p_new_price: 5.25, p_note: null,
+  });
+});
 
 it("deletes only the selected stock level for the specified venue", async () => {
   const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(new Response(null, { status: 204 }));

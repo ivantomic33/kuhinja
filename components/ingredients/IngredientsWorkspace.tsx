@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Carrot, Grid2X2, Plus, Search, Table2 } from "lucide-react";
 import { CreateIngredientSheet } from "@/components/create/CreateIngredientSheet";
 import { DeleteIngredientButton } from "@/components/create/DeleteIngredientButton";
@@ -18,6 +19,8 @@ import { usePlan } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
 import type { CachedIngredient } from "@/lib/offline/cache";
 import { FREE_MAX_INGREDIENTS } from "@/lib/plan/limits";
+import { queryKeys } from "@/lib/query/keys";
+import { useHydratedData } from "@/lib/query/use-hydrated-data";
 import { formatMoney } from "@/lib/utils/format";
 import { TableMoney } from "@/components/ui/TableMoney";
 import { cn } from "@/lib/utils/cn";
@@ -27,20 +30,19 @@ type ViewMode = "table" | "cards";
 const VIEW_KEY = "treuplate-ingredients-view";
 
 export type IngredientsWorkspaceProps = {
-  initialIngredients: CachedIngredient[];
   venueId?: string | null;
   loadError?: boolean;
 };
 
 export function IngredientsWorkspace({
-  initialIngredients,
   venueId = null,
   loadError = false,
 }: IngredientsWorkspaceProps) {
   const { isFree, isPremium } = usePlan();
   const { showFreeLimit } = usePlanUi();
-  const [previousInitialIngredients, setPreviousInitialIngredients] = useState(initialIngredients);
-  const [items, setItems] = useState(initialIngredients);
+  const queryClient = useQueryClient();
+  const listKey = queryKeys.ingredients(venueId);
+  const items = useHydratedData<CachedIngredient[]>(listKey);
   const [open, setOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<CachedIngredient | null>(null);
   const [query, setQuery] = useState("");
@@ -48,11 +50,6 @@ export function IngredientsWorkspace({
   const hasQuery = Boolean(query.trim());
   const [sort, setSort] = useState<DataTableSort>();
   const [view, setView] = useState<ViewMode>("table");
-
-  if (previousInitialIngredients !== initialIngredients) {
-    setPreviousInitialIngredients(initialIngredients);
-    setItems(initialIngredients);
-  }
 
   useEffect(() => {
     try {
@@ -153,7 +150,7 @@ export function IngredientsWorkspace({
   }
 
   function handleDeleted(id: string) {
-    setItems((prev) => prev.filter((row) => row.id !== id));
+    queryClient.setQueryData<CachedIngredient[]>(listKey, (prev) => prev?.filter((row) => row.id !== id));
   }
 
   return (
@@ -341,6 +338,7 @@ export function IngredientsWorkspace({
       )}
 
       <CreateIngredientSheet
+        key={editTarget?.id ?? "create"}
         open={open}
         onClose={() => {
           setOpen(false);
@@ -349,10 +347,10 @@ export function IngredientsWorkspace({
         venueId={venueId}
         currentCount={items.length}
         existing={items}
-        // If sheet supports edit later; for now create still works
+        ingredient={editTarget}
         onCreated={(ingredient) => {
-          setItems((prev) =>
-            [...prev.filter((row) => row.id !== ingredient.id), ingredient].sort(
+          queryClient.setQueryData<CachedIngredient[]>(listKey, (prev) =>
+            [...(prev ?? []).filter((row) => row.id !== ingredient.id), ingredient].sort(
               (a, b) => a.name.localeCompare(b.name, "sr")
             )
           );

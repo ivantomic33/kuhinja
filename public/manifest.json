@@ -1,14 +1,14 @@
 {
   "name": "TreuPlate",
   "short_name": "TreuPlate",
-  "description": "Recepti, troškovi i priprema smene za restorane.",
+  "description": "TreuPlate pomaže restoranima da izračunaju trošak porcije, prate nabavne cene, skaliraju recepte i na jednom mestu organizuju zalihe, pripremu i raspored smena.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#0B0B0E",
   "background_color": "#0B0B0E",
-  "lang": "sr-Latn",
+  "lang": "sr",
   "icons": [
     {
       "src": "/icons/icon-192-v3.png",

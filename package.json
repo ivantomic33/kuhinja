@@ -18,14 +18,17 @@
     "pkg:frozen": "pnpm install --frozen-lockfile"
   },
   "dependencies": {
+    "@paddle/paddle-js": "^1.6.6",
     "@serwist/next": "^9.5.15",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
     "@tanstack/react-query": "^5.80.6",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.15.0",
     "idb-keyval": "^6.3.0",
     "lucide-react": "^0.511.0",
     "next": "^15.5.29",
+    "pdf-lib": "^1.17.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "serwist": "^9.5.15",
@@ -34,7 +37,9 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@next/bundle-analyzer": "^16.4.6",
     "@tailwindcss/postcss": "^4.1.8",
+    "@tanstack/react-virtual": "^3.14.28",
     "@types/node": "^20.17.57",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",

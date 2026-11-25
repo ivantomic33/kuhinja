@@ -22,15 +22,15 @@ import RouteError from "@/components/ui/RouteError";
 import type { CachedIngredient } from "@/lib/offline/cache";
 import { getEntitlements, planDisplayName, type PlanId } from "@/lib/plan/entitlements";
 import { sr } from "@/lib/i18n/sr";
+import { queryKeys } from "@/lib/query/keys";
+import { useHydratedData } from "@/lib/query/use-hydrated-data";
 import { DashboardLayout, dashboardKpiHeight } from "./DashboardLayout";
 
-export type DashboardClientProps = {
+export type DashboardData = {
   firstName: string;
   greeting: string;
   plan: PlanId;
-  venueId: string | null;
   recipes: RecipePreview[];
-  recipeFoodCosts: Promise<RecipeFoodCosts>;
   recipeCount: number | null;
   ingredients: CachedIngredient[];
   ingredientCount: number | null;
@@ -38,15 +38,23 @@ export type DashboardClientProps = {
   templates: TemplateRow[];
   initialTemplateCount: number | null;
   loadError: boolean;
+};
+
+export type DashboardClientProps = {
+  venueId: string | null;
+  recipeFoodCosts: Promise<RecipeFoodCosts>;
   trends: { recipes: ReactNode; ingredients: ReactNode; templates: ReactNode };
 };
 
 const copy = sr.dashboard;
 
 export function DashboardClient({
-  firstName, greeting, plan, venueId, recipes, recipeFoodCosts, recipeCount,
-  ingredients, ingredientCount, stockAlertCount, templates, initialTemplateCount, loadError, trends,
+  venueId, recipeFoodCosts, trends,
 }: DashboardClientProps) {
+  const {
+    firstName, greeting, plan, recipes, recipeCount, ingredients, ingredientCount,
+    stockAlertCount, templates, initialTemplateCount, loadError,
+  } = useHydratedData<DashboardData>(queryKeys.dashboard(venueId));
   const { showFreeLimit } = usePlanUi();
   const [templateOpen, setTemplateOpen] = useState(false);
   const [templateList, setTemplateList] = useState(templates);

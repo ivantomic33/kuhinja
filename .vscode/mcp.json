@@ -1,0 +1,27 @@
+{
+  "inputs": [
+    {
+      "id": "paddle-sandbox-api-key",
+      "type": "promptString",
+      "description": "Paddle sandbox API key (pdl_sdbx_…)",
+      "password": true
+    }
+  ],
+  "servers": {
+    "paddle-sandbox": {
+      "type": "http",
+      "url": "https://sandbox-mcp.paddle.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:paddle-sandbox-api-key}"
+      }
+    },
+    "paddle-live": {
+      "type": "http",
+      "url": "https://mcp.paddle.com/mcp"
+    },
+    "ngrok": {
+      "type": "http",
+      "url": "https://mcp.ngrok.com/mcp"
+    }
+  }
+}

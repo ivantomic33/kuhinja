@@ -10,14 +10,6 @@ export type BillingPeriod = "monthly" | "yearly";
 export type DbPlanValue = string | null | undefined;
 
 /** List prices (RSD) by billing period. */
-export const PLAN_PRICES = {
-  free: { monthly: 0, yearly: 0 },
-  starter: { monthly: 990, yearly: 9900 },
-  pro: { monthly: 1990, yearly: 19900 },
-  team: { monthly: 3990, yearly: 39900 },
-  business: { monthly: 5990, yearly: 59900 },
-} as const;
-
 export const TRIAL_DAYS_PRO = 14;
 
 /** Free hard caps (also mirrored by DB triggers). */
@@ -52,6 +44,12 @@ export type PlanEntitlements = {
   roles: boolean;
   foodCostCalculator: boolean;
   priceHistory: boolean;
+  /** Starter+: restock-driven food cost over-target alerts + dashboard widget. */
+  foodCostAlarm: boolean;
+  /** Starter+: low-stock alerts and PO drafts from alerts. */
+  stockAlerts: boolean;
+  /** Pro+: purchase orders from trebovanje source. */
+  purchaseOrders: boolean;
   foodCostVariance: boolean;
   basicReports: boolean;
   prepListPdf: boolean;
@@ -68,6 +66,12 @@ export type PlanEntitlements = {
   stockInventory: boolean;
   /** Team+: userId audit on stock moves. */
   stockMoveAudit: boolean;
+  /** Starter+: waste log capture + report widget. */
+  wasteLog: boolean;
+  /** Starter+: waste CSV export. */
+  wasteExportCsv: boolean;
+  /** Pro+: waste PDF + XLSX export. */
+  wasteExportPdfXlsx: boolean;
 };
 
 const RANK: Record<PlanId, number> = {
@@ -85,7 +89,8 @@ const RANK: Record<PlanId, number> = {
 export function normalizePlanId(value: DbPlanValue): PlanId {
   if (value === "starter") return "starter";
   if (value === "team") return "team";
-  if (value === "business") return "business";
+  // Advanced checkout tier maps to business entitlements.
+  if (value === "business" || value === "advanced") return "business";
   if (value === "pro" || value === "premium") return "pro";
   return "free";
 }
@@ -125,6 +130,9 @@ export function getEntitlements(plan: PlanId): PlanEntitlements {
     roles: teamPlus,
     foodCostCalculator: true,
     priceHistory: proPlus,
+    foodCostAlarm: starterPlus,
+    stockAlerts: starterPlus,
+    purchaseOrders: proPlus,
     foodCostVariance: proPlus,
     basicReports: proPlus,
     prepListPdf: starterPlus,
@@ -136,6 +144,9 @@ export function getEntitlements(plan: PlanId): PlanEntitlements {
     stockRestock: starterPlus,
     stockInventory: proPlus,
     stockMoveAudit: teamPlus,
+    wasteLog: starterPlus,
+    wasteExportCsv: starterPlus,
+    wasteExportPdfXlsx: proPlus,
   };
 }
 

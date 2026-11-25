@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: sr.auth.signIn,
   description: sr.auth.loginMetaDescription,
   alternates: { canonical: "/login" },
-  robots: { index: true, follow: true },
+  robots: { index: false },
 };
 
 export default function LoginPage() {

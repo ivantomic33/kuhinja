@@ -1,6 +1,7 @@
 ﻿import type { ReactNode } from "react";
 import Link from "next/link";
 import { LogoMark } from "@/components/brand/LogoMark";
+import { SiteFooterLinks } from "@/components/legal/SiteFooterLinks";
 import { APP_NAME } from "@/lib/config/app";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
@@ -32,6 +33,7 @@ export function AuthShell({ title, subtitle, children, className }: AuthShellPro
           <Link href="/premium" className="focus-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-text-2 hover:underline">
             {sr.auth.pricingLink}
           </Link>
+          <SiteFooterLinks compact />
         </footer>
       </div>
     </main>

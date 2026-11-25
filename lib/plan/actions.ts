@@ -71,6 +71,7 @@ export type CreatedIngredient = {
   price: number;
   waste_percent: number;
   notes: string | null;
+  version: number;
 };
 
 export type CreatedRecipe = {
@@ -118,7 +119,7 @@ export async function createIngredientAction(
       waste_percent: parsed.data.waste_percent,
       notes: parsed.data.notes ?? null,
     })
-    .select("id, venue_id, name, unit, price, waste_percent, notes")
+    .select("id, venue_id, name, unit, price, waste_percent, notes, version")
     .single();
 
   if (error) return mapInsertError(error);
@@ -132,6 +133,7 @@ export async function createIngredientAction(
     price: Number(data.price) || 0,
     waste_percent: Number(data.waste_percent) || 0,
     notes: data.notes,
+    version: data.version,
   });
 }
 
@@ -218,7 +220,7 @@ export async function createTemplateAction(
 }
 
 /**
- * Insert a price-history row. Pro+ only — Free/Starter rejected with LIMIT_REACHED.
+ * Insert a price-history row. Requires the priceHistory entitlement.
  */
 export async function createPriceHistoryAction(
   input: unknown
@@ -229,7 +231,7 @@ export async function createPriceHistoryAction(
   const parsed = parseActionInput(ingredientPriceHistoryInsertSchema, input);
   if ("error" in parsed) return parsed;
 
-  const access = await assertCanUsePriceHistory();
+  const access = await assertCanUsePriceHistory(auth);
   if (access !== true) return access;
 
   // Confirm the ingredient belongs to a venue the user owns (RLS also enforces).

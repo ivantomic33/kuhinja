@@ -11,8 +11,8 @@ import {
   type ReactNode,
 } from "react";
 import { AlertTriangle, Check } from "lucide-react";
-import { AnimatePresence, motion, useIsPresent } from "framer-motion";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
+import { cn } from "@/lib/utils/cn";
 
 type ToastAction = {
   label: string;
@@ -111,26 +111,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           {current?.tone === "danger" ? <span key={current.id}>{current.message}</span> : null}
         </div>
       </div>
-      <AnimatePresence initial={false}>
-        {current ? <ToastView key="toast" item={current} dismiss={dismiss} /> : null}
-      </AnimatePresence>
+      {current ? <ToastView key={current.id} item={current} dismiss={dismiss} /> : null}
     </ToastContext.Provider>
   );
 }
 
 function ToastView({ item, dismiss }: { item: ToastItem; dismiss: (id: string) => void }) {
   const reduced = usePrefersReducedMotion();
-  const present = useIsPresent();
   return (
-    <motion.div
-      className="app-toast"
+    <div
+      className={cn("app-toast", !reduced && "app-toast-enter")}
       data-motion-surface
-      inert={!present || undefined}
-      aria-hidden={!present || undefined}
-      initial={reduced ? false : { opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={reduced ? undefined : { opacity: 0, y: 6 }}
-      transition={{ duration: reduced ? 0 : 0.18, ease: "easeOut" }}
     >
       {item.tone === "warning" ? (
         <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
@@ -150,6 +141,6 @@ function ToastView({ item, dismiss }: { item: ToastItem; dismiss: (id: string) =
           {item.action.label}
         </button>
       ) : null}
-    </motion.div>
+    </div>
   );
 }

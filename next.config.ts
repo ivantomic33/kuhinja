@@ -1,11 +1,13 @@
 import withSerwistInit from "@serwist/next";
 import type { NextConfig } from "next";
-import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
+import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from "next/constants";
+import { getSiteUrl } from "./lib/config/env";
 import icons from "./lib/config/pwa-icons.json";
 import { SECURITY_HEADERS } from "./lib/security/csp";
 
 const iconUrls = Object.values(icons);
 const offlineEntrypoints = ["main-app", "app/layout", "app/~offline/page"];
+const privatePrefixes = ["dashboard", "settings", "ingredients", "recipes", "scaler", "shift", "trebovanje", "raspored", "premium/upravljanje"];
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -13,6 +15,15 @@ const nextConfig: NextConfig = {
   experimental: {
     // Tree-shake icon/motion entry points instead of pulling full packages.
     optimizePackageImports: ["lucide-react", "framer-motion"],
+    // Allow Server Actions from local dev and VS Code / GitHub HTTPS tunnels.
+    serverActions: {
+      allowedOrigins: [
+        "localhost:3000",
+        "127.0.0.1:3000",
+        "*.euw.devtunnels.ms",
+        "*.devtunnels.ms",
+      ],
+    },
   },
   async redirects() {
     return [{ source: "/podesavanja", destination: "/settings", permanent: false }];
@@ -26,6 +37,10 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [...SECURITY_HEADERS],
       },
+      ...[...privatePrefixes, "r"].map((prefix) => ({
+        source: `/${prefix}/:path*`,
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      })),
       ...iconUrls.map((source) => ({
         source,
         headers: [
@@ -215,11 +230,13 @@ const nextConfig: NextConfig = {
 // `next dev --turbopack` warns when that hook exists without a turbopack
 // config. The service worker is unused in development, so skip the wrapper
 // there. Production `next build` still uses Webpack and generates it.
-export default function config(phase: string): NextConfig {
+export default async function config(phase: string): Promise<NextConfig> {
+  const productionBuild = phase === PHASE_PRODUCTION_BUILD;
+  if (productionBuild) getSiteUrl();
   if (phase === PHASE_DEVELOPMENT_SERVER) return nextConfig;
 
   let buildId: string;
-  return withSerwistInit({
+  const serwistConfig = withSerwistInit({
     swSrc: "app/sw.ts",
     swDest: "public/sw.js",
     disable: false,
@@ -251,4 +268,8 @@ export default function config(phase: string): NextConfig {
       return config;
     },
   });
+  if (!productionBuild || process.env.ANALYZE !== "true") return serwistConfig;
+
+  const { default: bundleAnalyzer } = await import("@next/bundle-analyzer");
+  return bundleAnalyzer({ analyzerMode: "json", openAnalyzer: false })(serwistConfig);
 }

@@ -3,7 +3,7 @@ import {
   requireActionUser,
   type ActionUserContext,
 } from "@/lib/server/action";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getServerUser } from "@/lib/supabase/server";
 import { z } from "zod";
 import { parsePublicSchedule } from "./public-payload";
 import type { Assignment, Employee, PublicSchedule, ScheduleWeek } from "./types";
@@ -12,22 +12,22 @@ const uuid = z.string().uuid();
 const date = z.string().date();
 
 /**
- * Load the caller's schedule week. Requires a verified user (getUser).
+ * Load the caller's schedule week with a verified read-session.
  * Ownership is enforced inside the security-definer RPC via auth.uid().
  */
 export async function loadSchedule(
   location?: string,
   week?: string
 ): Promise<ScheduleWeek | null> {
-  const auth = await requireActionUser();
-  if ("error" in auth) {
-    throw Object.assign(new Error(auth.error.message), {
-      code: auth.error.code,
+  const [supabase, user] = await Promise.all([createClient(), getServerUser()]);
+  if (!user) {
+    throw Object.assign(new Error("Authentication required."), {
+      code: "UNAUTHORIZED",
       status: 401,
     });
   }
 
-  const { data, error } = await auth.supabase.rpc("schedule_load", {
+  const { data, error } = await supabase.rpc("schedule_load", {
     p_location: uuid.safeParse(location).data ?? null,
     p_week: date.safeParse(week).data ?? null,
   });

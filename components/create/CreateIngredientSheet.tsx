@@ -9,7 +9,9 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useToast } from "@/components/ui/Toast";
+import { readVersionConflictMessage } from "@/lib/auth/version-conflict";
 import { parseDecimal } from "@/lib/domain/parse";
+import { updateVersioned } from "@/lib/domain/versioned-update-client";
 import { getPrimaryVenueId } from "@/lib/domain/venue";
 import { useOnline } from "@/lib/hooks/useOnline";
 import { usePlan } from "@/lib/hooks/usePlan";
@@ -53,6 +55,7 @@ export type CreateIngredientSheetProps = {
   venueId?: string | null;
   currentCount: number;
   existing?: CachedIngredient[];
+  ingredient?: CachedIngredient | null;
   onCreated?: (ingredient: CachedIngredient) => void;
 };
 
@@ -62,6 +65,7 @@ export function CreateIngredientSheet({
   venueId: venueIdProp,
   currentCount,
   existing = [],
+  ingredient,
   onCreated,
 }: CreateIngredientSheetProps) {
   const router = useRouter();
@@ -70,14 +74,15 @@ export function CreateIngredientSheet({
   const { showFreeLimit, handleError } = usePlanUi();
   const { toast } = useToast();
 
-  const [name, setName] = useState("");
-  const [unit, setUnit] = useState<IngredientUnitInput>("kg");
+  const [name, setName] = useState(ingredient?.name ?? "");
+  const [unit, setUnit] = useState<IngredientUnitInput>(ingredient?.unit ?? "kg");
   const [unitAmount, setUnitAmount] = useState("1");
-  const [price, setPrice] = useState("");
-  const [waste, setWaste] = useState("0");
-  const [notes, setNotes] = useState("");
+  const [price, setPrice] = useState(ingredient ? String(ingredient.price) : "");
+  const [waste, setWaste] = useState(String(ingredient?.waste_percent ?? 0));
+  const [notes, setNotes] = useState(ingredient?.notes ?? "");
   const [duplicateName, setDuplicateName] = useState(false);
   const [formError, setFormError] = useState<string | undefined>();
+  const [conflict, setConflict] = useState(false);
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -135,6 +140,7 @@ export function CreateIngredientSheet({
     setNotes("");
     setDuplicateName(false);
     setFormError(undefined);
+    setConflict(false);
     setTouched({});
   }
 
@@ -146,7 +152,7 @@ export function CreateIngredientSheet({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (loading) return;
+    if (loading || conflict) return;
     const form = event.currentTarget;
     setFormError(undefined);
 
@@ -161,14 +167,14 @@ export function CreateIngredientSheet({
       return;
     }
 
-    if (!canCreateIngredient(plan, currentCount)) {
+    if (!ingredient && !canCreateIngredient(plan, currentCount)) {
       showFreeLimit("FREE_LIMIT_INGREDIENTS");
       return;
     }
 
     setLoading(true);
     try {
-      const venueId = venueIdProp ?? await getPrimaryVenueId();
+      const venueId = ingredient?.venue_id ?? venueIdProp ?? await getPrimaryVenueId();
       if (!venueId) {
         setFormError(sr.create.noVenue);
         return;
@@ -187,9 +193,23 @@ export function CreateIngredientSheet({
         return;
       }
 
-      const result = await createIngredientAction(parsed.data);
+      if (ingredient && ingredient.version === undefined) {
+        setConflict(true);
+        setFormError(sr.pwa.versionConflict);
+        return;
+      }
+      const { venue_id, ...patch } = parsed.data;
+      const result = ingredient?.version === undefined
+        ? await createIngredientAction({ venue_id, ...patch })
+        : await updateVersioned("ingredients", { id: ingredient.id, version: ingredient.version, patch });
 
       if ("error" in result) {
+        const conflictMessage = readVersionConflictMessage(result.error);
+        if (conflictMessage) {
+          setConflict(true);
+          setFormError(conflictMessage);
+          return;
+        }
         const limitCode = getFreeLimitCode(result.error);
         if (limitCode || result.error.code === "LIMIT_REACHED") {
           showFreeLimit(limitCode ?? "FREE_LIMIT_INGREDIENTS");
@@ -218,6 +238,7 @@ export function CreateIngredientSheet({
         price: Number(data.price) || 0,
         waste_percent: Number(data.waste_percent) || 0,
         notes: data.notes,
+        version: data.version,
       };
 
       const merged = [
@@ -227,7 +248,7 @@ export function CreateIngredientSheet({
       void saveIngredients(merged);
 
       onCreated?.(created);
-      toast(sr.create.ingredient.success, "success");
+      toast(ingredient ? copy.editSuccess : copy.success, "success");
       reset();
       onClose();
       router.refresh();
@@ -247,9 +268,9 @@ export function CreateIngredientSheet({
     <BottomSheet
       open={open}
       onClose={handleClose}
-      title={copy.title}
+      title={ingredient ? copy.editTitle : copy.title}
       size="lg"
-      description={
+      description={ingredient ? undefined :
         <span>
           {copy.limitFreeRemaining} {remainingFree} {copy.limitFreeOf} {FREE_MAX_INGREDIENTS}
           {" · "}
@@ -261,6 +282,11 @@ export function CreateIngredientSheet({
           <IngredientPricePreview {...preview} compact />
           {formError ? <p role="alert" className="text-sm text-danger">{formError}</p> : null}
           <div className="flex flex-wrap justify-end gap-2">
+            {conflict ? (
+              <PrimaryButton type="button" variant="secondary" onClick={() => window.location.reload()}>
+                {sr.pwa.versionConflictRefresh}
+              </PrimaryButton>
+            ) : null}
             <PrimaryButton type="button" variant="ghost" onClick={handleClose} disabled={loading}>
               {sr.common.cancel}
             </PrimaryButton>
@@ -268,9 +294,9 @@ export function CreateIngredientSheet({
               type="submit"
               form="create-ingredient-form"
               loading={loading}
-              disabled={!isValid}
+              disabled={!isValid || conflict}
             >
-              {copy.submit}
+              {ingredient ? sr.common.save : copy.submit}
             </PrimaryButton>
           </div>
         </div>

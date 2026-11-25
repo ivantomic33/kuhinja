@@ -2,39 +2,37 @@
 
 import { useState, type ReactNode } from "react";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import {
-  startCheckout,
-  type CheckoutInterval,
-} from "@/lib/billing/invoke";
+import type { BillingInterval, PaidPlan } from "@/lib/billing/plans";
+import { startAuthorizedCheckout } from "@/lib/billing/start-checkout";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
 type CheckoutButtonProps = {
-  interval?: CheckoutInterval;
+  /** Paid plan key for authorized create-checkout-session. */
+  planKey: PaidPlan;
+  /** Billing interval matching the price shown on the page. */
+  interval: BillingInterval;
   disabled?: boolean;
   fullWidth?: boolean;
   leftIcon?: ReactNode;
   children: ReactNode;
-  /** Visual variant — Pro uses primary orange. */
   variant?: "primary" | "secondary";
   className?: string;
-  /**
-   * Target plan for future multi-price checkout.
-   * Server still owns assignment today; kept for wiring.
-   * TODO: payment provider plan-specific price IDs.
-   */
-  planTarget?: "starter" | "pro";
 };
 
+/**
+ * Starts authorized checkout (customer bind + transaction authorization).
+ * Webhooks only grant plans for authorized TreuPlate transactions.
+ */
 export function CheckoutButton({
-  interval = "month",
+  planKey,
+  interval,
   disabled = false,
   fullWidth = true,
   leftIcon,
   children,
   variant = "primary",
   className,
-  planTarget: _planTarget = "pro",
 }: CheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -43,15 +41,13 @@ export function CheckoutButton({
     setLoading(true);
     setError(undefined);
 
-    // TODO: payment provider — pass planTarget when starter/pro prices split.
-    const result = await startCheckout(interval);
-    if ("error" in result) {
-      setError(sr.billing.checkoutError);
+    try {
+      await startAuthorizedCheckout(planKey, interval);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : sr.billing.checkoutError);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    window.location.assign(result.url);
   }
 
   return (
@@ -64,7 +60,7 @@ export function CheckoutButton({
         leftIcon={leftIcon}
         variant={variant}
         className={cn("min-h-[46px]", className)}
-        onClick={handleClick}
+        onClick={() => void handleClick()}
       >
         {children}
       </PrimaryButton>

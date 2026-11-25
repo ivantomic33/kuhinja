@@ -1,13 +1,7 @@
 import { ChevronDown } from "lucide-react";
+import { getLandingFaqItems } from "@/content/faq";
 import { sr } from "@/lib/i18n/sr";
-
-const ITEMS = [
-  { q: sr.marketing.faq1Q, a: sr.marketing.faq1A },
-  { q: sr.marketing.faq2Q, a: sr.marketing.faq2A },
-  { q: sr.marketing.faq3Q, a: sr.marketing.faq3A },
-  { q: sr.marketing.faq4Q, a: sr.marketing.faq4A },
-  { q: sr.marketing.faq5Q, a: sr.marketing.faq5A },
-] as const;
+import { textLinkClass } from "./landing-links";
 
 /** Server-rendered FAQ. Answers stay in the HTML for crawlers. */
 export function MarketingFaq() {
@@ -20,22 +14,23 @@ export function MarketingFaq() {
         {sr.marketing.faqTitle}
       </h2>
       <div className="flex flex-col gap-3">
-        {ITEMS.map((item) => (
+        {getLandingFaqItems().map((item) => (
           <details
-            key={item.q}
+            key={item.id}
             className="group rounded-xl border border-border bg-surface"
           >
-            <summary className="flex min-h-[60px] cursor-pointer list-none items-center justify-between gap-3 px-5 text-base font-semibold text-text [&::-webkit-details-marker]:hidden">
-              {item.q}
+            <summary className="focus-ring flex min-h-[60px] cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-5 text-base font-semibold text-text [&::-webkit-details-marker]:hidden">
+              {item.question}
               <ChevronDown
-                className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180"
+                className="size-4 shrink-0 text-muted group-open:rotate-180 motion-safe:transition-transform"
                 aria-hidden="true"
               />
             </summary>
-            <p className="px-5 pb-4 text-sm leading-relaxed text-muted">{item.a}</p>
+            <p className="px-5 pb-4 text-sm leading-relaxed text-muted">{item.answer}</p>
           </details>
         ))}
       </div>
+      <a href="/faq" className={`mt-3 ${textLinkClass}`}>{sr.marketing.landing.faqLink}</a>
     </div>
   );
 }

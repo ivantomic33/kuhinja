@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { persistPendingLegalConsent } from "@/lib/legal/consent";
 
 /**
  * Ensure a venue exists using the signed-in user's JWT + RLS
@@ -42,21 +44,23 @@ function safeRedirectPath(next: string | null): string {
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
-  const code = searchParams.get("code");
-  const next = safeRedirectPath(searchParams.get("next") ?? "/dashboard");
+  const code = z.string().trim().min(1).max(512).safeParse(searchParams.get("code")).data;
+  const redirectPath = z.string().max(500).safeParse(searchParams.get("next")).data;
+  const next = safeRedirectPath(redirectPath ?? null);
 
   if (code) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error && data.user) {
-      // Re-verify with getUser() after exchange — never trust session alone.
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        return NextResponse.redirect(`${origin}/login`);
+    // The exchange response comes from Auth and supplies the verified user.
+    const user = data.user;
+    if (!error && user) {
+      if (!(await persistPendingLegalConsent(supabase, user))) {
+        if (next === "/reset-password") {
+          return NextResponse.redirect(`${origin}${next}`);
+        }
+        await supabase.auth.signOut({ scope: "local" });
+        return NextResponse.redirect(`${origin}/login?consent=retry`);
       }
 
       const meta = user.user_metadata ?? {};

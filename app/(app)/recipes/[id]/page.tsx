@@ -74,7 +74,7 @@ export default async function RecipeFoodCostPage({ params }: RecipePageProps) {
 
   const recipeRes = await supabase
     .from("recipes")
-    .select("id, name, venue_id, portions, selling_price, description")
+    .select("id, name, venue_id, portions, selling_price, description, version")
     .eq("id", id)
     .maybeSingle();
 
@@ -86,6 +86,7 @@ export default async function RecipeFoodCostPage({ params }: RecipePageProps) {
     | "portions"
     | "selling_price"
     | "description"
+    | "version"
   > | null;
 
   if (recipeRes.error || !recipe) {
@@ -210,12 +211,14 @@ export default async function RecipeFoodCostPage({ params }: RecipePageProps) {
       </div>
 
       <FoodCostCalculator
+        key={recipe.id}
         recipeId={recipe.id}
         recipeName={recipe.name}
         recipeDescription={recipe.description}
         venueId={recipe.venue_id}
         portions={Number(recipe.portions) || 1}
         sellingPrice={Number(recipe.selling_price) || 0}
+        recipeVersion={recipe.version}
         ingredients={ingredients}
         initialLines={initialLines}
         allowPersist

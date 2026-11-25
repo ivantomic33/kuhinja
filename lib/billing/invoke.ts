@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/client";
 
+import type { BillingInterval, PaidPlan } from "./plans";
+
 export type CheckoutInterval = "month" | "year";
 
 type FunctionErrorBody = {
@@ -21,18 +23,19 @@ function readUrl(data: unknown): string | null {
 }
 
 /**
- * Start Stripe Checkout (14-day trial). Interval maps to server price secrets.
- * Never sends a plan value — server owns plan assignment via webhook.
+ * Start Paddle Checkout (14-day trial). Interval maps to server price secrets.
+ * Sends a requested plan key. Paddle events determine effective entitlements.
  */
 export async function startCheckout(
-  interval: CheckoutInterval = "month"
+  interval: CheckoutInterval = "month",
+  plan: PaidPlan = "pro",
 ): Promise<{ url: string } | { error: string }> {
   const supabase = createClient();
   const { data, error } = await supabase.functions.invoke(
     "create-checkout-session",
     {
       method: "POST",
-      body: { interval },
+      body: { interval, plan_key: plan },
     }
   );
 
@@ -52,7 +55,15 @@ export async function startCheckout(
   return { url };
 }
 
-/** Open Stripe Customer Portal for the current user. */
+export async function changeBillingPlan(planKey: PaidPlan, interval: BillingInterval) {
+  return fetch("/api/billing/change-plan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ planKey, interval }),
+  });
+}
+
+/** Open Paddle Customer Portal for the current user. */
 export async function openCustomerPortal(): Promise<
   { url: string } | { error: string }
 > {

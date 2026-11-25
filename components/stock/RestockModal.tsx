@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { parseDecimal } from "@/lib/domain/parse";
 import { sr } from "@/lib/i18n/sr";
 import { stockSr as t } from "@/lib/i18n/stock";
+import { restockIngredientPriceSchema } from "@/lib/schemas/stock";
 import { applyRestock } from "@/lib/stock/actions";
 import { formatQty } from "@/lib/stock/math";
 import type { StockRow } from "@/lib/stock/types";
@@ -151,6 +152,18 @@ export function RestockModal({
   }
 
   async function handleSave() {
+    if (canSetPrice && drafts.some((draft) => {
+      const qty = parseDecimal(draft.qty);
+      return draft.ingredientId && qty != null && qty > 0 && draft.price.trim() &&
+        !restockIngredientPriceSchema.safeParse({
+          ingredientId: draft.ingredientId,
+          newPrice: parseDecimal(draft.price),
+        }).success;
+    })) {
+      setError(t.restockPriceError);
+      return;
+    }
+
     const lines = drafts
       .map((d) => {
         const qty = parseDecimal(d.qty);
@@ -159,8 +172,7 @@ export function RestockModal({
         return {
           ingredientId: d.ingredientId,
           qty,
-          unitCost:
-            canSetPrice && price != null && price >= 0 ? price : null,
+          unitCost: canSetPrice ? price : null,
         };
       })
       .filter(Boolean) as Array<{

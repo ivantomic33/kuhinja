@@ -5,7 +5,8 @@ import { BentoCard } from "@/components/ui/BentoCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateLink } from "@/components/ui/RouteStates";
 import { sr } from "@/lib/i18n/sr";
-import { isPremium } from "@/lib/supabase/plan";
+import { isPaid } from "@/lib/supabase/plan";
+import { planDisplayName } from "@/lib/plan/entitlements";
 import { getPlanDetails } from "@/lib/supabase/plan-server";
 import { formatShortDate } from "@/lib/utils/format";
 
@@ -22,8 +23,9 @@ export default async function BillingPage({
   const params = searchParams ? await searchParams : undefined;
   const checkout = params?.checkout;
   const details = await getPlanDetails();
-  const premium = isPremium(details.plan);
-  const hasCustomer = Boolean(details.stripeCustomerId);
+  const premium = isPaid(details.plan);
+  const canManage = premium && (details.billingStatus === "active" || details.billingStatus === "trialing");
+  const hasCustomer = Boolean(details.paddleCustomerId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,7 +66,7 @@ export default async function BillingPage({
               {sr.settings.plan}
             </p>
             <p className="mt-1 text-lg font-semibold text-text">
-              {premium ? sr.premium.proName : sr.premium.freeName}
+              {planDisplayName(details.plan)}
             </p>
           </div>
           <div>
@@ -84,7 +86,7 @@ export default async function BillingPage({
             <p className="mt-1 text-base tabular-nums text-text">
               {premium
                 ? "Prema aktivnoj pretplati"
-                : `${sr.premium.freePrice} ${sr.premium.currency}`}
+                : "Besplatno"}
             </p>
           </div>
         </div>
@@ -97,7 +99,8 @@ export default async function BillingPage({
       >
         <p className="text-sm text-muted">{sr.billing.manageHint}</p>
         {hasCustomer ? (
-          <div className="max-w-xs">
+          <div className="flex flex-wrap items-start gap-3">
+            {canManage ? <StateLink href="/premium/upravljanje">{sr.settings.manageBilling}</StateLink> : null}
             <PortalButton />
           </div>
         ) : (

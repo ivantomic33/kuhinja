@@ -15,6 +15,37 @@ export type Json =
 
 export type Plan = "free" | "starter" | "pro" | "premium" | "team" | "business";
 
+export type BillingSubscription = {
+  id: string;
+  user_id: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  paddle_customer_id: string | null;
+  paddle_subscription_id: string | null;
+  paddle_price_id: string | null;
+  paddle_event_at: string | null;
+  paid_access_plan: "starter" | "pro" | null;
+  paid_access_until: string | null;
+  stripe_price_id: string | null;
+  plan_key: "free" | "starter" | "pro";
+  status: "trialing" | "active" | "past_due" | "canceled" | "unpaid" | "incomplete" | "incomplete_expired" | "paused";
+  current_period_start: string | null;
+  current_period_end: string | null;
+  trial_end: string | null;
+  cancel_at_period_end: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type StripeEvent = {
+  id: string;
+  type: string;
+  received_at: string;
+  processed_at: string | null;
+  payload: Json | null;
+  attempts: number;
+};
+
 export type IngredientUnit = "g" | "kg" | "ml" | "l" | "kom" | "pak";
 
 export type Database = {
@@ -26,6 +57,7 @@ export type Database = {
           full_name: string;
           plan: Plan;
           stripe_customer_id: string | null;
+          paddle_customer_id: string | null;
           plan_expires_at: string | null;
           created_at: string;
           updated_at: string;
@@ -35,6 +67,7 @@ export type Database = {
           full_name?: string;
           plan?: Plan;
           stripe_customer_id?: string | null;
+          paddle_customer_id?: string | null;
           plan_expires_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -44,6 +77,7 @@ export type Database = {
           full_name?: string;
           plan?: Plan;
           stripe_customer_id?: string | null;
+          paddle_customer_id?: string | null;
           plan_expires_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -57,6 +91,19 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      subscriptions: {
+        Row: BillingSubscription;
+        Insert: Pick<BillingSubscription, "user_id" | "plan_key" | "status"> &
+          Partial<BillingSubscription>;
+        Update: Partial<BillingSubscription>;
+        Relationships: [];
+      };
+      stripe_events: {
+        Row: StripeEvent;
+        Insert: Pick<StripeEvent, "id" | "type"> & Partial<StripeEvent>;
+        Update: Partial<StripeEvent>;
+        Relationships: [];
       };
       stripe_webhook_events: {
         Row: {
@@ -117,6 +164,8 @@ export type Database = {
           price: number;
           waste_percent: number;
           notes: string | null;
+          /** Optimistic lock token; bumped by trigger on UPDATE. */
+          version: number;
           created_at: string;
           updated_at: string;
         };
@@ -128,6 +177,7 @@ export type Database = {
           price?: number;
           waste_percent?: number;
           notes?: string | null;
+          version?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -139,6 +189,7 @@ export type Database = {
           price?: number;
           waste_percent?: number;
           notes?: string | null;
+          version?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -189,6 +240,7 @@ export type Database = {
           description: string | null;
           portions: number;
           selling_price: number;
+          version: number;
           created_at: string;
           updated_at: string;
         };
@@ -199,6 +251,7 @@ export type Database = {
           description?: string | null;
           portions?: number;
           selling_price?: number;
+          version?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -209,6 +262,7 @@ export type Database = {
           description?: string | null;
           portions?: number;
           selling_price?: number;
+          version?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -360,6 +414,48 @@ export type Database = {
           },
         ];
       };
+      shift_checklist_items: {
+        Row: {
+          run_id: string;
+          item_id: string;
+          checked: boolean;
+          checked_by: string | null;
+          checked_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          run_id: string;
+          item_id: string;
+          checked?: boolean;
+          checked_by?: string | null;
+          checked_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          run_id?: string;
+          item_id?: string;
+          checked?: boolean;
+          checked_by?: string | null;
+          checked_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shift_checklist_items_run_id_fkey";
+            columns: ["run_id"];
+            isOneToOne: false;
+            referencedRelation: "checklist_runs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shift_checklist_items_checked_by_fkey";
+            columns: ["checked_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       stock_levels: {
         Row: {
           id: string;
@@ -483,9 +579,27 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      claim_billing_lock: { Args: { p_key: string; p_token: string }; Returns: boolean };
+      release_billing_lock: { Args: { p_key: string; p_token: string }; Returns: undefined };
+      record_stock_adjustment: {
+        Args: { p_venue_id: string; p_type: string; p_lines: Json };
+        Returns: undefined;
+      };
+      get_entitlements: {
+        Args: { p_user_id: string };
+        Returns: Json;
+      };
       is_venue_owner: {
         Args: { p_venue_id: string };
         Returns: boolean;
+      };
+      restock_ingredient: {
+        Args: { p_ingredient_id: string; p_new_price: number; p_note?: string | null };
+        Returns: Database["public"]["Tables"]["ingredients"]["Row"];
+      };
+      upsert_shift_checklist_item: {
+        Args: { p_run_id: string; p_item_id: string; p_checked: boolean };
+        Returns: Database["public"]["Tables"]["shift_checklist_items"]["Row"];
       };
     };
     Enums: {

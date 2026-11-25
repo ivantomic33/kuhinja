@@ -35,8 +35,11 @@ export const createClient = cache(async () => {
   );
 });
 
+/** Identity for RLS-protected pages. GoTrue verifies the JWT or falls back to Auth. */
 export const getServerUser = cache(async () => {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  return data.user;
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (error || !claims?.sub || claims.role !== "authenticated") return null;
+  return { id: claims.sub, email: claims.email, user_metadata: claims.user_metadata, app_metadata: claims.app_metadata };
 });

@@ -1,160 +1,163 @@
-// Supabase Edge Function: create-checkout-session
-// Authenticated users only. Creates/reuses Stripe customer, starts Checkout
-// with a 14-day trial. Plan is never taken from the client.
-//
-// Deploy: supabase functions deploy create-checkout-session
-// Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_MONTHLY_ID, STRIPE_PRICE_YEARLY_ID,
-//          SITE_URL (plus auto SUPABASE_URL / ANON / SERVICE_ROLE)
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
-import Stripe from "https://esm.sh/stripe@14.25.0?target=deno";
+import { z } from "https://esm.sh/zod@3.25.76";
+import { BillingBusyError, createBillingAdmin, withBillingLock } from "../_shared/billing-lock.ts";
+import { configuredPrice, paidPlans, planForPrice } from "../_shared/billing-prices.ts";
+import { matchesPaddleInterval, matchingTrialPrice, paddleApi, type PaddlePrice, type PaddleTransaction } from "../_shared/paddle.ts";
+import { cancelPendingTransaction, customerSubscriptions, pendingSignupTransactions } from "../_shared/paddle-checkout.ts";
 
-const corsHeaders: Record<string, string> = {
+const readEnv = (key: string) => Deno.env.get(key);
+const input = z.object({
+  plan_key: z.enum(paidPlans).default("pro"),
+  interval: z.enum(["month", "year", "monthly", "yearly"]).default("monthly"),
+}).strict();
+
+const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type Interval = "month" | "year";
-
-function json(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+function json(status: number, body: object) {
+  return Response.json(body, { status, headers: cors });
 }
 
-function parseInterval(value: unknown): Interval {
-  if (value === "year" || value === "yearly") return "year";
-  return "month";
+function parseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
+
+type PaddleCustomer = { id: string; status: string; custom_data: ({ supabase_user_id?: string } & Record<string, unknown>) | null };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (req.method !== "POST") return json(405, { error: "METHOD_NOT_ALLOWED" });
 
-  if (req.method !== "POST") {
-    return json(405, { error: "Method not allowed" });
-  }
+  const url = readEnv("SUPABASE_URL");
+  const anonKey = readEnv("SUPABASE_ANON_KEY");
+  const serviceRole = readEnv("SUPABASE_SERVICE_ROLE_KEY");
+  const site = readEnv("SITE_URL");
+  if (!url || !anonKey || !serviceRole || !site) return json(503, { error: "BILLING_UNAVAILABLE" });
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
-    const priceMonthly = Deno.env.get("STRIPE_PRICE_MONTHLY_ID");
-    const priceYearly = Deno.env.get("STRIPE_PRICE_YEARLY_ID");
-    const siteUrl = (Deno.env.get("SITE_URL") || "").replace(/\/$/, "");
+    const token = req.headers.get("Authorization")?.match(/^Bearer (\S+)$/i)?.[1];
+    if (!token) return json(401, { error: "UNAUTHORIZED" });
+    const auth = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data: { user }, error } = await auth.auth.getUser(token);
+    if (error || !user?.email || !user.email_confirmed_at) return json(401, { error: "UNAUTHORIZED" });
 
-    if (
-      !supabaseUrl ||
-      !anonKey ||
-      !serviceRoleKey ||
-      !stripeSecretKey ||
-      !priceMonthly ||
-      !priceYearly ||
-      !siteUrl
-    ) {
-      return json(500, { error: "Missing server configuration" });
-    }
+    const raw = await req.text();
+    const parsed = input.safeParse(raw ? parseJson(raw) : {});
+    if (!parsed.success) return json(400, { error: "VALIDATION_ERROR" });
+    const { plan_key: plan } = parsed.data;
+    const interval = parsed.data.interval === "year" || parsed.data.interval === "yearly" ? "yearly" : "monthly";
+    const admin = createBillingAdmin(url, serviceRole);
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return json(401, { error: "Unauthorized" });
-    }
-
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await userClient.auth.getUser();
-
-    if (userError || !user) {
-      return json(401, { error: "Unauthorized" });
-    }
-
-    let interval: Interval = "month";
-    try {
-      const body = await req.json();
-      interval = parseInterval(body?.interval);
-    } catch {
-      // empty body → monthly
-    }
-
-    // Price IDs come only from secrets — never from the client plan/price.
-    const priceId = interval === "year" ? priceYearly : priceMonthly;
-
-    const admin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    const { data: profile, error: profileError } = await admin
-      .from("profiles")
-      .select("id, stripe_customer_id, full_name")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profileError || !profile) {
-      return json(404, { error: "Profile not found" });
-    }
-
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2023-10-16",
-      httpClient: Stripe.createFetchHttpClient(),
-    });
-
-    let customerId = profile.stripe_customer_id as string | null;
-
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email ?? undefined,
-        name: profile.full_name || undefined,
-        metadata: {
-          supabase_user_id: user.id,
-        },
-      });
-      customerId = customer.id;
-
-      const { error: updateError } = await admin
-        .from("profiles")
-        .update({ stripe_customer_id: customerId })
-        .eq("id", user.id);
-
-      if (updateError) {
-        return json(500, { error: "Failed to save customer" });
+    return await withBillingLock(admin, `customer:${user.id}`, async () => {
+      const { data: profile, error: profileError } = await admin.from("profiles")
+        .select("paddle_customer_id, full_name").eq("id", user.id).single();
+      if (profileError || !profile) return json(503, { error: "PROFILE_UNAVAILABLE" });
+      const api = paddleApi(readEnv);
+      let customerId = profile.paddle_customer_id as string | null;
+      if (!customerId) {
+        // Reuse a customer created by a previous attempt before the local save succeeded.
+        let customer: PaddleCustomer | undefined;
+        for await (const match of api.list<PaddleCustomer>(`/customers?email=${encodeURIComponent(user.email!)}`)) {
+          if (match.status !== "active") continue;
+          if (customer) return json(409, { error: "CUSTOMER_CONFLICT" });
+          const formerUser = match.custom_data?.supabase_user_id;
+          if (formerUser !== user.id) {
+            if (!formerUser) return json(409, { error: "CUSTOMER_CONFLICT" });
+            const released = await admin.from("paddle_released_customers").select("customer_id")
+              .eq("customer_id", match.id).eq("former_user_id", formerUser).maybeSingle();
+            if (released.error) return json(503, { error: "PROFILE_UNAVAILABLE" });
+            if (!released.data) return json(409, { error: "CUSTOMER_CONFLICT" });
+            customer = await api.patch<PaddleCustomer>(`/customers/${match.id}`, {
+              custom_data: { ...match.custom_data, supabase_user_id: user.id },
+            });
+          } else {
+            customer = match;
+          }
+        }
+        customer ??= await api.post<PaddleCustomer>("/customers", {
+          email: user.email,
+          ...(profile.full_name && { name: profile.full_name }),
+          custom_data: { supabase_user_id: user.id },
+        });
+        customerId = customer.id;
+        const { data: saved, error: saveError } = await admin.from("profiles")
+          .update({ paddle_customer_id: customerId }).eq("id", user.id).select("id").single();
+        if (saveError || !saved) return json(503, { error: "CUSTOMER_SAVE_FAILED" });
       }
-    }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      client_reference_id: user.id,
-      line_items: [{ price: priceId, quantity: 1 }],
-      subscription_data: {
-        trial_period_days: 14,
-        metadata: {
-          supabase_user_id: user.id,
-        },
-      },
-      metadata: {
-        supabase_user_id: user.id,
-      },
-      success_url: `${siteUrl}/settings/billing?checkout=success`,
-      cancel_url: `${siteUrl}/premium?checkout=cancel`,
-      allow_promotion_codes: true,
+      let returning = false;
+      for await (const subscription of customerSubscriptions(api, customerId)) {
+        returning = true;
+        if (subscription.status !== "canceled") return json(409, { error: "EXISTING_SUBSCRIPTION" });
+      }
+
+      // Catalog price is always required. A dedicated 14-day trial price is optional and
+      // only used for first-time customers when it is configured and valid in Paddle.
+      const regularId = configuredPrice(readEnv, plan, interval);
+      if (!regularId || planForPrice(readEnv, regularId) !== plan) {
+        return json(503, { error: "PRICE_UNAVAILABLE" });
+      }
+      const regular = await api.get<PaddlePrice>(`/prices/${regularId}`);
+      if (!matchesPaddleInterval(regular, interval) || regular.trial_period) {
+        return json(503, { error: "PRICE_UNAVAILABLE" });
+      }
+
+      let priceId = regularId;
+      if (!returning) {
+        const trialId = configuredPrice(readEnv, plan, interval, true);
+        if (trialId && planForPrice(readEnv, trialId) === plan) {
+          const trial = await api.get<PaddlePrice>(`/prices/${trialId}`);
+          if (matchesPaddleInterval(trial, interval) && matchingTrialPrice(trial, regular)) {
+            priceId = trialId;
+          }
+        }
+      }
+
+      let reusable: PaddleTransaction | undefined;
+      for await (const transaction of pendingSignupTransactions(api, customerId)) {
+        if (transaction.status === "paid") return json(409, { error: "CHECKOUT_PROCESSING" });
+        if (!reusable && transaction.items.length === 1 &&
+            transaction.items[0].price.id === priceId) {
+          reusable = transaction;
+        } else {
+          await cancelPendingTransaction(api, transaction);
+        }
+      }
+      const transaction = reusable ?? await api.post<PaddleTransaction>("/transactions", {
+        items: [{ price_id: priceId, quantity: 1 }],
+        customer_id: customerId,
+        collection_mode: "automatic",
+        custom_data: { treuplate_checkout: true },
+      });
+      if (!/^txn_[a-z\d]{26}$/.test(transaction.id)) {
+        return json(503, { error: "CHECKOUT_UNAVAILABLE" });
+      }
+
+      // Overlay checkout only needs the transaction id. Build the app payment-link URL
+      // from SITE_URL so a mismatched Paddle default payment link cannot block checkout.
+      let siteOrigin: string;
+      try {
+        siteOrigin = new URL(site).origin;
+      } catch {
+        return json(503, { error: "BILLING_UNAVAILABLE" });
+      }
+
+      const authorized = await admin.from("paddle_checkout_authorizations").upsert({
+        transaction_id: transaction.id, user_id: user.id, customer_id: customerId, price_id: priceId,
+      }, { onConflict: "transaction_id", ignoreDuplicates: true });
+      if (authorized.error) return json(503, { error: "CHECKOUT_UNAVAILABLE" });
+      return json(200, { url: `${siteOrigin}/checkout?_ptxn=${transaction.id}` });
     });
-
-    if (!session.url) {
-      return json(500, { error: "Checkout session missing URL" });
-    }
-
-    return json(200, { url: session.url });
-  } catch {
-    return json(500, { error: "Unexpected error" });
+  } catch (error) {
+    if (error instanceof BillingBusyError) return json(409, { error: "BILLING_BUSY" });
+    console.error("Paddle checkout failed", error instanceof Error ? error.message : "unknown");
+    return json(502, { error: "CHECKOUT_FAILED" });
   }
 });

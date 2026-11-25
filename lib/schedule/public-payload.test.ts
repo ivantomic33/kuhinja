@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 import { SchedulePreview } from "@/components/schedule/SchedulePreview";
 import { getSchedulePreview } from "./exports-preview";
 import {

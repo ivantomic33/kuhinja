@@ -65,6 +65,7 @@ import {
   usedTodayValue,
 } from "@/lib/stock/math";
 import type { RecipeForSale, StockRow } from "@/lib/stock/types";
+import { subscribeWorkspaceChannel } from "@/lib/realtime/workspace-channel";
 import { createClient } from "@/lib/supabase/client";
 import { fetchStockRows, keepStockSnapshot } from "@/lib/stock/read";
 import { formatMoney } from "@/lib/utils/format";
@@ -220,15 +221,7 @@ export function StockWorkspace({
       timeout = window.setTimeout(() => void settleStock(), 150);
     }
 
-    // A fresh topic avoids reusing a channel that is still unsubscribing.
-    const topic = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
-    const channel = supabase
-      .channel(`stock-levels:${venueId}:${topic}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "stock_levels", filter: `venue_id=eq.${venueId}` }, refreshStock)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "stock_levels", filter: `venue_id=eq.${venueId}` }, refreshStock)
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") refreshStock();
-      });
+    const unsubscribe = subscribeWorkspaceChannel(supabase, venueId, refreshStock);
 
     // Recover missed events and deletes without a realtime delete feed across locations.
     const interval = window.setInterval(refreshStock, 15000);
@@ -243,7 +236,7 @@ export function StockWorkspace({
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", refreshStock);
       window.removeEventListener("online", refreshStock);
-      void supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [venueId]);
 

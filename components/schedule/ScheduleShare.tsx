@@ -5,7 +5,6 @@ import { ImageDown, Link2, Link2Off } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useToast } from "@/components/ui/Toast";
-import { createSchedulePng, downloadScheduleFile } from "@/lib/schedule/exports-browser";
 import { getSchedulePreview } from "@/lib/schedule/exports-preview";
 import { weekNumber } from "@/lib/schedule/math";
 import type { PublicSchedule } from "@/lib/schedule/types";
@@ -50,6 +49,10 @@ export function ScheduleShare({
   async function saveImage() {
     setSaving(true);
     try {
+      // Canvas PNG export is heavy — load only on user action.
+      const { createSchedulePng, downloadScheduleFile } = await import(
+        "@/lib/schedule/exports-browser"
+      );
       const png = await createSchedulePng(schedule);
       downloadScheduleFile(
         png,

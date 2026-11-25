@@ -10,6 +10,7 @@ import { GoogleButton } from "@/components/auth/GoogleButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { loginAction } from "@/lib/auth/actions";
+import { checkoutReturnPath } from "@/lib/billing/checkout-intent";
 import { loginSchema } from "@/lib/schemas/auth";
 import { sr } from "@/lib/i18n/sr";
 
@@ -17,11 +18,14 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") || "/dashboard";
+  const checkout = checkoutReturnPath(nextPath);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [formError, setFormError] = useState<string | undefined>();
+  const [formError, setFormError] = useState<string | undefined>(
+    searchParams.get("consent") === "retry" ? sr.auth.errors.legalConsentRetryLogin : undefined,
+  );
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -50,14 +54,15 @@ export function LoginForm() {
 
       if (!result.success) {
         setFieldErrors(result.fieldErrors ?? {});
-        setFormError(result.message ?? sr.auth.errors.generic);
+        setFormError(result.message);
         setLoading(false);
         return;
       }
 
       router.replace(nextPath);
       router.refresh();
-    } catch {
+    } catch (error) {
+      console.error("[login-form]", error);
       setFormError(sr.auth.errors.generic);
       setLoading(false);
     }
@@ -65,7 +70,7 @@ export function LoginForm() {
 
   return (
     <div className="flex flex-col gap-2">
-      <form onSubmit={onSubmit} className="flex flex-col gap-2" noValidate>
+      <form method="post" action="/login" onSubmit={onSubmit} className="flex flex-col gap-2" noValidate>
         <AuthField
           label={sr.auth.email}
           name="email"
@@ -109,7 +114,7 @@ export function LoginForm() {
 
       <EmptyState className="!gap-1 !p-0" title={sr.auth.noAccount} action={
         <Link
-          href="/register"
+          href={checkout ? `/register?next=${encodeURIComponent(checkout)}` : "/register"}
           className="font-medium text-text underline-offset-2 hover:underline"
         >
           {sr.auth.signUp}

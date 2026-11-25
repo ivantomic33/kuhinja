@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isAuthEntryPath, isPublicPath } from "@/lib/auth/public-routes";
+import {
+  isAuthEntryPath,
+  isHtmlNavigation,
+  isPublicPath,
+} from "@/lib/auth/routes";
 import {
   buildCspReportOnly,
   createCspNonce,
@@ -12,7 +16,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 function hasSupabaseAuthCookie(request: NextRequest) {
   return request.cookies.getAll().some(
     (cookie) =>
-      cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"),
+      /^sb-.+-auth-token(?:\.\d+)?$/.test(cookie.name),
   );
 }
 
@@ -23,7 +27,7 @@ function redirectWithSession(
 ) {
   const redirect = NextResponse.redirect(url);
   session.cookies.getAll().forEach((cookie) => {
-    redirect.cookies.set(cookie.name, cookie.value);
+    redirect.cookies.set(cookie);
   });
   redirect.headers.set(CSP_REPORT_ONLY_HEADER, cspValue);
   return redirect;
@@ -49,6 +53,15 @@ export async function middleware(request: NextRequest) {
 
   const finish = (response: NextResponse) => {
     response.headers.set(CSP_REPORT_ONLY_HEADER, cspValue);
+    if (pathname === "/login" && process.env.TREUPLATE_DEPLOYMENT === "staging") {
+      const project = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(
+        /^https:\/\/([a-z0-9]{20})\.supabase\.co\/?$/,
+      )?.[1];
+      if (project) {
+        response.headers.set("X-TreuPlate-Environment", "staging");
+        response.headers.set("X-TreuPlate-Supabase-Project", project);
+      }
+    }
     return response;
   };
 
@@ -65,12 +78,20 @@ export async function middleware(request: NextRequest) {
     return finish(NextResponse.redirect(loginRedirectUrl(request)));
   }
 
+  // Route handlers and Flight requests verify their own session.
+  if (
+    pathname.startsWith("/api/") || pathname === "/auth/callback" ||
+    pathname === "/robots.txt" || pathname === "/sitemap.xml" || !isHtmlNavigation(request)
+  ) {
+    return next();
+  }
+
   const { supabaseResponse, user } = await updateSession(
     request,
     requestHeaders,
   );
 
-  // Default-deny: every non-public route needs a verified session user.
+  // Default-deny: every non-public HTML route needs a verified session user.
   if (!user && !publicRoute) {
     return redirectWithSession(
       loginRedirectUrl(request),
@@ -96,6 +117,6 @@ export const config = {
      * sw.js + manifest.json stay excluded so the service worker and manifest
      * keep loading without auth/CSP middleware interference.
      */
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|swe-worker|manifest.json|icons/|~offline|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|webmanifest)$).*)",
+    "/((?!_next/(?:static|image)(?:/|$)|(?:favicon\\.ico|sw\\.js|swe-worker(?:-[^/]+)?\\.js|manifest\\.json|~offline|opengraph-image|twitter-image)$|icons/|landing/).*)",
   ],
 };

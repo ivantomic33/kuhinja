@@ -1,5 +1,27 @@
 # Changelog
 
+## Nepublikovano
+
+- P8 F4: upozorenja o niskim zalihama (`low_stock`), dobavljači, `stock_movements`, narudžbenice po dobavljaču (iz upozorenja / trebovanja), PDF/tekst slanje, atomičan prijem robe (`receive_purchase_order`) koji ažurira zalihe i cene. Plan flagovi `stockAlerts` (Starter+) i `purchaseOrders` (Pro+). E-pošta ostaje isključena dok nema mail providera (Edge Function 501).
+
+- P7 dodaje kanonske URL-ove, metapodatke za društvene mreže, strukturirane podatke i sitemap za šest javnih stranica. Privatne rute i deljeni rasporedi imaju `noindex`. Produkcijski build zahteva validan `NEXT_PUBLIC_SITE_URL`.
+
+- P6 redizajnira javnu početnu stranu. Dodat je prikaz obračuna iz aplikacije, mesečni i godišnji cenovnik iz Paddle kataloga, mobilni poziv na probni period i nastavak izabranog paketa kroz prijavu ili registraciju.
+
+- P3 uvodi Starter i Pro pretplate, sedmodnevni grace period, idempotentnu Paddle sinhronizaciju i serverske provere prava. Korisnik može promeniti paket, zakazati otkazivanje ili poništiti otkazivanje.
+- Brisanje naloga zaustavlja Paddle pretplate pre brisanja Auth naloga. Otpis i inventura proveravaju paket i zajedno upisuju količinu i evidenciju pokreta.
+
+- P2 dovršava javne nacrte uslova korišćenja, privatnosti, povraćaja i FAQ-a, dodaje linkove u podnožja i sitemap i beleži prihvatanje dokumenata tokom registracije.
+- Dodat je inventar RLS politika, indeksa i ruta, uz SQL regresioni test izolacije podataka.
+- Dopuna sa cenom ažurira sastojak i upisuje jedan istorijski red u istoj transakciji. Starter može da sačuva cenu, a istorija je dostupna od Pro paketa.
+- Izmene sastojka i podataka recepta koriste verziju reda. Zastarela izmena dobija HTTP 409 i dugme za osvežavanje.
+- Kontrolne liste se sinhronizuju po stavci. Postojeće čekirane stavke se prenose iz JSON-a, a završetak smene čuva njen status.
+- Dopunjeni su prevodi koje koriste postojeće FAQ i pravne stranice.
+- Replay nastavlja red nakon neuspeha. Peti neuspeh premešta zapis u `dead_letter` i osvežava upozorenje u zaglavlju.
+- Sužena je lista javnih ruta. RLS čitanja koriste verifikovane JWT tvrdnje, a privatne mutacije ponovo koriste identitet iz jedne provere.
+- Kontrolna tabla, sastojci i recepti hidriraju TanStack Query sa servera. Prikazi zaliha dele jedan Realtime kanal po lokalu.
+- Dodat je k6 scenario za staging i dijagram toka zahteva u README-u.
+
 Beleške iz prvobitnog redizajna. Važeće smernice su u [DESIGN.md](DESIGN.md).
 
 ## Screens delivered

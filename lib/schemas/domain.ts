@@ -181,6 +181,27 @@ export const checklistRunUpdateSchema = z
     message: "At least one field is required",
   });
 
+/** Args for public.upsert_shift_checklist_item (last-write-wins per item). */
+export const upsertShiftChecklistItemSchema = z
+  .object({
+    p_run_id: z.string().uuid(),
+    p_item_id: z.string().min(1).max(64).refine((id) => id.trim().length > 0),
+    p_checked: z.boolean(),
+  })
+  .strict();
+
+/** Row shape used when hydrating checked state from shift_checklist_items. */
+export const shiftChecklistItemStateSchema = z
+  .object({
+    item_id: z.string().min(1).max(64).refine((id) => id.trim().length > 0),
+    checked: z.boolean(),
+  })
+  .strict();
+
+export const shiftChecklistItemStateListSchema = z.array(
+  shiftChecklistItemStateSchema
+);
+
 export type PlanInput = z.infer<typeof planSchema>;
 export type IngredientUnitInput = z.infer<typeof ingredientUnitSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
@@ -205,3 +226,9 @@ export type ChecklistTemplateUpdateInput = z.infer<
 export type ChecklistRunStatusInput = z.infer<typeof checklistRunStatusSchema>;
 export type ChecklistRunInsertInput = z.infer<typeof checklistRunInsertSchema>;
 export type ChecklistRunUpdateInput = z.infer<typeof checklistRunUpdateSchema>;
+export type UpsertShiftChecklistItemInput = z.infer<
+  typeof upsertShiftChecklistItemSchema
+>;
+export type ShiftChecklistItemState = z.infer<
+  typeof shiftChecklistItemStateSchema
+>;

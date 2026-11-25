@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import type { DehydratedState } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
 import DashboardPage from "@/app/(app)/dashboard/page";
 import type { DashboardClientProps } from "@/components/dashboard/DashboardClient";
@@ -74,9 +75,16 @@ it("loads dashboard data in parallel and renders before recipe costs arrive", as
     expect(started).not.toContain("stock_levels");
     venues.resolve({ data: [{ id: "venue" }] });
 
-    const dashboard = await rendering as ReactElement<DashboardClientProps>;
+    const { props } = await rendering as ReactElement<{
+      state: DehydratedState;
+      children: ReactElement<DashboardClientProps>;
+    }>;
+    const dashboard = props.children;
     expect(dashboard.props.venueId).toBe("venue");
-    expect(dashboard.props.recipeCount).toBe(1);
+    expect(props.state.queries).toEqual([expect.objectContaining({
+      queryKey: ["dashboard", "venue"],
+      state: expect.objectContaining({ data: expect.objectContaining({ recipeCount: 1 }) }),
+    })]);
     for (const requests of Object.values(windows)) {
       expect(requests).toHaveLength(2);
       const [current, previous] = requests;

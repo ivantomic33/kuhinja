@@ -1,16 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const clearOfflineCache = vi.fn(async () => undefined);
+const clearOfflineCacheForUser = vi.fn(async () => undefined);
+const resetOfflineUserIdCache = vi.fn();
 const clearSyncQueue = vi.fn(async () => undefined);
+const clearDeadLetters = vi.fn(async () => undefined);
 const resetBrowserClient = vi.fn();
 const signOut = vi.fn(async () => undefined);
 
 vi.mock("@/lib/offline/cache", () => ({
   clearOfflineCache,
+  clearOfflineCacheForUser,
+  resetOfflineUserIdCache,
+  resolveOfflineUserId: async () => "test-user",
   OFFLINE_CACHE_DB_NAME: "treuplate-cache",
 }));
 vi.mock("@/lib/offline/idb", () => ({
   clearSyncQueue,
+  clearDeadLetters,
   SYNC_QUEUE_DB_NAME: "treuplate-offline",
 }));
 vi.mock("@/lib/supabase/client", () => ({
@@ -33,6 +40,7 @@ describe("clearClientUserState", () => {
     expect(signOut).not.toHaveBeenCalled();
     expect(clearOfflineCache).toHaveBeenCalledOnce();
     expect(clearSyncQueue).toHaveBeenCalledOnce();
+    expect(clearDeadLetters).toHaveBeenCalledOnce();
   });
 
   it("clears query cache, IDB helpers, cache storage, and local auth", async () => {
@@ -41,7 +49,7 @@ describe("clearClientUserState", () => {
 
     vi.stubGlobal("window", {});
     vi.stubGlobal("caches", {
-      keys: async () => ["pages", "next-static-assets"],
+      keys: async () => ["public-navigations", "next-static-assets", "unrelated-cache"],
       delete: async (key: string) => {
         deletedCaches.push(key);
         return true;
@@ -74,6 +82,9 @@ describe("clearClientUserState", () => {
     expect(resetBrowserClient).toHaveBeenCalledOnce();
     expect(clearOfflineCache).toHaveBeenCalledOnce();
     expect(clearSyncQueue).toHaveBeenCalledOnce();
-    expect(deletedCaches.sort()).toEqual(["next-static-assets", "pages"]);
+    expect(clearDeadLetters).toHaveBeenCalledOnce();
+    expect(clearOfflineCacheForUser).toHaveBeenCalledWith("test-user");
+    expect(resetOfflineUserIdCache).toHaveBeenCalledOnce();
+    expect(deletedCaches.sort()).toEqual(["next-static-assets", "public-navigations"]);
   });
 });

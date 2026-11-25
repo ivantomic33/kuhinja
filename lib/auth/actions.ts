@@ -3,7 +3,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { sr } from "@/lib/i18n/sr";
-import { zodFieldErrors } from "@/lib/auth/errors";
+import { authErrorMessage, zodFieldErrors } from "@/lib/auth/errors";
+import { checkoutReturnPath } from "@/lib/billing/checkout-intent";
+import { currentConsent, persistPendingLegalConsent } from "@/lib/legal/consent";
 import {
   forgotPasswordSchema,
   googleOAuthInputSchema,
@@ -29,22 +31,19 @@ export type AuthActionResult = {
   /** Structured error for callers that need codes (UNAUTHORIZED, etc.). */
   error?: ActionErrorBody;
   url?: string;
+  needsEmailConfirmation?: boolean;
 };
 
 function mapAuthError(message: string): string {
-  const lower = message.toLowerCase();
+  return authErrorMessage(message);
+}
 
-  if (lower.includes("invalid login credentials")) {
-    return sr.auth.errors.invalidCredentials;
-  }
-  if (lower.includes("email not confirmed")) {
-    return sr.auth.errors.emailNotConfirmed;
-  }
-  if (lower.includes("user already registered")) {
-    return sr.auth.errors.generic;
-  }
-
-  return sr.auth.errors.generic;
+function logAuthFailure(scope: string, error: { message?: string; status?: number; code?: string } | null) {
+  if (!error) return;
+  console.error(`[auth:${scope}]`, error.message ?? "unknown", {
+    status: error.status,
+    code: error.code,
+  });
 }
 
 async function getOrigin() {
@@ -56,7 +55,7 @@ async function getOrigin() {
   const proto = headerStore.get("x-forwarded-proto") ?? "http";
   if (host) return `${proto}://${host}`;
 
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://dlztt72p-3000.euw.devtunnels.ms/";
 }
 
 export async function loginAction(
@@ -75,24 +74,32 @@ export async function loginAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
     password: parsed.data.password,
   });
 
   if (error) {
+    logAuthFailure("login", error);
+    const message = mapAuthError(error.message);
     return {
       success: false,
-      message: mapAuthError(error.message),
-      error: { code: "UNAUTHORIZED", message: mapAuthError(error.message) },
+      message,
+      error: { code: "UNAUTHORIZED", message },
     };
+  }
+
+  if (data.user && !(await persistPendingLegalConsent(supabase, data.user))) {
+    await supabase.auth.signOut({ scope: "local" });
+    return { success: false, message: sr.auth.errors.legalConsentFailed };
   }
 
   return { success: true };
 }
 
 export async function registerAction(
-  input: RegisterInput
+  input: RegisterInput,
+  checkout?: string,
 ): Promise<AuthActionResult> {
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) {
@@ -108,28 +115,53 @@ export async function registerAction(
 
   const origin = await getOrigin();
   const supabase = await createClient();
+  const consent = currentConsent(parsed.data.marketingOptIn);
+  const checkoutPath = checkoutReturnPath(checkout);
 
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      emailRedirectTo: `${origin}/auth/callback?next=/login`,
+      emailRedirectTo: `${origin}/auth/callback?next=${checkoutPath ? encodeURIComponent(checkoutPath) : "/login"}`,
       data: {
         full_name: parsed.data.fullName,
         venue_name: parsed.data.venueName,
+        // Nested object for session-based consent write after verify/login.
+        legal_consent: consent,
+        // Flat keys kept for older DB triggers / debugging.
+        legal_terms_version: consent.terms,
+        legal_privacy_version: consent.privacy,
+        legal_accepted_at: consent.acceptedAt,
+        ...(consent.marketing
+          ? { legal_marketing_version: consent.marketing }
+          : {}),
       },
     },
   });
 
   if (error) {
+    logAuthFailure("register", error);
+    const message = mapAuthError(error.message);
     return {
       success: false,
-      message: mapAuthError(error.message),
-      error: { code: "VALIDATION_ERROR", message: mapAuthError(error.message) },
+      message,
+      error: { code: "VALIDATION_ERROR", message },
+    };
+  }
+
+  // Supabase may return a user with empty identities when the email already
+  // exists (email enumeration protection). Treat that as "email taken".
+  const identities = data.user?.identities;
+  if (data.user && Array.isArray(identities) && identities.length === 0) {
+    return {
+      success: false,
+      message: sr.auth.errors.emailTaken,
+      error: { code: "VALIDATION_ERROR", message: sr.auth.errors.emailTaken },
     };
   }
 
   if (!data.user) {
+    logAuthFailure("register", { message: "signUp returned no user and no error" });
     return {
       success: false,
       message: sr.auth.errors.generic,
@@ -140,14 +172,18 @@ export async function registerAction(
   // Profile + default venue are created by the handle_new_user DB trigger
   // from auth metadata (full_name, venue_name).
 
-  // Ensure we do not keep a session if Supabase returned one
   if (data.session) {
-    await supabase.auth.signOut();
+    const recorded = await persistPendingLegalConsent(supabase, data.user);
+    await supabase.auth.signOut({ scope: "local" });
+    if (!recorded) {
+      return { success: false, message: sr.auth.errors.legalConsentFailed };
+    }
   }
 
   return {
     success: true,
-    message: sr.auth.registerSuccess,
+    needsEmailConfirmation: !data.session,
+    message: data.session ? sr.auth.registerReady : sr.auth.registerSuccess,
   };
 }
 
@@ -174,10 +210,12 @@ export async function forgotPasswordAction(
   });
 
   if (error) {
+    logAuthFailure("forgot-password", error);
+    const message = mapAuthError(error.message);
     return {
       success: false,
-      message: mapAuthError(error.message),
-      error: { code: "INTERNAL_ERROR", message: mapAuthError(error.message) },
+      message,
+      error: { code: "INTERNAL_ERROR", message },
     };
   }
 
@@ -217,17 +255,21 @@ export async function resetPasswordAction(
   });
 
   if (error) {
+    logAuthFailure("reset-password", error);
+    const message = mapAuthError(error.message);
     return {
       success: false,
-      message: mapAuthError(error.message),
-      error: { code: "INTERNAL_ERROR", message: mapAuthError(error.message) },
+      message,
+      error: { code: "INTERNAL_ERROR", message },
     };
   }
 
-  return {
-    success: true,
-    message: sr.auth.passwordUpdated,
-  };
+  if (!(await persistPendingLegalConsent(auth.supabase, auth.user))) {
+    await auth.supabase.auth.signOut({ scope: "local" });
+    return { success: true, message: sr.auth.passwordUpdated, url: "/login?consent=retry" };
+  }
+
+  return { success: true, message: sr.auth.passwordUpdated };
 }
 
 export async function signOutAction() {
@@ -262,6 +304,7 @@ export async function getGoogleOAuthUrl(
   });
 
   if (error || !data.url) {
+    logAuthFailure("google-oauth", error);
     return {
       success: false,
       message: sr.auth.errors.oauthFailed,

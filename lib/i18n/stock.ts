@@ -125,6 +125,7 @@ export const stockSr = {
   restockUnit: "Jedinica",
   restockPrice: "Cena (opc.)",
   restockPricePh: "din",
+  restockPriceError: "Unesite pozitivnu cenu sa najviše dve decimale.",
   restockMin: "Minimum",
   restockAddRow: "Još stavka",
   restockCount: "Stavki",

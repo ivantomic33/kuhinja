@@ -6,20 +6,25 @@ import { AuthDivider } from "@/components/auth/AuthDivider";
 import { AuthError } from "@/components/auth/AuthError";
 import { AuthField } from "@/components/auth/AuthField";
 import { GoogleButton } from "@/components/auth/GoogleButton";
+import { LegalConsentFields } from "@/components/auth/LegalConsentFields";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { registerAction } from "@/lib/auth/actions";
 import { registerSchema } from "@/lib/schemas/auth";
 import { sr } from "@/lib/i18n/sr";
 
-export function RegisterForm() {
+export function RegisterForm({ checkout }: { checkout?: string }) {
+  const loginHref = checkout ? `/login?next=${encodeURIComponent(checkout)}` : "/login";
   const [fullName, setFullName] = useState("");
   const [venueName, setVenueName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | undefined>();
   const [successMessage, setSuccessMessage] = useState<string | undefined>();
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(true);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -33,6 +38,8 @@ export function RegisterForm() {
       venueName,
       email,
       password,
+      acceptTerms,
+      marketingOptIn,
     });
 
     if (!parsed.success) {
@@ -51,17 +58,21 @@ export function RegisterForm() {
     setLoading(true);
 
     try {
-      const result = await registerAction(parsed.data);
+      const result = await registerAction(parsed.data, checkout);
 
       if (!result.success) {
         setFieldErrors(result.fieldErrors ?? {});
-        setFormError(result.message ?? sr.auth.errors.generic);
+        // Only show a form-level message when the server sent one.
+        // Field-only validation errors should not also show the generic banner.
+        setFormError(result.message);
         return;
       }
 
+      setNeedsEmailConfirmation(result.needsEmailConfirmation ?? true);
       setSuccessMessage(result.message ?? sr.auth.registerSuccess);
       setPassword("");
-    } catch {
+    } catch (error) {
+      console.error("[register-form]", error);
       setFormError(sr.auth.errors.generic);
     } finally {
       setLoading(false);
@@ -76,12 +87,12 @@ export function RegisterForm() {
           className="rounded-[var(--radius-input)] border border-border bg-surface-2 p-2"
         >
           <p className="text-base font-semibold text-text">
-            {sr.auth.checkEmailTitle}
+            {needsEmailConfirmation ? sr.auth.checkEmailTitle : sr.auth.registeredTitle}
           </p>
           <p className="mt-1 text-sm text-muted">{successMessage}</p>
         </div>
         <Link
-          href="/login"
+          href={loginHref}
           className="text-center text-sm font-medium text-text underline-offset-2 hover:underline"
         >
           {sr.auth.backToLogin}
@@ -92,7 +103,13 @@ export function RegisterForm() {
 
   return (
     <div className="flex flex-col gap-2">
-      <form onSubmit={onSubmit} className="flex flex-col gap-2" noValidate>
+      <form
+        method="post"
+        action="/register"
+        onSubmit={onSubmit}
+        className="flex flex-col gap-2"
+        noValidate
+      >
         <AuthField
           label={sr.auth.fullName}
           name="fullName"
@@ -135,6 +152,13 @@ export function RegisterForm() {
           required
         />
 
+        <LegalConsentFields
+          acceptTerms={acceptTerms}
+          marketingOptIn={marketingOptIn}
+          onAcceptTerms={setAcceptTerms}
+          onMarketingOptIn={setMarketingOptIn}
+          error={fieldErrors.acceptTerms}
+        />
         <AuthError message={formError} />
 
         <PrimaryButton type="submit" fullWidth loading={loading}>
@@ -143,11 +167,14 @@ export function RegisterForm() {
       </form>
 
       <AuthDivider />
-      <GoogleButton nextPath="/dashboard" />
+      <div className="space-y-1">
+        <GoogleButton nextPath={checkout ?? "/dashboard"} />
+        <p className="text-center text-sm text-muted">{sr.auth.googleConsentHint}</p>
+      </div>
 
       <EmptyState className="!gap-1 !p-0" title={sr.auth.hasAccount} action={
         <Link
-          href="/login"
+          href={loginHref}
           className="font-medium text-text underline-offset-2 hover:underline"
         >
           {sr.auth.signIn}

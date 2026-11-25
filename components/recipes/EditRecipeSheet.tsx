@@ -6,7 +6,9 @@ import { AuthField } from "@/components/auth/AuthField";
 import { usePlanUiOptional } from "@/components/plan/PlanProvider";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { readVersionConflictMessage } from "@/lib/auth/version-conflict";
 import { parseDecimal } from "@/lib/domain/parse";
+import { updateVersioned } from "@/lib/domain/versioned-update-client";
 import { useOnline } from "@/lib/hooks/useOnline";
 import { sr } from "@/lib/i18n/sr";
 import {
@@ -15,7 +17,6 @@ import {
   type CachedRecipeItem,
 } from "@/lib/offline/cache";
 import { recipeUpdateSchema } from "@/lib/schemas/domain";
-import { createClient } from "@/lib/supabase/client";
 
 export type EditedRecipeSummary = {
   id: string;
@@ -24,6 +25,7 @@ export type EditedRecipeSummary = {
   portions: number;
   selling_price: number;
   description?: string | null;
+  version: number;
 };
 
 export type EditRecipeSheetProps = {
@@ -36,6 +38,7 @@ export type EditRecipeSheetProps = {
     description?: string | null;
     portions: number;
     selling_price: number;
+    version: number;
   };
   /** Keep offline cache items in sync after header update */
   cachedItems?: CachedRecipeItem[];
@@ -61,6 +64,7 @@ export function EditRecipeSheet({
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | undefined>();
+  const [conflict, setConflict] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -71,6 +75,7 @@ export function EditRecipeSheet({
     setSellingPrice(String(recipe.selling_price));
     setFieldErrors({});
     setFormError(undefined);
+    setConflict(false);
   }, [open, recipe]);
 
   function handleClose() {
@@ -80,7 +85,9 @@ export function EditRecipeSheet({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (conflict || loading) return;
     setFormError(undefined);
+    setConflict(false);
     setFieldErrors({});
 
     if (!online) {
@@ -122,26 +129,24 @@ export function EditRecipeSheet({
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("recipes")
-        .update({
-          name: parsed.data.name,
-          description: parsed.data.description ?? null,
-          portions: parsed.data.portions,
-          selling_price: parsed.data.selling_price,
-        })
-        .eq("id", recipe.id)
-        .select("id, venue_id, name, description, portions, selling_price")
-        .single();
+      const result = await updateVersioned("recipes", {
+        id: recipe.id,
+        version: recipe.version,
+        patch: parsed.data,
+      });
 
-      if (error) {
-        if (handleError(error)) return;
-        const message = error.message?.toLowerCase() ?? "";
+      if ("error" in result) {
+        const conflictMessage = readVersionConflictMessage(result.error);
+        if (conflictMessage) {
+          setConflict(true);
+          setFormError(conflictMessage);
+          return;
+        }
+        if (handleError?.(result.error)) return;
+        const message = result.error.message?.toLowerCase() ?? "";
         if (
-          error.code === "23505" ||
-          message.includes("unique") ||
-          message.includes("duplicate")
+          result.error.code === "VALIDATION_ERROR" &&
+          (message.includes("unique") || message.includes("duplicate"))
         ) {
           setFormError(sr.create.duplicateName);
           return;
@@ -150,11 +155,7 @@ export function EditRecipeSheet({
         return;
       }
 
-      if (!data) {
-        setFormError(sr.create.genericError);
-        return;
-      }
-
+      const data = result.data;
       const updated: EditedRecipeSummary = {
         id: data.id,
         venue_id: data.venue_id,
@@ -162,6 +163,7 @@ export function EditRecipeSheet({
         description: data.description,
         portions: Number(data.portions) || 1,
         selling_price: Number(data.selling_price) || 0,
+        version: data.version,
       };
 
       const cached: Omit<CachedRecipe, "cachedAt"> = {
@@ -174,7 +176,7 @@ export function EditRecipeSheet({
       onClose();
       router.refresh();
     } catch (error) {
-      if (handleError(error)) return;
+      if (handleError?.(error)) return;
       setFormError(sr.create.genericError);
     } finally {
       setLoading(false);
@@ -226,12 +228,22 @@ export function EditRecipeSheet({
         />
 
         {formError ? (
-          <p role="alert" className="text-sm text-danger">
-            {formError}
-          </p>
+          <div role="alert" className="grid gap-2 text-sm text-danger">
+            <p>{formError}</p>
+            {conflict ? (
+              <PrimaryButton
+                type="button"
+                variant="secondary"
+                fullWidth
+                onClick={() => window.location.reload()}
+              >
+                {sr.pwa.versionConflictRefresh}
+              </PrimaryButton>
+            ) : null}
+          </div>
         ) : null}
 
-        <PrimaryButton type="submit" fullWidth loading={loading}>
+        <PrimaryButton type="submit" fullWidth loading={loading} disabled={conflict}>
           {sr.create.recipe.editSubmit}
         </PrimaryButton>
       </form>

@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
+import { entitlementSchema } from "@/lib/billing/entitlements";
+import { restockIngredientPriceSchema } from "@/lib/schemas/stock";
 import { belgradeToday } from "./math";
 import type {
   SaleDeductionLine,
@@ -155,21 +157,6 @@ async function ensureLevels(
   return refreshUsedTodayBatch(map);
 }
 
-async function ensureLevel(
-  venueId: string,
-  ingredientId: string,
-  defaults?: { min?: number; qty?: number }
-): Promise<LevelRow> {
-  const defaultsMap =
-    defaults != null
-      ? new Map([[ingredientId, defaults]])
-      : undefined;
-  const map = await ensureLevels(venueId, [ingredientId], defaultsMap);
-  const level = map.get(ingredientId);
-  if (!level) throw new Error("level-missing");
-  return level;
-}
-
 export async function fetchStockMoves(options: {
   venueId: string;
   ingredientId?: string;
@@ -212,6 +199,23 @@ export async function applyRestock(options: {
   const supabase = createClient();
   const lines = options.lines.filter((line) => line.qty > 0);
   if (lines.length === 0) throw new Error("empty");
+  const prices = options.updatePrices
+    ? lines.filter((line) => line.unitCost != null).map((line) =>
+        restockIngredientPriceSchema.parse({
+          ingredientId: line.ingredientId,
+          newPrice: line.unitCost,
+        })
+      )
+    : [];
+
+  if (lines.some((line) => line.unitCost != null)) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    if (!user) throw new Error("UNAUTHORIZED");
+    const { data, error } = await supabase.rpc("get_entitlements", { p_user_id: user.id });
+    if (error) throw error;
+    if (!entitlementSchema.safeParse(data).data?.features.stockRestock) throw new Error("UPGRADE_REQUIRED");
+  }
 
   if (
     options.maxStockItems != null &&
@@ -286,34 +290,13 @@ export async function applyRestock(options: {
   );
   if (moveError) throw moveError;
 
-  if (options.updatePrices) {
-    const priced = lines.filter(
-      (line): line is RestockLineInput & { unitCost: number } =>
-        line.unitCost != null &&
-        Number.isFinite(line.unitCost) &&
-        line.unitCost >= 0
-    );
-    if (priced.length > 0) {
-      await Promise.all(
-        priced.map(async (line) => {
-          const { error: priceError } = await supabase
-            .from("ingredients")
-            .update({ price: line.unitCost })
-            .eq("id", line.ingredientId);
-          if (priceError) throw priceError;
-        })
-      );
-
-      const { error: historyError } = await supabase
-        .from("ingredient_price_history")
-        .insert(
-          priced.map((line) => ({
-            ingredient_id: line.ingredientId,
-            price: line.unitCost,
-          }))
-        );
-      if (historyError) throw historyError;
-    }
+  for (const { ingredientId, newPrice, note } of prices) {
+    const { error } = await supabase.rpc("restock_ingredient", {
+      p_ingredient_id: ingredientId,
+      p_new_price: newPrice,
+      p_note: note,
+    });
+    if (error) throw error;
   }
 }
 
@@ -441,27 +424,18 @@ export async function applyWriteOff(options: {
   unitCost?: number;
 }): Promise<void> {
   if (options.qty <= 0) throw new Error("empty");
-  const supabase = createClient();
-  const level = await ensureLevel(options.venueId, options.ingredientId);
-  const nextQty = num(level.qty) - options.qty;
-
-  const { error: updateError } = await supabase
-    .from("stock_levels")
-    .update({ qty: nextQty })
-    .eq("id", level.id);
-  if (updateError) throw updateError;
-
-  const { error: moveError } = await supabase.from("stock_moves").insert({
-    venue_id: options.venueId,
-    ingredient_id: options.ingredientId,
-    type: "otpis",
-    qty_delta: -options.qty,
-    unit_cost: options.unitCost ?? null,
-    reason: options.reason,
-    note: options.note?.trim() || null,
-    user_id: options.userId ?? null,
+  const { error } = await createClient().rpc("record_stock_adjustment", {
+    p_venue_id: options.venueId,
+    p_type: "otpis",
+    p_lines: [{
+      ingredient_id: options.ingredientId,
+      qty: options.qty,
+      reason: options.reason,
+      note: options.note,
+      unit_cost: options.unitCost,
+    }],
   });
-  if (moveError) throw moveError;
+  if (error) throw error;
 }
 
 export type InventoryLineInput = {
@@ -475,54 +449,17 @@ export async function applyInventory(options: {
   lines: InventoryLineInput[];
   userId?: string | null;
 }): Promise<void> {
-  const supabase = createClient();
   if (options.lines.length === 0) throw new Error("empty");
-
-  const levels = await ensureLevels(
-    options.venueId,
-    options.lines.map((line) => line.ingredientId)
-  );
-
-  const moves: Array<{
-    venue_id: string;
-    ingredient_id: string;
-    type: "korekcija";
-    qty_delta: number;
-    unit_cost: number | null;
-    reason: string;
-    user_id: string | null;
-  }> = [];
-
-  await Promise.all(
-    options.lines.map(async (line) => {
-      const level = levels.get(line.ingredientId);
-      if (!level) throw new Error("level-missing");
-      const before = num(level.qty);
-      const delta = line.counted - before;
-      if (Math.abs(delta) < 1e-9) return;
-
-      const { error: updateError } = await supabase
-        .from("stock_levels")
-        .update({ qty: line.counted })
-        .eq("id", level.id);
-      if (updateError) throw updateError;
-
-      moves.push({
-        venue_id: options.venueId,
-        ingredient_id: line.ingredientId,
-        type: "korekcija",
-        qty_delta: delta,
-        unit_cost: line.unitCost ?? null,
-        reason: "inventura",
-        user_id: options.userId ?? null,
-      });
-    })
-  );
-
-  if (moves.length > 0) {
-    const { error: moveError } = await supabase.from("stock_moves").insert(moves);
-    if (moveError) throw moveError;
-  }
+  const { error } = await createClient().rpc("record_stock_adjustment", {
+    p_venue_id: options.venueId,
+    p_type: "korekcija",
+    p_lines: options.lines.map((line) => ({
+      ingredient_id: line.ingredientId,
+      qty: line.counted,
+      unit_cost: line.unitCost,
+    })),
+  });
+  if (error) throw error;
 }
 
 export async function removeStockLevel({ venueId, levelId }: {

@@ -7,7 +7,7 @@ import { sr } from "@/lib/i18n/sr";
 import { parseChecklistItems } from "@/lib/shift/parse-items";
 import { runFromRow } from "@/lib/shift/run";
 import { getPlan } from "@/lib/supabase/plan-server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getServerUser } from "@/lib/supabase/server";
 
 type ShiftPageProps = {
   params: Promise<{ templateId: string }>;
@@ -15,11 +15,7 @@ type ShiftPageProps = {
 
 export default async function ShiftChecklistPage({ params }: ShiftPageProps) {
   const { templateId } = await params;
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, user] = await Promise.all([createClient(), getServerUser()]);
 
   if (!user) {
     notFound();
@@ -49,7 +45,16 @@ export default async function ShiftChecklistPage({ params }: ShiftPageProps) {
   if (runError) throw runError;
 
   const items = parseChecklistItems(template.items);
-  const initialRun = activeRun ? runFromRow(activeRun) : null;
+
+  let initialRun = null;
+  if (activeRun) {
+    const { data: itemRows, error: itemsError } = await supabase
+      .from("shift_checklist_items")
+      .select("item_id, checked")
+      .eq("run_id", activeRun.id);
+    if (itemsError) throw itemsError;
+    initialRun = runFromRow(activeRun, itemRows);
+  }
 
   return (
     <div className="flex flex-col gap-2">

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { APP_NAME } from "@/lib/config/app";
+import { requireFeature } from "@/lib/billing/guard";
 import {
   actionData,
   actionError,
@@ -16,7 +17,6 @@ import {
   updateScheduleInputSchema,
   type ScheduleAction,
 } from "@/lib/schemas/schedule";
-import { parsePublicSchedule } from "./public-payload";
 import { loadMonthlyReport } from "./server";
 import type { Assignment, Employee, PublicSchedule } from "./types";
 
@@ -93,6 +93,11 @@ export async function updateSchedule(
   );
   if ("error" in access) return access;
 
+  if (!access.isEmployee) {
+    const feature = await requireFeature("schedule", auth);
+    if ("error" in feature) return feature;
+  }
+
   const { type, ...fields } = commandParsed.data;
   const payload =
     commandParsed.data.type === "request"
@@ -141,6 +146,9 @@ export async function loadScheduleReport(
     parsed.data.location
   );
   if ("error" in access) return access;
+
+  const feature = await requireFeature("schedule", auth);
+  if ("error" in feature) return feature;
 
   try {
     const data = await loadMonthlyReport(

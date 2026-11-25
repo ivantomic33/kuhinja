@@ -1,190 +1,199 @@
+import { getChecklistRunAlias, saveChecklistRunAlias } from "@/lib/offline/cache";
 import {
   enqueueSyncOp,
   listSyncOps,
+  MAX_SYNC_ATTEMPTS,
+  moveToDeadLetter,
   removeSyncOp,
+  updateSyncOp,
+  type ChecklistRunStart,
   type SyncQueueOp,
 } from "@/lib/offline/idb";
-import {
-  runFromRow,
-  type RunSnapshot,
-} from "@/lib/shift/run";
+import { upsertShiftChecklistItemSchema } from "@/lib/schemas/domain";
+import { runFromRow, type RunSnapshot } from "@/lib/shift/run";
+import type { createClient } from "@/lib/supabase/client";
 
 export type { RunSnapshot } from "@/lib/shift/run";
-export { runFromRow } from "@/lib/shift/run";
 
-function isOnline(): boolean {
-  return typeof navigator === "undefined" ? true : navigator.onLine;
+type Client = ReturnType<typeof createClient>;
+
+function isOnline() {
+  return typeof navigator === "undefined" || navigator.onLine;
 }
 
-async function pushOp(op: SyncQueueOp): Promise<void> {
-  const { createClient } = await import("@/lib/supabase/client");
-  const supabase = createClient();
+async function ensureRun(supabase: Client, run: ChecklistRunStart) {
+  const id = await getChecklistRunAlias(run.id);
+  if (id !== run.id) return id;
 
-  if (op.kind === "checklist_run_upsert") {
-    const { error } = await supabase.from("checklist_runs").upsert(
-      {
-        id: op.payload.id,
-        venue_id: op.payload.venue_id,
-        template_id: op.payload.template_id,
-        user_id: op.payload.user_id,
-        status: op.payload.status,
-        checked_item_ids: op.payload.checked_item_ids,
-        started_at: op.payload.started_at,
-        completed_at: op.payload.completed_at,
-      },
-      { onConflict: "id" }
-    );
+  // Never reset status when a start is retried after another device finished.
+  const { error } = await supabase.from("checklist_runs").upsert(run, {
+    onConflict: "id",
+    ignoreDuplicates: true,
+  });
+  if (!error) return id;
+  if (error.code !== "23505") throw error;
+
+  const { data, error: lookupError } = await supabase.from("checklist_runs")
+    .select("id")
+    .eq("venue_id", run.venue_id)
+    .eq("template_id", run.template_id)
+    .eq("user_id", run.user_id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (lookupError || !data) throw lookupError ?? error;
+  await saveChecklistRunAlias(id, data.id);
+  return data.id;
+}
+
+function opRunId(op: SyncQueueOp) {
+  return op.kind === "checklist_item_upsert" ? op.payload.run_id : op.payload.id;
+}
+
+async function pushOp(supabase: Client, op: SyncQueueOp, runId: string) {
+  if (op.kind === "checklist_item_upsert") {
+    const { item_id, checked, ensure_run } = op.payload;
+    if (ensure_run) {
+      const { id, venue_id, template_id, user_id, started_at } = ensure_run;
+      runId = await ensureRun(supabase, { id, venue_id, template_id, user_id, started_at });
+    }
+    const args = upsertShiftChecklistItemSchema.parse({
+      p_run_id: runId,
+      p_item_id: item_id,
+      p_checked: checked,
+    });
+    const { error } = await supabase.rpc("upsert_shift_checklist_item", args);
     if (error) throw error;
     return;
   }
 
-  const { error } = await supabase
-    .from("checklist_runs")
-    .update({
-      ...(op.payload.status !== undefined
-        ? { status: op.payload.status }
-        : {}),
-      ...(op.payload.checked_item_ids !== undefined
-        ? { checked_item_ids: op.payload.checked_item_ids }
-        : {}),
-      ...(op.payload.completed_at !== undefined
-        ? { completed_at: op.payload.completed_at }
-        : {}),
-    })
-    .eq("id", op.payload.id);
+  if (op.kind === "checklist_run_start") {
+    await ensureRun(supabase, op.payload);
+    return;
+  }
 
+  // Older IndexedDB entries can still contain a legacy snapshot.
+  if (op.kind === "checklist_run_upsert") {
+    const { error } = await supabase.from("checklist_runs")
+      .upsert({ ...op.payload, id: runId }, { onConflict: "id" });
+    if (error) throw error;
+    return;
+  }
+
+  const { status, checked_item_ids, completed_at } = op.payload;
+  const patch = { status, checked_item_ids, completed_at };
+  const { error } = await supabase.from("checklist_runs").update(patch).eq("id", runId);
   if (error) throw error;
 }
 
-/** Flush queued offline writes in order. Returns number of ops synced. */
-export async function flushChecklistSyncQueue(): Promise<number> {
+async function flushOnce(): Promise<number> {
   if (!isOnline()) return 0;
-
   const ops = await listSyncOps();
+  if (!ops.length) return 0;
+
+  const { createClient } = await import("@/lib/supabase/client");
+  const supabase = createClient();
+  const failedItems = new Map<string, string[]>();
   let synced = 0;
 
   for (const op of ops) {
+    let itemKey: string | undefined;
     try {
-      await pushOp(op);
+      const runId = await getChecklistRunAlias(opRunId(op));
+      if (op.kind === "checklist_item_upsert") {
+        itemKey = JSON.stringify([runId, op.payload.item_id]);
+      }
+      await pushOp(supabase, op, runId);
+      // A retry of an earlier toggle must not undo this successful write.
+      if (itemKey) {
+        for (const id of failedItems.get(itemKey) ?? []) await removeSyncOp(id);
+        failedItems.delete(itemKey);
+      }
       await removeSyncOp(op.id);
-      synced += 1;
-    } catch {
-      // Stop on first failure so order is preserved; retry later.
-      break;
+      synced++;
+    } catch (error) {
+      const attempts = (op.attempts ?? 0) + 1;
+      const message = typeof error === "object" && error && "message" in error
+        ? String(error.message)
+        : String(error);
+      const failed = { ...op, attempts, last_error: message };
+      if (attempts >= MAX_SYNC_ATTEMPTS) {
+        await moveToDeadLetter(failed, message);
+      } else {
+        await updateSyncOp(failed);
+        if (itemKey) {
+          const earlier = failedItems.get(itemKey) ?? [];
+          earlier.push(op.id);
+          failedItems.set(itemKey, earlier);
+        }
+      }
     }
   }
 
   return synced;
 }
 
-export type PersistRunResult = {
-  run: RunSnapshot;
-  queued: boolean;
-};
+let flushing = Promise.resolve(0);
 
-/** Persist run progress: direct write when online, else queue in IndexedDB. */
-export async function persistChecklistRun(
-  run: RunSnapshot,
-  mode: "upsert" | "update" = "update"
-): Promise<PersistRunResult> {
-  if (!isOnline()) {
-    await enqueueSyncOp(
-      mode === "upsert"
-        ? {
-            kind: "checklist_run_upsert",
-            payload: {
-              id: run.id,
-              venue_id: run.venue_id,
-              template_id: run.template_id,
-              user_id: run.user_id,
-              status: run.status,
-              checked_item_ids: run.checked_item_ids,
-              started_at: run.started_at,
-              completed_at: run.completed_at,
-            },
-          }
-        : {
-            kind: "checklist_run_update",
-            payload: {
-              id: run.id,
-              status: run.status,
-              checked_item_ids: run.checked_item_ids,
-              completed_at: run.completed_at,
-            },
-          }
-    );
-    return { run, queued: true };
-  }
-
-  try {
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-
-    if (mode === "upsert") {
-      const { data, error } = await supabase
-        .from("checklist_runs")
-        .upsert(
-          {
-            id: run.id,
-            venue_id: run.venue_id,
-            template_id: run.template_id,
-            user_id: run.user_id,
-            status: run.status,
-            checked_item_ids: run.checked_item_ids,
-            started_at: run.started_at,
-            completed_at: run.completed_at,
-          },
-          { onConflict: "id" }
-        )
-        .select("*")
-        .single();
-
-      if (error) throw error;
-      return { run: runFromRow(data), queued: false };
+export function flushChecklistSyncQueue(): Promise<number> {
+  const next = flushing.catch(() => 0).then(async () => {
+    if (typeof navigator !== "undefined" && navigator.locks) {
+      return await navigator.locks.request("treuplate-checklist-sync", flushOnce);
     }
+    return flushOnce();
+  });
+  flushing = next;
+  return next;
+}
 
-    const { data, error } = await supabase
-      .from("checklist_runs")
-      .update({
-        status: run.status,
-        checked_item_ids: run.checked_item_ids,
-        completed_at: run.completed_at,
-      })
-      .eq("id", run.id)
-      .select("*")
-      .single();
-
-    if (error) throw error;
-    return { run: runFromRow(data), queued: false };
-  } catch {
-    // Network blip while navigator.onLine is still true — queue and continue.
-    await enqueueSyncOp(
-      mode === "upsert"
-        ? {
-            kind: "checklist_run_upsert",
-            payload: {
-              id: run.id,
-              venue_id: run.venue_id,
-              template_id: run.template_id,
-              user_id: run.user_id,
-              status: run.status,
-              checked_item_ids: run.checked_item_ids,
-              started_at: run.started_at,
-              completed_at: run.completed_at,
-            },
-          }
-        : {
-            kind: "checklist_run_update",
-            payload: {
-              id: run.id,
-              status: run.status,
-              checked_item_ids: run.checked_item_ids,
-              completed_at: run.completed_at,
-            },
-          }
-    );
-    return { run, queued: true };
+export async function hasPendingChecklistWrites(id: string): Promise<boolean> {
+  const runId = await getChecklistRunAlias(id);
+  for (const op of await listSyncOps()) {
+    if (await getChecklistRunAlias(opRunId(op)) === runId) return true;
   }
+  return false;
+}
+
+type PersistRunResult = { run: RunSnapshot; queued: boolean };
+
+async function persist(run: RunSnapshot, input: Parameters<typeof enqueueSyncOp>[0]): Promise<PersistRunResult> {
+  const op = await enqueueSyncOp(input);
+  if (!isOnline()) return { run, queued: true };
+
+  await flushChecklistSyncQueue();
+  const queued = (await listSyncOps()).some((pending) => pending.id === op.id);
+  return { run: { ...run, id: await getChecklistRunAlias(run.id) }, queued };
+}
+
+export async function persistChecklistItemDelta({
+  run,
+  itemId,
+  checked,
+}: {
+  run: RunSnapshot;
+  itemId: string;
+  checked: boolean;
+}): Promise<PersistRunResult> {
+  const args = upsertShiftChecklistItemSchema.parse({
+    p_run_id: run.id,
+    p_item_id: itemId,
+    p_checked: checked,
+  });
+  const ids = new Set(run.checked_item_ids);
+  if (checked) ids.add(itemId);
+  else ids.delete(itemId);
+
+  return persist({ ...run, checked_item_ids: [...ids] }, {
+    kind: "checklist_item_upsert",
+    payload: { run_id: args.p_run_id, item_id: args.p_item_id, checked: args.p_checked },
+  });
+}
+
+export async function completeChecklistRun(run: RunSnapshot): Promise<PersistRunResult> {
+  const completed_at = new Date().toISOString();
+  return persist({ ...run, status: "completed", completed_at }, {
+    kind: "checklist_run_update",
+    payload: { id: run.id, status: "completed", completed_at },
+  });
 }
 
 export async function createChecklistRun(input: {
@@ -192,17 +201,33 @@ export async function createChecklistRun(input: {
   template_id: string;
   user_id: string;
 }): Promise<PersistRunResult> {
-  const now = new Date().toISOString();
-  const run: RunSnapshot = {
+  const pending = (await listSyncOps()).find((op) => op.kind === "checklist_run_start" &&
+    op.payload.user_id === input.user_id && op.payload.template_id === input.template_id);
+  const start = pending?.kind === "checklist_run_start" ? pending.payload : {
     id: crypto.randomUUID(),
-    venue_id: input.venue_id,
-    template_id: input.template_id,
-    user_id: input.user_id,
-    status: "active",
-    checked_item_ids: [],
-    started_at: now,
-    completed_at: null,
+    started_at: new Date().toISOString(),
+    ...input,
   };
+  const run: RunSnapshot = { ...start, status: "active", checked_item_ids: [], completed_at: null };
+  const result = pending
+    ? { run, queued: true }
+    : await persist(run, { kind: "checklist_run_start", payload: start });
 
-  return persistChecklistRun(run, "upsert");
+  if (result.run.id !== start.id) {
+    const current = await loadChecklistRun(result.run.id);
+    if (current) return { ...result, run: current };
+  }
+  return result;
+}
+
+export async function loadChecklistRun(id: string): Promise<RunSnapshot | null> {
+  const { createClient } = await import("@/lib/supabase/client");
+  const supabase = createClient();
+  const runId = await getChecklistRunAlias(id);
+  const [{ data: run, error: runError }, { data: items, error: itemsError }] = await Promise.all([
+    supabase.from("checklist_runs").select("*").eq("id", runId).maybeSingle(),
+    supabase.from("shift_checklist_items").select("item_id, checked").eq("run_id", runId),
+  ]);
+  if (runError || itemsError) throw runError ?? itemsError;
+  return run ? runFromRow(run, items) : null;
 }

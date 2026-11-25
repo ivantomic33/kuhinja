@@ -10,27 +10,27 @@ export default function MarketingLayout({
 }) {
   return (
     <div className="min-h-dvh bg-background text-text">
-      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/85 backdrop-blur-md">
-        <div className="page-gutter mx-auto flex h-20 max-w-app items-center justify-between gap-4">
+      <header className="sticky top-0 z-40 border-b border-border bg-background">
+        <div className="page-gutter mx-auto flex h-16 max-w-app items-center justify-between gap-3 md:h-20">
           <Link
             href="/"
-            className="flex items-center gap-3 text-2xl font-semibold tracking-tight text-text"
+            className="focus-ring flex min-h-11 min-w-11 items-center gap-2 rounded-md text-lg font-semibold tracking-tight text-text sm:text-2xl"
           >
-            <LogoMark className="size-9" />
+            <LogoMark className="size-8 shrink-0" />
             {sr.app.name}
           </Link>
           <nav className="flex items-center gap-2 sm:gap-5" aria-label="Glavna navigacija">
-            <Link href="/#features" className="hidden text-sm text-muted hover:text-text md:block">Funkcije</Link>
-            <Link href="/#pricing" className="hidden text-sm text-muted hover:text-text md:block">Cenovnik</Link>
+            <Link href="/#features" className="focus-ring hidden min-h-11 min-w-11 items-center rounded-md text-sm text-muted hover:text-text md:inline-flex">Funkcije</Link>
+            <Link href="/#cenovnik" className="focus-ring hidden min-h-11 min-w-11 items-center rounded-md text-sm text-muted hover:text-text md:inline-flex">{sr.marketing.landing.pricing}</Link>
             <Link
               href="/login"
-              className="flex min-h-11 items-center rounded-[var(--radius-input)] px-2 text-sm text-muted hover:text-text"
+              className="focus-ring flex min-h-11 min-w-11 items-center rounded-[var(--radius-input)] px-2 text-sm text-muted hover:text-text"
             >
               {sr.marketing.navLogin}
             </Link>
             <Link
               href="/register"
-              className="flex min-h-11 items-center rounded-[var(--radius-input)] bg-accent px-4 text-sm font-semibold text-accent-ink hover:bg-accent-hover"
+              className="focus-ring flex min-h-11 min-w-11 items-center rounded-[var(--radius-input)] bg-accent px-3 text-sm font-semibold text-accent-ink hover:bg-accent-hover"
             >
               {sr.marketing.navRegister}
             </Link>

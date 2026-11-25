@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { LogoMark } from "@/components/brand/LogoMark";
+import { SiteFooterLinks } from "@/components/legal/SiteFooterLinks";
 import { InstallHint } from "@/components/pwa/InstallHint";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
 import { PlanBootstrap } from "@/components/plan/PlanBootstrap";
@@ -134,6 +135,9 @@ export function AppShell({
               <ToastProvider>{children}</ToastProvider>
             </PlanProvider>
             {pathname === "/dashboard" ? <div className="mt-6 empty:hidden"><InstallHint /></div> : null}
+            <footer className="mt-8 border-t border-border pt-4">
+              <SiteFooterLinks />
+            </footer>
           </div>
         </main>
       </div>

@@ -1,273 +1,168 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import type { ReactNode } from "react";
-import {
-  Calculator,
-  Check,
-  ClipboardList,
-  Scale,
-} from "lucide-react";
-import { FoodCostMockup } from "@/components/marketing/FoodCostMockup";
+import Image from "next/image";
+import { ArrowRight, Calculator, CalendarDays, Carrot, ChefHat, ClipboardList, Package, WifiOff } from "lucide-react";
+import { SiteFooterLinks } from "@/components/legal/SiteFooterLinks";
 import { MarketingFaq } from "@/components/marketing/MarketingFaq";
 import { MarketingJsonLd } from "@/components/marketing/MarketingJsonLd";
-import { PricingCard } from "@/components/ui/PricingCard";
+import { MobileCta } from "@/components/marketing/MobileCta";
+import { PricingTable } from "@/components/marketing/PricingTable";
+import { SocialProof } from "@/components/marketing/SocialProof";
+import { primaryCtaClass, secondaryCtaClass, textLinkClass, trialHref } from "@/components/marketing/landing-links";
+import { getBillingCatalog } from "@/lib/billing/catalog";
+import { getPricingPlans } from "@/lib/billing/plans";
 import { sr } from "@/lib/i18n/sr";
-import { PLAN_PRICES } from "@/lib/plan/entitlements";
-import { getSiteUrl } from "@/lib/seo/site";
-import { openGraphCard, twitterCard } from "@/lib/seo/social-card";
-import { cn } from "@/lib/utils/cn";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 
-const priceFormat = new Intl.NumberFormat("sr-Latn", {
-  maximumFractionDigits: 0,
-});
+export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: { absolute: sr.marketing.metaTitle },
-  description: sr.marketing.metaDescription,
-  alternates: {
-    canonical: "/",
-  },
-  openGraph: {
-    siteName: sr.app.name,
-    title: sr.marketing.metaTitle,
-    description: sr.marketing.metaDescription,
-    url: "/",
-    images: [openGraphCard],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: sr.marketing.metaTitle,
-    description: sr.marketing.metaDescription,
-    images: [twitterCard],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+export const metadata: Metadata = publicPageMetadata(
+  sr.marketing.metaTitle, sr.marketing.metaDescription, "/",
+);
 
-const FEATURES = [
-  {
-    key: "foodcost",
-    icon: Calculator,
-    title: sr.marketing.feature1Title,
-    body: sr.marketing.feature1Body,
-  },
-  {
-    key: "scaler",
-    icon: Scale,
-    title: sr.marketing.feature2Title,
-    body: sr.marketing.feature2Body,
-  },
-  {
-    key: "shift",
-    icon: ClipboardList,
-    title: sr.marketing.feature3Title,
-    body: sr.marketing.feature3Body,
-  },
+const copy = sr.marketing.landing;
+const featureIcons = [Carrot, ChefHat, Calculator, Package, ClipboardList, CalendarDays];
+const steps = [
+  { ...copy.steps[0], image: "ingredients", height: 630 },
+  { ...copy.steps[1], image: "recipe", height: 430, alt: copy.previewAlt },
+  { ...copy.steps[2], image: "shift", height: 530 },
 ] as const;
+const sectionTitle = "mb-6 text-ui-kpi font-semibold tracking-tight text-text";
+const card = "rounded-xl border border-border bg-surface p-5";
+const paragraph = "mt-2 text-sm leading-relaxed text-text-2";
 
-const STEPS = [
-  { title: sr.marketing.step1Title, body: sr.marketing.step1Body },
-  { title: sr.marketing.step2Title, body: sr.marketing.step2Body },
-  { title: sr.marketing.step3Title, body: sr.marketing.step3Body },
-] as const;
+export default async function MarketingPage() {
+  const plans = getPricingPlans(await getBillingCatalog());
 
-function CtaLink({
-  href,
-  children,
-  variant = "primary",
-  className,
-}: {
-  href: string;
-  children: ReactNode;
-  variant?: "primary" | "ghost";
-  className?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "inline-flex min-h-[52px] items-center justify-center gap-1",
-        "rounded-[var(--radius-input)] px-6 text-base font-semibold",
-        "outline-none transition-opacity",
-        "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        variant === "primary" && "bg-accent text-accent-ink hover:bg-accent-hover",
-        variant === "ghost" &&
-          "border border-border bg-surface-2 text-text hover:opacity-90",
-        className
-      )}
-    >
-      {children}
-    </Link>
-  );
-}
-
-export default function MarketingPage() {
   return (
     <>
-      <MarketingJsonLd siteUrl={getSiteUrl()} />
-
-      <main className="page-gutter mx-auto flex w-full max-w-app flex-col gap-20 py-12 lg:gap-24 lg:py-20">
-        <p
-          id="nalog-obrisan"
-          role="status"
-          className="hidden scroll-mt-24 rounded-lg border border-border bg-surface-2 px-4 py-3 text-sm text-text target:block"
-        >
+      <MarketingJsonLd plans={plans} />
+      <main className="page-gutter mx-auto flex w-full max-w-app flex-col gap-14 pb-10 pt-10 lg:gap-20 lg:pt-20">
+        <p id="nalog-obrisan" role="status" className="hidden scroll-mt-24 rounded-lg border border-border bg-surface-2 px-4 py-3 text-sm text-text target:block">
           {sr.auth.deleteAccountSuccess}
         </p>
-        <section aria-labelledby="hero-title" className="grid items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-16">
-          <div className="flex flex-col gap-7">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent">
-              {sr.marketing.heroEyebrow}
-            </p>
-            <h1 id="hero-title" className="max-w-xl text-balance text-ui-hero font-semibold leading-[1.08] tracking-[-0.05em] text-text sm:text-6xl xl:text-ui-hero-wide">
-              {sr.marketing.heroTitle}
+
+        <section aria-labelledby="hero-title" className="grid items-center gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-10">
+          <div className="flex flex-col gap-5">
+            <h1 id="hero-title" className="max-w-[13ch] text-balance text-[clamp(2.25rem,5vw,4.25rem)] leading-[1.06] font-semibold tracking-[-0.045em] text-text">
+              {copy.heroTitle}
             </h1>
-            <p className="max-w-lg text-pretty text-lg leading-relaxed text-muted">
-              {sr.marketing.heroSubtitle}
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <CtaLink href="/register">{sr.marketing.ctaRegister}</CtaLink>
-              <CtaLink href="#mockup" variant="ghost">{sr.marketing.ctaTry}</CtaLink>
+            <p className="max-w-lg text-base leading-relaxed text-text-2 sm:text-lg">{copy.heroSubtitle}</p>
+            <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:flex-wrap">
+              <a id="landing-hero-cta" href={trialHref} data-landing-cta="hero" className={`${primaryCtaClass} gap-2`}>
+                {copy.trialCta}<ArrowRight className="size-4" aria-hidden="true" />
+              </a>
+              <a href="#cenovnik" className={secondaryCtaClass}>{copy.plansCta}</a>
             </div>
-            <p className="flex items-center gap-2 text-sm text-muted">
-              <Check className="size-4" aria-hidden="true" />
-              {sr.marketing.freeNote}
-            </p>
           </div>
-          <div id="mockup" className="min-w-0 scroll-mt-24"><FoodCostMockup /></div>
+
+          <figure className="min-w-0 rounded-2xl border border-border-strong bg-surface px-2 pt-2">
+            <Image
+              src="/landing/recipe.avif"
+              width={960}
+              height={430}
+              sizes="(max-width: 1023px) calc(100vw - 48px), (max-width: 1400px) 50vw, 690px"
+              priority
+              alt={copy.previewAlt}
+              className="h-auto w-full rounded-xl"
+            />
+            <figcaption className="px-2 py-3 text-xs font-medium text-text-2">{copy.previewCaption}</figcaption>
+          </figure>
         </section>
 
-        <section aria-label={sr.marketing.howLabel} className="grid gap-6 border-y border-border py-8 sm:grid-cols-3">
-          {STEPS.map((step) => (
-            <div key={step.title}>
-              <p className="mb-2 text-base font-semibold">{step.title}</p>
-              <p className="text-sm leading-relaxed text-muted">{step.body}</p>
-            </div>
-          ))}
+        <section aria-labelledby="outcomes-title">
+          <h2 id="outcomes-title" className={sectionTitle}>{copy.outcomesTitle}</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {copy.outcomes.map(({ title, body }) => (
+              <article key={title} className={card}>
+                <h3 className="text-base font-semibold">{title}</h3>
+                <p className={paragraph}>{body}</p>
+              </article>
+            ))}
+          </div>
         </section>
 
-        <section
-          id="features" aria-labelledby="features-title"
-          className="flex flex-col gap-7"
-        >
-          <h2
-            id="features-title"
-            className="text-ui-kpi font-semibold tracking-tight text-text"
-          >
-            {sr.marketing.featuresTitle}
-          </h2>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
-            {FEATURES.map((feature) => {
-              const Icon = feature.icon;
+        <section id="features" aria-labelledby="features-title" className="scroll-mt-24">
+          <h2 id="features-title" className={sectionTitle}>{copy.modulesTitle}</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {copy.modules.map(({ title, body }, index) => {
+              const Icon = featureIcons[index];
               return (
-                <div key={feature.key} className="flex flex-col gap-4 border-t border-border pt-6">
-                  <div
-                    className={cn(
-                      "inline-flex size-9 items-center justify-center",
-                      "rounded-[var(--radius-input)] bg-surface-2 text-muted"
-                    )}
-                  >
-                    <Icon className="size-5" aria-hidden />
-                  </div>
-                  <h3 className="text-base font-semibold text-text">
-                    {feature.title}
-                  </h3>
-                  <p className="text-base leading-relaxed text-muted">{feature.body}</p>
-                </div>
+                <article key={title} className={card}>
+                  <Icon className="mb-4 size-6 text-accent" aria-hidden="true" />
+                  <h3 className="text-base font-semibold">{title}</h3>
+                  <p className={paragraph}>{body}</p>
+                </article>
               );
             })}
           </div>
         </section>
 
-        <section
-          id="pricing" aria-labelledby="pricing-title"
-          className="flex flex-col gap-7"
-        >
-          <div className="flex flex-col gap-1">
-            <h2
-              id="pricing-title"
-              className="text-lg font-semibold tracking-tight text-text"
-            >
-              {sr.marketing.pricingTitle}
-            </h2>
-            <p className="text-sm text-muted">{sr.marketing.pricingSubtitle}</p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-            {Object.values(sr.marketing.pricingPlans).map((plan) => (
-              <PricingCard
-                key={plan.id}
-                name={plan.name}
-                description={plan.description}
-                price={`${priceFormat.format(PLAN_PRICES[plan.id].monthly)} ${sr.premium.currency}`}
-                priceHint={plan.id === "free" ? sr.marketing.freePriceHint : sr.marketing.paidPriceHint}
-                features={plan.features}
-                highlighted={plan.id === "pro"}
-                cta={
-                  <CtaLink
-                    href={plan.id === "free" ? "/register" : `/premium#plan-${plan.id}`}
-                    variant={plan.id === "pro" ? "primary" : "ghost"}
-                    className="w-full"
-                  >
-                    {plan.cta}
-                  </CtaLink>
-                }
-              />
+        <section aria-labelledby="steps-title">
+          <h2 id="steps-title" className={sectionTitle}>{sr.marketing.howLabel}</h2>
+          <ol className="grid gap-4 sm:grid-cols-3">
+            {steps.map(({ title, image, height, alt }, index) => (
+              <li key={image} className="overflow-hidden rounded-xl border border-border bg-surface">
+                <div className="flex items-center gap-3 p-4">
+                  <span aria-hidden="true" className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-semibold text-accent-ink">
+                    {index + 1}
+                  </span>
+                  <h3 className="text-sm font-semibold">{title}</h3>
+                </div>
+                <Image
+                  src={`/landing/${image}.avif`}
+                  width={960}
+                  height={height}
+                  sizes="(max-width: 639px) 100vw, 33vw"
+                  alt={alt}
+                  className="h-auto w-full border-t border-border"
+                />
+              </li>
             ))}
-          </div>
-          <p className="text-sm text-muted">{sr.marketing.pricingWaitlist}</p>
+          </ol>
         </section>
 
-        <section aria-labelledby="faq-heading">
+        <section aria-labelledby="offline-title" className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+          <div className="flex items-center gap-3">
+            <WifiOff className="size-6 shrink-0 text-accent" aria-hidden="true" />
+            <h2 id="offline-title" className="text-ui-kpi font-semibold tracking-tight">{copy.offlineTitle}</h2>
+          </div>
+          <ul className="my-4 ml-5 list-disc space-y-2 text-sm leading-relaxed text-text-2">
+            {copy.offline.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+          <a href="/faq" className={textLinkClass}>{copy.offlineLink}</a>
+        </section>
+
+        <section id="cenovnik" aria-labelledby="pricing-title" className="scroll-mt-24">
+          <span id="pricing" className="block scroll-mt-24" />
+          <h2 id="pricing-title" className={sectionTitle}>{copy.pricing}</h2>
+          <PricingTable plans={plans} />
+        </section>
+
+        <SocialProof />
+
+        <section aria-labelledby="faq-heading" className="mx-auto w-full max-w-3xl">
           <MarketingFaq />
         </section>
 
-        <section className="flex flex-col items-start justify-between gap-6 rounded-2xl border border-border bg-surface p-7 sm:flex-row sm:items-center sm:p-10">
-          <div>
-            <h2 className="text-ui-kpi font-semibold tracking-tight">{sr.marketing.closingTitle}</h2>
-            <p className="mt-3 text-base text-muted">{sr.marketing.closingBody}</p>
-          </div>
-          <CtaLink href="/register">{sr.marketing.ctaRegister}</CtaLink>
-        </section>
-
-        <footer className="border-t border-border pt-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <p className="text-base font-semibold text-text">{sr.app.name}</p>
-              <p className="text-sm text-muted">{sr.marketing.footerTagline}</p>
-              <p className="text-xs text-muted">
-                © {new Date().getFullYear()} {sr.app.name}.{" "}
-                {sr.marketing.footerRights}
-              </p>
+        <div id="landing-end" className="space-y-10">
+          <section aria-labelledby="closing-title" className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-border-strong bg-surface p-6 sm:p-8">
+            <h2 id="closing-title" className="text-ui-kpi font-semibold tracking-tight">{copy.closingTitle}</h2>
+            <a href={trialHref} data-landing-cta="footer" className={primaryCtaClass}>{copy.trialCta}</a>
+          </section>
+          <footer className="border-t border-border pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-x-6">
+              <p className="text-sm font-semibold">{sr.app.name}</p>
+              <nav aria-label="Podnožje" className="flex flex-wrap gap-x-4 text-sm">
+                <a href="/login" className={textLinkClass}>{sr.marketing.footerLogin}</a>
+                <a href="/register" className={textLinkClass}>{sr.marketing.footerRegister}</a>
+                <a href="#cenovnik" className={textLinkClass}>{copy.pricing}</a>
+              </nav>
             </div>
-            <nav
-              aria-label="Footer"
-              className="flex flex-wrap gap-x-3 gap-y-1 text-sm"
-            >
-              <Link
-                href="/login"
-                className="text-muted hover:text-text"
-              >
-                {sr.marketing.footerLogin}
-              </Link>
-              <Link
-                href="/register"
-                className="text-muted hover:text-text"
-              >
-                {sr.marketing.footerRegister}
-              </Link>
-              <Link
-                href="/#pricing"
-                className="text-muted hover:text-text"
-              >
-                {sr.marketing.footerPremium}
-              </Link>
-            </nav>
-          </div>
-        </footer>
+            <SiteFooterLinks />
+          </footer>
+        </div>
       </main>
+      <MobileCta />
     </>
   );
 }

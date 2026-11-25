@@ -1,59 +1,52 @@
 # Supabase Edge Functions
 
-## Billing (Stripe)
+## Billing (Paddle)
 
 | Function | Auth | Role |
 | --- | --- | --- |
-| `create-checkout-session` | User JWT | Create Checkout (14-day trial) |
+| `create-checkout-session` | User JWT | Start Starter or Pro Checkout with a 14-day first trial |
 | `create-portal-session` | User JWT | Open Customer Portal |
-| `stripe-webhook` | Stripe signature | Update `profiles.plan` (service role) |
+| `paddle-webhook` | Paddle signature | Record Paddle events and sync subscriptions (service role) |
 
 ### Deploy
 
 ```bash
 supabase functions deploy create-checkout-session
 supabase functions deploy create-portal-session
-supabase functions deploy stripe-webhook --no-verify-jwt
+supabase functions deploy paddle-webhook --no-verify-jwt
 ```
 
-Webhook must use `--no-verify-jwt` so Stripe can POST without a Supabase JWT.
+Webhook must use `--no-verify-jwt` so Paddle can POST without a Supabase JWT.
 Signature verification still runs inside the function.
 
 ### Secrets
 
 ```bash
-supabase secrets set STRIPE_SECRET_KEY=sk_...
-supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
-supabase secrets set STRIPE_PRICE_MONTHLY_ID=price_...
-supabase secrets set STRIPE_PRICE_YEARLY_ID=price_...
-supabase secrets set SITE_URL=https://your-domain.example
+supabase secrets set --env-file <billing-env-file>
 ```
 
-`SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are provided by the platform.
+Copy the Paddle server and Edge variables from [`.env.example`](../../.env.example) to the billing secrets file. See the [billing guide](../../docs/billing.md) for catalog, checkout URL, and webhook setup.
 
-### Stripe webhook events
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are provided by the platform. See the [billing runbook](../../docs/billing.md) for Next.js server configuration, reconciliation, and local checks.
 
-Point the Stripe endpoint to:
+### Paddle webhook events
 
-`https://<project-ref>.supabase.co/functions/v1/stripe-webhook`
+For sandbox, point the Paddle endpoint to:
 
-Subscribe to:
+`https://<project-ref>.supabase.co/functions/v1/paddle-webhook`
 
-- `checkout.session.completed`
-- `customer.subscription.updated`
-- `customer.subscription.deleted`
+Use the subscription lifecycle events listed in the [billing guide](../../docs/billing.md). For live, point Paddle at the public proxy described there.
 
 ## Account deletion
 
 Apply the database migrations before deploying the Edge Function.
 
 ```bash
-supabase db push
 supabase functions deploy delete-account
 ```
 
 The function verifies the caller with Supabase Auth and uses the service role
-to invoke the deletion transaction. Token refresh does not reset the five-minute
+to verify the fresh session, cancel existing Paddle subscriptions, and invoke the deletion transaction. Token refresh does not reset the five-minute
 sign-in window.
 
 To run the integration test, start local Supabase, run

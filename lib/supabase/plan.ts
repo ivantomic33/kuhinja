@@ -1,3 +1,4 @@
+import type { SubscriptionStatus } from "@/supabase/functions/_shared/entitlements";
 import {
   getEntitlements,
   hasProFeatures,
@@ -18,7 +19,8 @@ export type DbPlan = string | null | undefined;
 export type PlanDetails = {
   plan: Plan;
   planExpiresAt: string | null;
-  stripeCustomerId: string | null;
+  billingStatus?: SubscriptionStatus | null;
+  paddleCustomerId: string | null;
   entitlements: PlanEntitlements;
 };
 
@@ -67,13 +69,13 @@ export function resolvePlan(
 export function resolvePlanDetails(
   dbPlan: DbPlan,
   planExpiresAt?: string | null,
-  stripeCustomerId?: string | null
+  paddleCustomerId?: string | null
 ): PlanDetails {
   const plan = resolvePlan(dbPlan, planExpiresAt);
   return {
     plan,
     planExpiresAt: planExpiresAt ?? null,
-    stripeCustomerId: stripeCustomerId ?? null,
+    paddleCustomerId: paddleCustomerId ?? null,
     entitlements: getEntitlements(plan),
   };
 }

@@ -24,7 +24,9 @@ import {
   type PricingMode,
 } from "@/lib/calc/foodcost";
 import { priceDifference } from "@/lib/calc/prices";
+import { readVersionConflictMessage } from "@/lib/auth/version-conflict";
 import { parseDecimal } from "@/lib/domain/parse";
+import { updateVersioned } from "@/lib/domain/versioned-update-client";
 import {
   saveRecipeItems,
   type RecipeCacheMeta,
@@ -37,7 +39,6 @@ import {
   type CachedRecipeItem,
 } from "@/lib/offline/cache";
 import { ingredientUnitSchema } from "@/lib/schemas/domain";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
 
 export type CalculatorIngredient = {
@@ -62,6 +63,7 @@ export type FoodCostCalculatorProps = {
   venueId?: string;
   portions?: number;
   sellingPrice?: number;
+  recipeVersion?: number;
   ingredients: CalculatorIngredient[];
   initialLines?: CalculatorInitialLine[];
   defaultVatPercent?: number;
@@ -123,6 +125,7 @@ export function FoodCostCalculator({
   venueId,
   portions = 1,
   sellingPrice = 0,
+  recipeVersion,
   ingredients,
   initialLines = [],
   defaultVatPercent = 20,
@@ -159,13 +162,17 @@ export function FoodCostCalculator({
   const [marginPercent, setMarginPercent] = useState(defaultMarginPercent);
   const [vatPercent, setVatPercent] = useState(defaultVatPercent);
 
-  const [header, setHeader] = useState({
+  const serverHeader = useMemo(() => ({
+    id: recipeId ?? "",
     name: recipeName,
     description: recipeDescription,
     portions,
-    sellingPrice,
-    venueId: venueId ?? "",
-  });
+    selling_price: sellingPrice,
+    venue_id: venueId ?? "",
+    version: recipeVersion ?? 0,
+  }), [recipeId, recipeName, recipeDescription, portions, sellingPrice, venueId, recipeVersion]);
+  const [savedHeader, setHeader] = useState(serverHeader);
+  const header = serverHeader.version >= savedHeader.version ? serverHeader : savedHeader;
   const [cachedItems, setCachedItems] = useState<CachedRecipeItem[]>(() =>
     initialLines.map((line) => ({
       id: line.id,
@@ -180,8 +187,9 @@ export function FoodCostCalculator({
   const [applyLoading, setApplyLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | undefined>();
   const [statusError, setStatusError] = useState<string | undefined>();
+  const [conflict, setConflict] = useState(false);
 
-  const canPersist = Boolean(allowPersist && recipeId && header.venueId);
+  const canPersist = Boolean(allowPersist && recipeId && header.venue_id && header.version);
 
   const calcLines: IngredientLineInput[] = useMemo(() => {
     return lines
@@ -217,11 +225,11 @@ export function FoodCostCalculator({
 
   const menuFoodCostPct = useMemo(
     () =>
-      foodCostPercentFromPrices(result.portionCost, header.sellingPrice),
-    [result.portionCost, header.sellingPrice]
+      foodCostPercentFromPrices(result.portionCost, header.selling_price),
+    [result.portionCost, header.selling_price]
   );
 
-  const priceDelta = priceDifference(result.netPrice, header.sellingPrice);
+  const priceDelta = priceDifference(result.netPrice, header.selling_price);
 
   const perLineDisplayCosts = useMemo(() => {
     return lines.map((line) => {
@@ -272,14 +280,14 @@ export function FoodCostCalculator({
   }
 
   function buildRecipeMeta(): RecipeCacheMeta | null {
-    if (!recipeId || !header.venueId) return null;
+    if (!recipeId || !header.venue_id) return null;
     return {
       id: recipeId,
-      venue_id: header.venueId,
+      venue_id: header.venue_id,
       name: header.name,
       description: header.description,
       portions: header.portions,
-      selling_price: header.sellingPrice,
+      selling_price: header.selling_price,
     };
   }
 
@@ -348,7 +356,7 @@ export function FoodCostCalculator({
   }
 
   async function handleApplySuggestedPrice() {
-    if (!canPersist || !recipeId) return;
+    if (!canPersist || !recipeId || conflict || applyLoading) return;
     setStatusMessage(undefined);
     setStatusError(undefined);
 
@@ -365,27 +373,28 @@ export function FoodCostCalculator({
 
     setApplyLoading(true);
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("recipes")
-        .update({ selling_price: nextPrice })
-        .eq("id", recipeId);
-
-      if (error) {
-        if (handleError(error)) return;
-        setStatusError(sr.recipes.foodCost.applyPriceError);
+      const updated = await updateVersioned("recipes", {
+        id: recipeId,
+        version: header.version,
+        patch: { selling_price: nextPrice },
+      });
+      if ("error" in updated) {
+        const message = readVersionConflictMessage(updated.error);
+        if (message) setConflict(true);
+        else if (handleError(updated.error)) return;
+        setStatusError(message ?? sr.recipes.foodCost.applyPriceError);
         return;
       }
 
-      setHeader((prev) => ({ ...prev, sellingPrice: nextPrice }));
+      setHeader(updated.data);
 
       const cached: Omit<CachedRecipe, "cachedAt"> = {
         id: recipeId,
-        venue_id: header.venueId,
+        venue_id: header.venue_id,
         name: header.name,
         description: header.description,
         portions: header.portions,
-        selling_price: nextPrice,
+        selling_price: updated.data.selling_price,
         items: cachedItems,
       };
       void touchRecentRecipe(cached);
@@ -401,13 +410,8 @@ export function FoodCostCalculator({
   }
 
   function handleRecipeUpdated(updated: EditedRecipeSummary) {
-    setHeader({
-      name: updated.name,
-      description: updated.description ?? null,
-      portions: updated.portions,
-      sellingPrice: updated.selling_price,
-      venueId: updated.venue_id,
-    });
+    setHeader({ ...updated, description: updated.description ?? null });
+    setConflict(false);
     setStatusMessage(sr.create.recipe.editSuccess);
     setStatusError(undefined);
   }
@@ -468,7 +472,7 @@ export function FoodCostCalculator({
               type="button"
               fullWidth
               loading={applyLoading}
-              disabled={!online || result.netPrice <= 0}
+              disabled={!online || result.netPrice <= 0 || conflict}
               onClick={() => {
                 void handleApplySuggestedPrice();
               }}
@@ -486,7 +490,7 @@ export function FoodCostCalculator({
                 data-numeric
                 className="text-lg font-semibold tabular-nums text-text"
               >
-                {formatMoney(header.sellingPrice)}
+                {formatMoney(header.selling_price)}
               </p>
             </div>
             <div className="flex flex-col gap-1">
@@ -508,7 +512,7 @@ export function FoodCostCalculator({
                 data-numeric
                 className="text-xl font-semibold tabular-nums text-text"
               >
-                {header.sellingPrice > 0
+                {header.selling_price > 0
                   ? `${roundDisplay(menuFoodCostPct).toLocaleString("sr-Latn", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
@@ -795,9 +799,16 @@ export function FoodCostCalculator({
       </BentoCard>
 
       {statusError ? (
-        <p role="alert" className="order-4 text-sm text-danger xl:col-span-2">
-          {statusError}
-        </p>
+        <div role="alert" className="order-4 grid gap-2 text-sm text-danger xl:col-span-2">
+          <p>{statusError}</p>
+          {conflict ? (
+            <PrimaryButton type="button" variant="secondary" onClick={() => {
+              window.location.reload();
+            }}>
+              {sr.pwa.versionConflictRefresh}
+            </PrimaryButton>
+          ) : null}
+        </div>
       ) : null}
       {statusMessage ? (
         <p role="status" className="order-4 text-sm text-success xl:col-span-2">
@@ -809,14 +820,7 @@ export function FoodCostCalculator({
         <EditRecipeSheet
           open={editOpen}
           onClose={() => setEditOpen(false)}
-          recipe={{
-            id: recipeId,
-            venue_id: header.venueId,
-            name: header.name,
-            description: header.description,
-            portions: header.portions,
-            selling_price: header.sellingPrice,
-          }}
+          recipe={header}
           cachedItems={cachedItems}
           onUpdated={handleRecipeUpdated}
         />

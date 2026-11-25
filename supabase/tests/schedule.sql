@@ -12,6 +12,18 @@ insert into public.profiles (id, full_name, plan) values
   ('33333333-3333-4333-8333-333333333333', 'Treći Test', 'free')
 on conflict (id) do update set full_name = excluded.full_name, plan = excluded.plan;
 
+-- Exercise future Team and Business schedule behavior with test-only ranks.
+-- The production resolver still handles Free, Starter and Pro from subscriptions.
+alter function public.schedule_rank(uuid) rename to schedule_billing_rank;
+create function public.schedule_rank(p_owner uuid) returns integer
+language sql stable security definer set search_path = '' as $$
+  select case (select plan from public.profiles
+    where id = p_owner and (plan_expires_at is null or plan_expires_at >= now()))
+    when 'team' then 3 when 'business' then 4
+    else public.schedule_billing_rank(p_owner) end
+$$;
+revoke all on function public.schedule_rank(uuid) from public, anon, authenticated;
+
 do $$
 <<fixture>>
 declare
@@ -41,7 +53,8 @@ begin
   assert not exists (select from public.schedule_locations l where l.owner_id = fixture.owner_id),
     'Free account created a schedule location';
 
-  update public.profiles set plan = 'starter' where id = owner_id;
+  insert into public.subscriptions (user_id, paddle_customer_id, paddle_subscription_id, plan_key, status)
+    values (owner_id, 'schedule_fixture_customer', 'schedule_fixture_subscription', 'starter', 'active');
   data := public.schedule_load(null, next_monday);
   assert (data->>'monday')::date = next_monday;
   location_id := (data->'venue'->>'id')::uuid;
@@ -52,7 +65,7 @@ begin
   end loop;
   data := public.schedule_load(location_id, current_monday);
   assert jsonb_array_length(data->'employees') = 4;
-  update public.profiles set plan = 'free' where id = owner_id;
+  update public.subscriptions set status = 'canceled' where user_id = owner_id;
   assert public.schedule_load(location_id, current_monday) is null;
   begin
     perform public.schedule_command('publish', location_id, current_monday, '{}');

@@ -8,13 +8,17 @@ export type ActionErrorCode =
   | "VALIDATION_ERROR"
   | "NOT_FOUND"
   | "INTERNAL_ERROR"
-  | "LIMIT_REACHED";
+  | "LIMIT_REACHED"
+  | "UPGRADE_REQUIRED"
+  | "VERSION_CONFLICT";
 
 export type ActionErrorBody = {
   code: ActionErrorCode;
   message: string;
   /** Present when code is LIMIT_REACHED (ingredients | recipes | …). */
   resource?: string;
+  /** HTTP-ish status for clients (e.g. 409 on VERSION_CONFLICT). */
+  status?: number;
 };
 
 export type ActionError = {
@@ -116,7 +120,7 @@ export async function requireVenueOwner(
 export async function requireScheduleLocationAccess(
   ctx: ActionUserContext,
   locationId: string
-): Promise<{ locationId: string } | ActionError> {
+): Promise<{ locationId: string; isEmployee: boolean } | ActionError> {
   const { data, error } = await ctx.supabase.rpc("schedule_load", {
     p_location: locationId,
     p_week: null,
@@ -143,5 +147,5 @@ export async function requireScheduleLocationAccess(
     return actionError("FORBIDDEN", "You do not have access to this schedule.");
   }
 
-  return { locationId };
+  return { locationId, isEmployee: data.mode === "employee" };
 }

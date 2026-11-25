@@ -57,7 +57,7 @@ export function ResetPasswordForm() {
       setSuccessMessage(result.message ?? sr.auth.passwordUpdated);
 
       window.setTimeout(() => {
-        router.replace("/dashboard");
+        router.replace(result.url ?? "/dashboard");
         router.refresh();
       }, 1200);
     } catch {

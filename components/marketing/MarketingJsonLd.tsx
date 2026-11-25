@@ -1,72 +1,40 @@
+import { JsonLd } from "@/components/seo/JsonLd";
+import type { PricingPlan } from "@/lib/billing/plans";
+import icons from "@/lib/config/pwa-icons.json";
 import { sr } from "@/lib/i18n/sr";
-import { PLAN_PRICES } from "@/lib/plan/entitlements";
+import { getSiteUrl } from "@/lib/seo/site";
 
-type MarketingJsonLdProps = {
-  siteUrl: string;
-};
-
-const FAQ = [
-  [sr.marketing.faq1Q, sr.marketing.faq1A],
-  [sr.marketing.faq2Q, sr.marketing.faq2A],
-  [sr.marketing.faq3Q, sr.marketing.faq3A],
-  [sr.marketing.faq4Q, sr.marketing.faq4A],
-  [sr.marketing.faq5Q, sr.marketing.faq5A],
-] as const;
-
-export function MarketingJsonLd({ siteUrl }: MarketingJsonLdProps) {
+export function MarketingJsonLd({ plans }: { plans: readonly PricingPlan[] }) {
+  const siteUrl = new URL("/", getSiteUrl()).href;
   const software = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: sr.app.name,
     applicationCategory: "BusinessApplication",
-    operatingSystem: "Web, iOS, Android",
+    operatingSystem: "Web",
     description: sr.marketing.jsonLdDescription,
-    offers: Object.values(sr.marketing.pricingPlans).map(({ id, name }) => ({
-      "@type": "Offer",
-      price: String(PLAN_PRICES[id].monthly),
-      priceCurrency: "RSD",
-      name,
-      ...(id === "free" ? {} : { billingDuration: "P1M" }),
-    })),
+    offers: plans.flatMap(({ name, prices }) => {
+      const price = prices.monthly;
+      return price ? [{
+        "@type": "Offer", name, price: price.amount, priceCurrency: price.currency,
+      }] : [];
+    }),
     url: siteUrl,
-    inLanguage: "sr-Latn",
+    inLanguage: "sr",
   };
 
   const organization = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: sr.app.name,
-    description: sr.app.description,
     url: siteUrl,
-  };
-
-  const faq = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: FAQ.map(([question, answer]) => ({
-      "@type": "Question",
-      name: question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: answer,
-      },
-    })),
+    logo: new URL(icons.png512, siteUrl).href,
   };
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(software) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faq) }}
-      />
+      <JsonLd data={software} />
+      <JsonLd data={organization} />
     </>
   );
 }

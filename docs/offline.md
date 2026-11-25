@@ -1,29 +1,9 @@
-# Current offline behavior
+# Rad bez mreže i sinhronizacija
 
-- **Cached reads.** `idb-keyval` stores snapshots of recent recipes, ingredients
-  and checklist templates in the browser. A cached ingredient price reflects
-  the last saved snapshot. [Cache implementation](../lib/offline/cache.ts)
-- **Queued writes.** The IndexedDB queue currently accepts checklist-run
-  changes. Checklist writes go straight to Supabase while connected. The app
-  queues them while offline or when the direct write fails, and the shift
-  screen uses the local result. [Queue](../lib/offline/idb.ts) ·
-  [Checklist persistence](../lib/offline/checklist-sync.ts)
-- **Replay and checklist conflicts.** The app tries to replay on mount and on
-  the browser's `online` event. It sends entries in creation order, removes
-  successful entries, and stops at the first failure until another flush.
-  Upserts reuse the checklist run ID, so repeating an upsert targets the same
-  row. For the same run, the last applied write replaces the fields it sends,
-  including the entire checked-item list. [Replay](../lib/offline/checklist-sync.ts) ·
-  [Connectivity listener](../components/pwa/OfflineSync.tsx)
-- **Prices.** Price changes require a live write. Restocking updates the
-  ingredient price and inserts a price-history row in separate requests. If
-  two devices successfully update the same ingredient price, the last update
-  applied by Supabase controls the current price. The database sets
-  `updated_at` when it applies the update. An offline price change stays
-  outside the replay queue. [Restock writes](../lib/stock/actions.ts) ·
-  [Timestamp trigger](../supabase/migrations/20250322000000_initial_schema.sql)
-- **Status and sign-out.** The header badge reflects connection status. The
-  shift screen tracks its own sync progress. Sign-out clears the local cache
-  and pending checklist writes. [Header badge](../components/pwa/OfflineIndicator.tsx) ·
-  [Shift screen](../components/shift/ShiftChecklist.tsx) ·
-  [Sign-out cleanup](../lib/auth/clear-client-state.ts)
+- **Keširani prikaz.** IndexedDB čuva skorašnje recepte, sastojke i šablone kontrolnih lista. Keširana cena prikazuje poslednji sačuvani snimak. [Keš](../lib/offline/cache.ts)
+- **Kontrolne liste.** Klik na stavku upisuje delta operaciju sa ID-jem smene, ID-jem stavke i novom oznakom. Supabase upisuje po ključu `(run_id, item_id)`. Poslednji uspešno primenjen upis određuje oznaku te stavke. Završetak smene čuva status i vreme završetka. [Sinhronizacija](../lib/offline/checklist-sync.ts)
+- **Ponovno slanje.** Aplikacija šalje upise pri montiranju i povratku mreže. Svaki zapis ima `attempts` i `last_error`. Replay nastavlja isti prolaz i nakon neuspeha. Ako uspe noviji upis iste stavke, raniji retry stavke se uklanja iz reda. Peti neuspeh premešta zapis u `dead_letter`, a zaglavlje odmah prikazuje upozorenje, dostupno i bez mreže. Ako drugi uređaj već ima aktivnu smenu za isti šablon i nalog, lokalni ID se povezuje sa njenim serverskim ID-jem. [Red upisa](../lib/offline/idb.ts) · [Status sinhronizacije](../components/pwa/OfflineIndicator.tsx)
+- **Ranije sačuvani podaci.** Migracija prenosi čekirane ID-jeve iz `checklist_runs.checked_item_ids`. Postojeći red stavke ima prednost, uključujući eksplicitno odčekiranje. Za stare upise koji su već u IndexedDB redu, baza izračunava razliku prema prethodno sačuvanom JSON-u. Stari format sadrži samo snimak liste, pa razlika zavisi od te osnove. [Migracija](../supabase/migrations/20261204120700_backfill_shift_checklist_items.sql)
+- **Cene i izmene.** Restock sa cenom traži mrežu. RPC primenjuje cenu i upisuje istoriju zajedno za jedan sastojak. Uređivanje sastojka, podataka recepta i primena predložene prodajne cene šalju poznatu verziju reda. Na HTTP 409 prikazuju se „Podaci su promenjeni na drugom uređaju“ i „Osveži“. [Restock](../lib/stock/actions.ts) · [Verzionirane izmene](../app/api/versioned-update/route.ts)
+- **Odjava.** Odjava pokreće brisanje lokalnog keša, reda i liste neuspelih upisa (`dead_letter`). Odjava iz menija profila poziva čišćenje pre serverske odjave, bez čekanja da se red pošalje. Nesinhronizovane izmene koje postoje samo na uređaju tada mogu biti izgubljene. Čišćenje je best-effort kada pregledač blokira skladište. [Meni profila](../components/layout/ProfileMenu.tsx) · [Čišćenje](../lib/auth/clear-client-state.ts)
+- **Predlog za odvojenu izmenu.** Pre čišćenja proveriti red i `dead_letter`. Kada postoje neposlati upisi, ponuditi „Sinhronizuj i odjavi se“ ako je mreža dostupna, „Ostani prijavljen“ i eksplicitnu odjavu uz odbacivanje nečuvanih izmena.

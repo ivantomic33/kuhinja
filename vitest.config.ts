@@ -5,7 +5,7 @@ export default defineConfig({
   esbuild: { jsx: "automatic" },
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts"],
+    include: ["lib/**/*.test.ts", "tests/**/*.test.ts"],
     coverage: {
       include: ["lib/calc/**/*.ts"],
       exclude: ["lib/calc/**/*.test.ts"],

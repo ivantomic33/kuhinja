@@ -2,8 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { jsx } from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, it, vi } from "vitest";
-import { metadata } from "@/app/layout";
+import { beforeAll, expect, it, vi } from "vitest";
 import { tokens } from "@/lib/design/tokens";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { LogoMark } from "@/components/brand/LogoMark";
@@ -18,9 +17,25 @@ vi.mock("next/font/google", () => ({
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 
+let layout: typeof import("@/app/layout");
+beforeAll(async () => {
+  vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://treuplate.example");
+  try {
+    layout = await import("@/app/layout");
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
+
 it("uses the same brand in the title, Open Graph, and PWA manifest", () => {
+  const { metadata, viewport } = layout;
   expect(APP_NAME).toBe("TreuPlate");
-  expect(metadata.title).toEqual({ default: APP_NAME, template: `%s · ${APP_NAME}` });
+  expect(metadata.title).toEqual({ default: APP_NAME, template: `%s | ${APP_NAME}` });
+  expect(metadata.description).toBe(APP_DESCRIPTION);
+  expect(APP_DESCRIPTION.length).toBeGreaterThanOrEqual(150);
+  expect(APP_DESCRIPTION.length).toBeLessThanOrEqual(160);
+  expect(metadata.metadataBase?.origin).toBe("https://treuplate.example");
+  expect(metadata.keywords).toBeUndefined();
   expect(metadata.openGraph).toMatchObject({
     siteName: APP_NAME,
     description: APP_DESCRIPTION,
@@ -30,7 +45,12 @@ it("uses the same brand in the title, Open Graph, and PWA manifest", () => {
     name: APP_NAME,
     short_name: APP_SHORT_NAME,
     description: APP_DESCRIPTION,
+    lang: "sr",
+    start_url: "/dashboard",
+    display: "standalone",
   });
+  expect(viewport.themeColor).toBe(manifest.theme_color);
+  expect(renderToStaticMarkup(jsx(layout.default, { children: null }))).toMatch(/^<html lang="sr"/);
 });
 
 it("renders the configured name in the sidebar, mobile header, and authentication layout", () => {
@@ -48,7 +68,7 @@ it("renders the configured name in the sidebar, mobile header, and authenticatio
 
 it("uses the same versioned icon files in the manifest and page metadata", () => {
   expect([...new Set(manifest.icons.map(({ src }) => src))]).toEqual([icons.png192, icons.png512]);
-  expect(metadata.icons).toMatchObject({
+  expect(layout.metadata.icons).toMatchObject({
     icon: [{ url: icons.svg }, { url: icons.png192 }, { url: icons.png512 }],
     apple: [{ url: icons.png192 }],
   });

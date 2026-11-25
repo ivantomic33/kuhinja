@@ -4,8 +4,15 @@
  * including when the device is offline.
  */
 import type { QueryClient } from "@tanstack/react-query";
-import { clearOfflineCache, OFFLINE_CACHE_DB_NAME } from "@/lib/offline/cache";
-import { clearSyncQueue, SYNC_QUEUE_DB_NAME } from "@/lib/offline/idb";
+import {
+  clearOfflineCache,
+  clearOfflineCacheForUser,
+  OFFLINE_CACHE_DB_NAME,
+  resetOfflineUserIdCache,
+  resolveOfflineUserId,
+} from "@/lib/offline/cache";
+import { clearDeadLetters, clearSyncQueue, SYNC_QUEUE_DB_NAME } from "@/lib/offline/idb";
+import { isAppCacheName } from "@/lib/pwa/cache-names";
 import { resetBrowserClient } from "@/lib/supabase/client";
 
 const USER_IDB_NAMES = [OFFLINE_CACHE_DB_NAME, SYNC_QUEUE_DB_NAME] as const;
@@ -26,12 +33,19 @@ function deleteDatabase(name: string): Promise<void> {
   });
 }
 
-/** Delete every Cache Storage bucket (SW runtime + precache). */
+/**
+ * Delete Cache Storage buckets owned by this app (Serwist runtime + precache).
+ * Does not touch unrelated browser caches from other origins/apps.
+ */
 export async function clearCacheStorage(): Promise<void> {
   if (typeof caches === "undefined") return;
   try {
     const keys = await caches.keys();
-    await Promise.all(keys.map((key) => caches.delete(key)));
+    await Promise.all(
+      keys
+        .filter((key) => isAppCacheName(key))
+        .map((key) => caches.delete(key)),
+    );
   } catch {
     // Best-effort on restricted contexts.
   }
@@ -39,16 +53,12 @@ export async function clearCacheStorage(): Promise<void> {
 
 /** Drop known user IndexedDB databases entirely. */
 export async function clearUserIndexedDb(): Promise<void> {
-  try {
-    await clearOfflineCache();
-  } catch {
-    // continue
+  const userId = await resolveOfflineUserId().catch(() => null);
+  if (userId) {
+    await clearOfflineCacheForUser(userId).catch(() => undefined);
   }
-  try {
-    await clearSyncQueue();
-  } catch {
-    // continue
-  }
+  await Promise.allSettled([clearOfflineCache(), clearSyncQueue(), clearDeadLetters()]);
+  resetOfflineUserIdCache();
   await Promise.all(USER_IDB_NAMES.map((name) => deleteDatabase(name)));
 }
 

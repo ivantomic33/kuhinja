@@ -1,6 +1,8 @@
 import { IngredientsWorkspace } from "@/components/ingredients/IngredientsWorkspace";
 import { OfflineCacheSeeder } from "@/components/offline/OfflineCacheSeeder";
 import type { CachedIngredient } from "@/lib/offline/cache";
+import { dehydrateQuery, Hydrate } from "@/lib/query/hydrate";
+import { queryKeys } from "@/lib/query/keys";
 import { createClient } from "@/lib/supabase/server";
 import type { Ingredient } from "@/lib/supabase/database.types";
 
@@ -11,7 +13,7 @@ export default async function IngredientsPage() {
     supabase.from("venues").select("id").order("created_at", { ascending: true }).limit(1),
     supabase
       .from("ingredients")
-      .select("id, venue_id, name, unit, price, waste_percent, notes")
+      .select("id, venue_id, name, unit, price, waste_percent, notes, version")
       .order("name", { ascending: true })
       .limit(200),
     supabase
@@ -32,6 +34,7 @@ export default async function IngredientsPage() {
     | "price"
     | "waste_percent"
     | "notes"
+    | "version"
   >[];
 
   const ingredientRows: CachedIngredient[] = ingredients.map((row) => ({
@@ -42,6 +45,7 @@ export default async function IngredientsPage() {
     price: Number(row.price) || 0,
     waste_percent: Number(row.waste_percent) || 0,
     notes: row.notes,
+    version: row.version,
   }));
 
   const recipeRows = (recipesRes.data ?? []).map((row) => ({
@@ -66,11 +70,12 @@ export default async function IngredientsPage() {
         ingredients={ingredientRows}
         templates={templateRows}
       />
-      <IngredientsWorkspace
-        initialIngredients={ingredientRows}
-        venueId={venueId}
-        loadError={Boolean(ingredientsRes.error || venuesRes.error)}
-      />
+      <Hydrate state={dehydrateQuery(queryKeys.ingredients(venueId), ingredientRows)}>
+        <IngredientsWorkspace
+          venueId={venueId}
+          loadError={Boolean(ingredientsRes.error || venuesRes.error)}
+        />
+      </Hydrate>
     </>
   );
 }

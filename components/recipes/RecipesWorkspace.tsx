@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Info, Plus, Search } from "lucide-react";
 import {
   CreateRecipeSheet,
@@ -29,6 +30,8 @@ import {
 import { usePlan } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
 import { FREE_MAX_RECIPES } from "@/lib/plan/limits";
+import { queryKeys } from "@/lib/query/keys";
+import { useHydratedData } from "@/lib/query/use-hydrated-data";
 import { TableMoney } from "@/components/ui/TableMoney";
 import { formatPortions } from "@/lib/utils/portions";
 
@@ -46,14 +49,12 @@ export type RecipeListItem = {
 };
 
 export type RecipesWorkspaceProps = {
-  initialRecipes: RecipeListItem[];
   canSeeInsights: boolean;
   venueId?: string | null;
   loadError?: boolean;
 };
 
 export function RecipesWorkspace({
-  initialRecipes,
   canSeeInsights,
   venueId = null,
   loadError = false,
@@ -61,8 +62,9 @@ export function RecipesWorkspace({
   const { isFree, isPremium } = usePlan();
   const { showFreeLimit } = usePlanUi();
   const { toast } = useToast();
-  const [previousInitialRecipes, setPreviousInitialRecipes] = useState(initialRecipes);
-  const [recipes, setRecipes] = useState(initialRecipes);
+  const queryClient = useQueryClient();
+  const listKey = queryKeys.recipes(venueId);
+  const recipes = useHydratedData<RecipeListItem[]>(listKey);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -71,11 +73,6 @@ export function RecipesWorkspace({
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const didShowAlert = useRef(false);
   const selectedRecipe = recipes.find((recipe) => recipe.id === selectedRecipeId);
-
-  if (previousInitialRecipes !== initialRecipes) {
-    setPreviousInitialRecipes(initialRecipes);
-    setRecipes(initialRecipes);
-  }
 
   useEffect(() => {
     if (didShowAlert.current) return;
@@ -195,14 +192,14 @@ export function RecipesWorkspace({
   }
 
   function handleCreated(recipe: CreatedRecipeSummary) {
-    setRecipes((prev) => [
+    queryClient.setQueryData<RecipeListItem[]>(listKey, (prev) => [
       recipe,
-      ...prev.filter((row) => row.id !== recipe.id),
+      ...(prev ?? []).filter((row) => row.id !== recipe.id),
     ]);
   }
 
   function handleDeleted(recipeId: string) {
-    setRecipes((prev) => prev.filter((row) => row.id !== recipeId));
+    queryClient.setQueryData<RecipeListItem[]>(listKey, (prev) => prev?.filter((row) => row.id !== recipeId));
   }
 
   return (

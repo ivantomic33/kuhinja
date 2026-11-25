@@ -28,9 +28,12 @@ import { ChecklistItemRow } from "@/components/shift/ChecklistItemRow";
 import { ProgressRing } from "@/components/shift/ProgressRing";
 import { TimerCard, type ActiveTimer } from "@/components/shift/TimerCard";
 import {
+  completeChecklistRun,
   createChecklistRun,
   flushChecklistSyncQueue,
-  persistChecklistRun,
+  persistChecklistItemDelta,
+  hasPendingChecklistWrites,
+  loadChecklistRun,
   type RunSnapshot,
 } from "@/lib/offline/checklist-sync";
 import { sr } from "@/lib/i18n/sr";
@@ -107,92 +110,83 @@ export function ShiftChecklist({
   });
 
   const run = runQuery.data ?? null;
+  const runKey = SHIFT_QUERY_KEYS.run(templateId);
+  const [writeError, setWriteError] = useState(false);
 
-  const ensureRunMutation = useMutation({
-    mutationFn: async () => {
-      if (run) return run;
-      return (await createChecklistRun({ venue_id: venueId, template_id: templateId, user_id: userId })).run;
-    },
-    onSuccess: (next) => {
-      queryClient.setQueryData(SHIFT_QUERY_KEYS.run(templateId), next);
-    },
-  });
-
-  const persistMutation = useMutation({
-    mutationFn: async (next: RunSnapshot) => {
-      // Upsert so offline-created runs sync cleanly when back online
-      return persistChecklistRun(next, "upsert");
-    },
-    onMutate: async (next) => {
-      await queryClient.cancelQueries({
-        queryKey: SHIFT_QUERY_KEYS.run(templateId),
-      });
-      const previous = queryClient.getQueryData<RunSnapshot | null>(
-        SHIFT_QUERY_KEYS.run(templateId)
-      );
-      queryClient.setQueryData(SHIFT_QUERY_KEYS.run(templateId), next);
-      return { previous };
-    },
-    onError: (_err, _next, ctx) => {
-      if (ctx?.previous !== undefined) {
-        queryClient.setQueryData(
-          SHIFT_QUERY_KEYS.run(templateId),
-          ctx.previous
-        );
+  const { mutate: saveProgress, isPending: savingProgress } = useMutation({
+    scope: { id: `checklist:${userId}:${templateId}` },
+    mutationFn: async (operation: { itemId: string } | "start" | "complete") => {
+      let current = queryClient.getQueryData<RunSnapshot | null>(runKey);
+      if (!current || (operation === "start" && current.status === "completed")) {
+        const result = await createChecklistRun({
+          venue_id: venueId, template_id: templateId, user_id: userId,
+        });
+        queryClient.setQueryData(runKey, result.run);
+        setQueued(result.queued);
+        current = result.run;
       }
-    },
-    onSuccess: (result) => {
-      queryClient.setQueryData(SHIFT_QUERY_KEYS.run(templateId), result.run);
+
+      if (operation === "start" || current.status === "completed") return;
+      const result = operation === "complete"
+        ? await completeChecklistRun(current)
+        : await persistChecklistItemDelta({
+            run: current,
+            itemId: operation.itemId,
+            checked: !current.checked_item_ids.includes(operation.itemId),
+          });
+      queryClient.setQueryData(runKey, result.run);
       setQueued(result.queued);
     },
+    onMutate: () => setWriteError(false),
+    onError: () => setWriteError(true),
   });
 
-  // Ensure a run exists on mount
   useEffect(() => {
-    if (!run && !ensureRunMutation.isPending && !ensureRunMutation.isSuccess) {
-      void ensureRunMutation.mutateAsync().then((created) => {
-        void persistChecklistRun(created, "upsert").then((result) => {
-          setQueued(result.queued);
-          queryClient.setQueryData(
-            SHIFT_QUERY_KEYS.run(templateId),
-            result.run
-          );
-        });
-      });
+    if (!initialRun) saveProgress("start");
+    else {
+      const key = SHIFT_QUERY_KEYS.run(templateId);
+      queryClient.setQueryData<RunSnapshot | null>(key, (current) =>
+        current?.id === initialRun.id ? current : initialRun
+      );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once
-  }, []);
+  }, [initialRun, queryClient, saveProgress, templateId]);
 
-  // Online / offline + auto flush
   useEffect(() => {
-    const onOnline = () => {
+    const onOnline = async () => {
       setOnline(true);
       setSyncing(true);
-      void flushChecklistSyncQueue()
-        .then((count) => {
-          if (count > 0) setQueued(false);
-        })
-        .finally(() => setSyncing(false));
+      try {
+        await flushChecklistSyncQueue();
+        const key = SHIFT_QUERY_KEYS.run(templateId);
+        const current = queryClient.getQueryData<RunSnapshot | null>(key);
+        if (current) {
+          const synced = await loadChecklistRun(current.id);
+          if (synced && queryClient.getQueryData(key) === current) {
+            const remaining = await hasPendingChecklistWrites(current.id);
+            if (!remaining && queryClient.getQueryData(key) === current) {
+              queryClient.setQueryData(key, synced);
+              setQueued(false);
+            }
+          }
+        }
+      } catch {
+        setWriteError(true);
+      } finally {
+        setSyncing(false);
+      }
     };
     const onOffline = () => setOnline(false);
 
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
-
-    if (navigator.onLine) {
-      setSyncing(true);
-      void flushChecklistSyncQueue()
-        .then((count) => {
-          if (count > 0) setQueued(false);
-        })
-        .finally(() => setSyncing(false));
-    }
+    if (navigator.onLine) void onOnline();
 
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
     };
-  }, []);
+  }, [queryClient, templateId]);
+
 
   // Live clock for timers
   useEffect(() => {
@@ -293,42 +287,9 @@ export function ShiftChecklist({
 
   const groups = useMemo(() => groupItems(items), [items]);
 
-  const writeProgress = useCallback(
-    (checked_item_ids: string[], status: RunSnapshot["status"]) => {
-      const base = run ?? {
-        id: crypto.randomUUID(),
-        venue_id: venueId,
-        template_id: templateId,
-        user_id: userId,
-        status: "active" as const,
-        checked_item_ids: [],
-        started_at: new Date().toISOString(),
-        completed_at: null,
-      };
-
-      const next: RunSnapshot = {
-        ...base,
-        checked_item_ids,
-        status,
-        completed_at:
-          status === "completed" ? new Date().toISOString() : null,
-      };
-
-      persistMutation.mutate(next);
-    },
-    [run, venueId, templateId, userId, persistMutation]
-  );
-
-  const toggleItem = useCallback(
-    (itemId: string) => {
-      if (completed) return;
-      const next = new Set(checkedSet);
-      if (next.has(itemId)) next.delete(itemId);
-      else next.add(itemId);
-      writeProgress(Array.from(next), "active");
-    },
-    [checkedSet, completed, writeProgress]
-  );
+  const toggleItem = (itemId: string) => {
+    if (!completed) saveProgress({ itemId });
+  };
 
   const startTimer = useCallback(
     (itemId: string) => {
@@ -367,15 +328,10 @@ export function ShiftChecklist({
     firedTimersRef.current.delete(itemId);
   }, []);
 
-  const completeShift = useCallback(() => {
-    const ids = items.map((i) => i.id);
-    // Mark all checked on complete for a clean record
-    writeProgress(
-      Array.from(new Set([...(run?.checked_item_ids ?? []), ...ids])),
-      "completed"
-    );
+  function completeShift() {
+    saveProgress("complete");
     setTimers([]);
-  }, [items, run?.checked_item_ids, writeProgress]);
+  }
 
   const statusLabel = completed
     ? sr.shift.shiftCompleted
@@ -384,7 +340,7 @@ export function ShiftChecklist({
         ? sr.shift.syncing
         : queued
           ? sr.shift.offlineHint
-          : persistMutation.isPending
+          : savingProgress
             ? sr.shift.saveProgress
             : sr.shift.shiftActive
       : sr.shift.offline;
@@ -507,7 +463,7 @@ export function ShiftChecklist({
         <div className="mx-auto max-w-3xl">
           <PrimaryButton
             fullWidth
-            disabled={completed || items.length === 0 || persistMutation.isPending}
+            disabled={completed || items.length === 0 || savingProgress}
             onClick={completeShift}
             leftIcon={
               completed ? (
@@ -517,6 +473,7 @@ export function ShiftChecklist({
           >
             {completed ? sr.shift.shiftCompleted : sr.shift.completeShift}
           </PrimaryButton>
+          {writeError ? <p role="alert" className="text-sm text-danger">{sr.common.error}</p> : null}
         </div>
       </div> : null}
     </div>

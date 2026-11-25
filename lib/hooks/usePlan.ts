@@ -10,6 +10,7 @@ import {
   type Plan,
   type PlanDetails,
 } from "@/lib/supabase/plan";
+import { entitlementSchema } from "@/lib/billing/entitlements";
 import { getEntitlements } from "@/lib/plan/entitlements";
 
 export const PLAN_QUERY_KEY = ["profile", "plan"] as const;
@@ -34,11 +35,13 @@ export async function fetchPlanDetails(): Promise<PlanQueryResult> {
 
   if (!user) return empty;
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("plan, plan_expires_at, stripe_customer_id, full_name")
-    .eq("id", user.id)
-    .maybeSingle();
+  const [{ data, error }, { data: entitlement }] = await Promise.all([
+    supabase.from("profiles")
+      .select("plan_expires_at, paddle_customer_id, full_name")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase.rpc("get_entitlements", { p_user_id: user.id }),
+  ]);
 
   if (error || !data) {
     return {
@@ -58,19 +61,17 @@ export async function fetchPlanDetails(): Promise<PlanQueryResult> {
     user.email ||
     null;
 
+  const plan = entitlementSchema.safeParse(entitlement).data?.plan ?? "free";
   return {
-    ...resolvePlanDetails(
-      data.plan,
-      data.plan_expires_at,
-      data.stripe_customer_id
-    ),
+    ...resolvePlanDetails(plan, null, data.paddle_customer_id),
+    planExpiresAt: plan === "free" ? null : data.plan_expires_at,
     accountName,
     email: user.email ?? null,
   };
 }
 
 /**
- * Client hook for `profiles.plan` (+ billing fields).
+ * Client display hook for subscription entitlements and profile details.
  * Returns normalized PlanId (`free` | `starter` | `pro` | `team` | `business`).
  * `isPremium` = pro-tier features (pro+).
  *
@@ -93,7 +94,7 @@ export function usePlan(enabled = true) {
     plan,
     planId: plan,
     planExpiresAt: query.data?.planExpiresAt ?? null,
-    stripeCustomerId: query.data?.stripeCustomerId ?? null,
+    paddleCustomerId: query.data?.paddleCustomerId ?? null,
     accountName: query.data?.accountName ?? null,
     email: query.data?.email ?? null,
     entitlements,

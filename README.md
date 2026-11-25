@@ -6,6 +6,17 @@ TreuPlate je aplikacija za profesionalne kuhinje. U njoj se vode sastojci,
 recepti, nabavne cene, zalihe, priprema smene i nedeljni raspored. Kalkulatori
 računaju trošak porcije i skaliraju količine za drugi broj porcija.
 
+## Pravni dokumenti i pomoć
+
+Poslednja izmena sva četiri nacrta je 24. novembra 2026. godine.
+
+- Uslovi korišćenja na `/pravila-koriscenja`
+- Politika privatnosti na `/privatnost`
+- Politika povraćaja na `/povracaj-novca`
+- Česta pitanja na `/faq`
+
+Uputstvo za evidenciju prihvatanja, izbor politike povraćaja i pregled nacrta je u [dokumentaciji P2](docs/legal.md).
+
 ## Stack
 
 - Next.js 15 (App Router), React 19 i TypeScript
@@ -13,6 +24,24 @@ računaju trošak porcije i skaliraju količine za drugi broj porcija.
 - Supabase Auth, PostgreSQL, Realtime i Edge Functions
 - TanStack Query, IndexedDB (`idb-keyval`) i Serwist za PWA
 - Zod za validaciju i Vitest za testove
+
+## Arhitektura
+
+```mermaid
+flowchart LR
+    Browser["Browser"] --> Middleware["Next.js middleware"]
+    Middleware --> Action["Server action ili route handler"]
+    Middleware --> Page["Server Component"]
+    Action --> Supabase["Supabase Auth i PostgreSQL"]
+    Page --> Supabase
+    Page --> Hydration["TanStack HydrationBoundary"]
+    Hydration --> Browser
+```
+
+- Middleware dopušta javne putanje iz `lib/auth/routes.ts`. Privatne HTML navigacije proverava preko Auth-a. Privatne mutacije proveravaju korisnika u server action-u ili handler-u i validiraju ulaz Zod šemom.
+- Javni Supabase klijent koristi korisničku sesiju. Svaka tabela sa korisničkim podacima ima RLS. Pravila vezuju red za `auth.uid()`, vlasništvo lokala ili aktivno članstvo. Politike upisa proveravaju stanje reda posle izmene pomoću `WITH CHECK`.
+- Ograničen pristup važi i za direktne pozive iz browsera. RPC koristi ulogu pozivaoca gde je moguće. Servisni ključ ostaje na serveru, a RPC sa `SECURITY DEFINER` proverava identitet, obim pristupa i dozvolu izvršavanja.
+- Promene šeme idu u nove, vremenski prefiksirane migracije. SQL test proverava da dva korisnika imaju izolovane podatke. [Audit arhitekture](docs/architecture-audit.md) · [SQL test](supabase/tests/rls.test.sql)
 
 ## Preduslovi
 
@@ -36,10 +65,10 @@ računaju trošak porcije i skaliraju količine za drugi broj porcija.
    odeljku `[auth]` tog fajla podesite adresu aplikacije i dozvoljene povratne URL-ove.
 
    ```toml
-   site_url = "http://localhost:3000"
+   site_url = "https://dlztt72p-3000.euw.devtunnels.ms/"
    additional_redirect_urls = [
-     "http://localhost:3000/auth/callback?next=/login",
-     "http://localhost:3000/auth/callback?next=/reset-password",
+     "https://dlztt72p-3000.euw.devtunnels.ms//auth/callback?next=/login",
+     "https://dlztt72p-3000.euw.devtunnels.ms//auth/callback?next=/reset-password",
    ]
    ```
 
@@ -62,7 +91,7 @@ računaju trošak porcije i skaliraju količine za drugi broj porcija.
    | --- | --- |
    | `NEXT_PUBLIC_SUPABASE_URL` | Adresa lokalnog API-ja, po pravilu `http://127.0.0.1:54321` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Lokalni publishable ili `anon` ključ |
-   | `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` |
+   | `NEXT_PUBLIC_SITE_URL` | `https://dlztt72p-3000.euw.devtunnels.ms` |
    | `SUPABASE_SERVICE_ROLE_KEY` | Lokalni `service_role` ključ za serversko brisanje naloga |
 
 5. Dok lokalna baza radi, generišite tipove i pokrenite aplikaciju.
@@ -72,10 +101,10 @@ računaju trošak porcije i skaliraju količine za drugi broj porcija.
    pnpm dev
    ```
 
-6. Otvorite [localhost:3000](http://localhost:3000) i registrujte se. Ako je
+6. Otvorite [https://dlztt72p-3000.euw.devtunnels.ms/](https://dlztt72p-3000.euw.devtunnels.ms/) i registrujte se. Ako je
    uključena potvrda adrese, otvorite lokalno sanduče za testnu poštu sa adrese
    koju ispisuje `supabase status`, pa kliknite na vezu za potvrdu. Za osnovni
-   razvoj dovoljan je nalog prijavljen e-poštom. Google prijava i Stripe naplata
+   razvoj dovoljan je nalog prijavljen e-poštom. Google prijava i Paddle naplata
    traže zasebnu konfiguraciju provajdera.
 
 ## Skripte
@@ -106,6 +135,8 @@ PWA proveru koristite `pnpm build` pa `pnpm start`. Prijavite korisnika, otvorit
 recepte, sastojke i šablon smene, odjavite se, pa se prijavite kao drugi
 korisnik. U DevTools proverite da lokalno skladište i offline prikaz sadrže
 samo podatke novog korisnika. [Ponašanje bez mreže](docs/offline.md)
+
+Test opterećenja je u `load/dashboard.js` i pokreće se na izdvojenom staging projektu. [K6 konfiguracija i rezultati](docs/k6-dashboard.md)
 
 ## CI
 
@@ -138,13 +169,13 @@ repozitorijum već sadrži `supabase/config.toml`, uklonite korak `supabase init
 
    [Supabase okruženja](https://supabase.com/docs/guides/deployment/managing-environments)
 2. U hostingu podesite iste promenljive kao lokalno sa produkcijskim
-   vrednostima. `NEXT_PUBLIC_SITE_URL` je javna HTTPS adresa aplikacije.
+   vrednostima. `NEXT_PUBLIC_SITE_URL` je javna HTTPS adresa aplikacije bez završne kose crte.
    `SUPABASE_SERVICE_ROLE_KEY` ostaje u serverskom okruženju. U Supabase Auth
    podesite tu adresu i dozvolite povratne URL-ove `/auth/callback` za prijavu
    i resetovanje lozinke, sa parametrima iz lokalnog primera.
 3. Podesite Node 22, `pnpm install --frozen-lockfile` i `pnpm build`. Za
    sopstveni Node server koristite `pnpm start`. [Next.js deploy](https://nextjs.org/docs/15/app/getting-started/deploying)
-4. Za naplatu postavite Stripe tajne i objavite odgovarajuće funkcije.
+4. Za naplatu postavite Paddle tajne i objavite odgovarajuće funkcije. [Podešavanje Paddle sandbox-a i provere naplate](docs/billing.md)
    [Podešavanje Edge Functions](supabase/functions/README.md)
 
 Znak TreuPlate uređujte u `components/brand/mark.mjs`. Zatim pokrenite
@@ -164,6 +195,7 @@ ostanu usklađene (`pnpm check:pwa-icons`).
 | `public/` | PWA manifest i verzionisane ikone. |
 | `assets/fonts/` | Lokalni fontovi za slike pri deljenju. |
 | `scripts/` | Alati za PWA ikone i Open Graph fontove. |
+| `load/` | k6 scenario za HTTP čitanja na staging-u. |
 | `docs/` | Tehničke beleške i snimci ekrana. |
 | `.github/workflows/` | CI provere. |
 

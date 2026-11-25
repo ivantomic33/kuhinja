@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
-import { DashboardClient } from "@/components/dashboard/DashboardClient";
+import { DashboardClient, type DashboardData } from "@/components/dashboard/DashboardClient";
 import type {
   RecipeFoodCosts,
   RecipePreview,
@@ -9,6 +9,8 @@ import type { TemplateRow } from "@/components/offline/ShiftTemplatesCard";
 import type { CachedIngredient } from "@/lib/offline/cache";
 import { foodCostPercentFromPrices, lineCost } from "@/lib/calc/foodcost";
 import { sr } from "@/lib/i18n/sr";
+import { dehydrateQuery, Hydrate } from "@/lib/query/hydrate";
+import { queryKeys } from "@/lib/query/keys";
 import { classifyStockAlert } from "@/lib/stock/alerts";
 import { getPlan } from "@/lib/supabase/plan-server";
 import { createClient, getServerUser } from "@/lib/supabase/server";
@@ -259,22 +261,22 @@ export default async function DashboardPage() {
     return status === "crit" || status === "warn";
   }).length;
 
+  const data: DashboardData = {
+    firstName,
+    greeting,
+    plan,
+    recipes: recipes.rows,
+    recipeCount: recipes.error ? null : recipes.count ?? recipes.rows.length,
+    ingredients: ingredientRows,
+    ingredientCount: ingredientsRes.error ? null : ingredientsRes.count ?? ingredientRows.length,
+    stockAlertCount,
+    templates: templateRows,
+    initialTemplateCount: templatesRes.error ? null : templatesRes.count ?? templateRows.length,
+    loadError: Boolean(recipes.error || ingredientsRes.error || templatesRes.error),
+  };
   return (
-    <DashboardClient
-      firstName={firstName}
-      greeting={greeting}
-      plan={plan}
-      trends={trends}
-      venueId={venueId}
-      recipes={recipes.rows}
-      recipeFoodCosts={recipeFoodCosts}
-      recipeCount={recipes.error ? null : recipes.count ?? recipes.rows.length}
-      ingredients={ingredientRows}
-      ingredientCount={ingredientsRes.error ? null : ingredientsRes.count ?? ingredientRows.length}
-      stockAlertCount={stockAlertCount}
-      templates={templateRows}
-      initialTemplateCount={templatesRes.error ? null : templatesRes.count ?? templateRows.length}
-      loadError={Boolean(recipes.error || ingredientsRes.error || templatesRes.error)}
-    />
+    <Hydrate state={dehydrateQuery(queryKeys.dashboard(venueId), data)}>
+      <DashboardClient venueId={venueId} recipeFoodCosts={recipeFoodCosts} trends={trends} />
+    </Hydrate>
   );
 }

@@ -1,13 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { OfflineSync } from "@/components/pwa/OfflineSync";
-import { MotionProvider } from "@/components/ui/MotionProvider";
 import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME } from "@/lib/config/app";
 import icons from "@/lib/config/pwa-icons.json";
-import { tokens } from "@/lib/design/tokens";
-import { sr } from "@/lib/i18n/sr";
+import { SITE_TITLE_TEMPLATE, socialMetadata } from "@/lib/seo/metadata";
 import { getSiteUrl } from "@/lib/seo/site";
-import { openGraphCard, twitterCard } from "@/lib/seo/social-card";
+import manifest from "@/public/manifest.json";
 import "./globals.css";
 
 const inter = Inter({
@@ -21,25 +18,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
     default: APP_NAME,
-    template: `%s · ${APP_NAME}`,
+    template: SITE_TITLE_TEMPLATE,
   },
   description: APP_DESCRIPTION,
   applicationName: APP_NAME,
-  openGraph: {
-    type: "website",
-    locale: "sr_Latn",
-    siteName: APP_NAME,
-    title: sr.marketing.metaTitle,
-    description: APP_DESCRIPTION,
-    url: "/",
-    images: [openGraphCard],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: sr.marketing.metaTitle,
-    description: APP_DESCRIPTION,
-    images: [twitterCard],
-  },
+  ...socialMetadata(APP_NAME, APP_DESCRIPTION, "/"),
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -63,7 +46,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: tokens.bg,
+  themeColor: manifest.theme_color,
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
@@ -76,10 +59,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="sr-Latn" className={inter.variable} suppressHydrationWarning>
+    <html lang="sr" className={inter.variable} suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
-        <OfflineSync />
-        <MotionProvider>{children}</MotionProvider>
+        {children}
       </body>
     </html>
   );

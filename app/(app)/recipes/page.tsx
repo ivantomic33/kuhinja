@@ -6,6 +6,8 @@ import {
 } from "@/lib/calc/recipe-food-cost";
 import type { CachedIngredient } from "@/lib/offline/cache";
 import { hasMinPlan } from "@/lib/plan/entitlements";
+import { dehydrateQuery, Hydrate } from "@/lib/query/hydrate";
+import { queryKeys } from "@/lib/query/keys";
 import { getPlan } from "@/lib/supabase/plan-server";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -109,12 +111,13 @@ export default async function RecipesPage() {
         ingredients={ingredientRows}
         templates={templateRows}
       />
-      <RecipesWorkspace
-        initialRecipes={recipeRows}
-        canSeeInsights={canSeeInsights}
-        venueId={venueId}
-        loadError={Boolean(recipesRes.error || venuesRes.error)}
-      />
+      <Hydrate state={dehydrateQuery(queryKeys.recipes(venueId), recipeRows)}>
+        <RecipesWorkspace
+          canSeeInsights={canSeeInsights}
+          venueId={venueId}
+          loadError={Boolean(recipesRes.error || venuesRes.error)}
+        />
+      </Hydrate>
     </>
   );
 }

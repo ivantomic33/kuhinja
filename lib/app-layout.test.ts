@@ -2,7 +2,7 @@ import { Writable } from "node:stream";
 import { createElement, type ReactNode } from "react";
 import { renderToPipeableStream, renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, expect, it, vi } from "vitest";
-import AppLayout from "@/app/(app)/layout";
+import ProtectedAppShell from "@/components/layout/ProtectedAppShell";
 import { getPlanDetails } from "@/lib/supabase/plan-server";
 import { resolvePlanDetails } from "@/lib/supabase/plan";
 
@@ -35,7 +35,7 @@ it("renders the authenticated page before the free sidebar usage count is availa
     },
   });
 
-  const rendering = AppLayout({ children: "Page contents" }).then((layout) => {
+  const rendering = ProtectedAppShell({ children: "Page contents" }).then((layout) => {
     const stream = renderToPipeableStream(layout, {
       onShellReady() { stream.pipe(output); },
     });
@@ -56,7 +56,7 @@ it("skips the sidebar recipe count query when the premium badge replaces it", as
   vi.mocked(getPlanDetails).mockResolvedValue(resolvePlanDetails("pro"));
   select.mockResolvedValue({ count: 5 });
 
-  const layout = await AppLayout({ children: "Page contents" });
+  const layout = await ProtectedAppShell({ children: "Page contents" });
   expect(renderToStaticMarkup(layout)).toContain("Page contents");
   expect(select).not.toHaveBeenCalled();
 });

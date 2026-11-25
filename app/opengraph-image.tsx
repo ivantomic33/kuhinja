@@ -9,6 +9,7 @@ import { openGraphCard, socialCardSize } from "@/lib/seo/social-card";
 export const alt = openGraphCard.alt;
 export const size = socialCardSize;
 export const contentType = "image/png";
+export const runtime = "nodejs";
 
 const fontFiles = ["inter-latin-700-normal.woff", "inter-latin-ext-700-normal.woff"];
 
@@ -40,7 +41,7 @@ export default async function OpenGraphImage() {
           </div>
           <div style={{ display: "flex", width: 72, height: 6, borderRadius: 3, background: tokens.accent }} />
           <div style={{ display: "flex", color: tokens.text2, fontSize: 36, lineHeight: 1.3, maxWidth: 560 }}>
-            {sr.app.description}
+            {sr.marketing.ogTagline}
           </div>
         </div>
         <LogoMark size={324} />

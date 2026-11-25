@@ -65,7 +65,7 @@ function supabaseConnectSources(): string[] {
 
 /** Build a Report-Only CSP value with a per-request script nonce. */
 export function buildCspReportOnly(nonce: string): string {
-  const connectSrc = ["'self'", ...supabaseConnectSources()].join(" ");
+  const connectSrc = ["'self'", ...supabaseConnectSources(), "https://*.paddle.com"].join(" ");
 
   return [
     "default-src 'self'",
@@ -75,6 +75,7 @@ export function buildCspReportOnly(nonce: string): string {
     "img-src 'self' data:",
     "font-src 'self'",
     `connect-src ${connectSrc}`,
+    "frame-src 'self' https://*.paddle.com",
     // Service worker + any same-origin workers (Serwist).
     "worker-src 'self'",
     "manifest-src 'self'",

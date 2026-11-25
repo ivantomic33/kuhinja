@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { sr } from "@/lib/i18n/sr";
+import { registerLegalConsentSchema } from "@/lib/schemas/legal";
 
 const emailField = z
   .string()
@@ -15,7 +16,7 @@ const passwordField = z
 export const loginSchema = z
   .object({
     email: emailField,
-    password: z.string().min(1, sr.auth.errors.required),
+    password: passwordField,
   })
   .strict();
 
@@ -25,6 +26,7 @@ export const registerSchema = z
     password: passwordField,
     fullName: z.string().trim().min(1, sr.auth.errors.required).max(120),
     venueName: z.string().trim().min(1, sr.auth.errors.required).max(120),
+    ...registerLegalConsentSchema.shape,
   })
   .strict();
 

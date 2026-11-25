@@ -1,11 +1,12 @@
 # Server auth inventory
 
-Middleware only checks that a session cookie exists. Every server action, route
-handler, and server-side Supabase call must authorize itself with
-`supabase.auth.getUser()` (not `getSession()`).
+Middleware checks for a session cookie and verifies the user on HTML
+navigations. Server Components share the identity verified by `getClaims()`.
+Private mutations use `getUser()` and reuse that identity in downstream checks.
+Supabase policies apply to the browser and SSR clients.
 
-Error shape: `{ error: { code, message } }` with codes
-`UNAUTHORIZED` | `FORBIDDEN` | `VALIDATION_ERROR` | `NOT_FOUND` | `INTERNAL_ERROR`.
+The error payload uses `{ error: { code, message, status? } }`. A stale ingredient
+or recipe update returns `VERSION_CONFLICT` with HTTP status 409.
 
 ## Server actions (`"use server"`)
 
@@ -25,7 +26,9 @@ Error shape: `{ error: { code, message } }` with codes
 
 | File | Function | Auth check | Ownership check | Input validated |
 | --- | --- | --- | --- | --- |
-| `app/auth/callback/route.ts` | `GET` | yes (`exchangeCode` + `getUser`) | venue `owner_id` = verified user | safe `next` path |
+| `app/auth/callback/route.ts` | `GET` | user returned by the Auth code exchange | venue `owner_id` and consent `user_id` = verified user | Zod query fields, safe `next` path and Zod consent metadata |
+| `lib/legal/actions.ts` | `recordLegalConsent` | verified Google user from `requireActionUser` | consent `user_id` = verified user under RLS | `registerLegalConsentSchema` |
+| `app/api/versioned-update/route.ts` | `PATCH` | yes (`requireActionUser`) | ingredient or recipe RLS | strict Zod envelope and resource-specific patch |
 
 ## Server-side Supabase helpers / loaders
 
@@ -47,10 +50,10 @@ over time; never trust client-supplied `user_id` / `owner_id`.
 
 | File | Notes |
 | --- | --- |
-| `lib/stock/actions.ts` | stock writes; RLS on `stock_*` |
+| `lib/stock/actions.ts` | stock writes use RLS on `stock_*`. The price RPC validates its arguments in PostgreSQL and runs as the caller. |
 | `lib/domain/saveRecipeItems.ts` | recipe_items replace |
 | `lib/domain/venue.ts` | primary venue read |
-| `lib/offline/checklist-sync.ts` | checklist run upsert (includes `user_id` in payload — RLS must enforce) |
+| `lib/offline/checklist-sync.ts` | starting a run uses RLS for `user_id`, venue and template. Item writes use a security-invoker RPC with RLS on the parent run. |
 | `lib/billing/invoke.ts` | edge function invoke with user JWT |
 
 ## Edge functions (`supabase/functions`)
@@ -60,4 +63,4 @@ over time; never trust client-supplied `user_id` / `owner_id`.
 | `create-checkout-session` | `getUser` via JWT | 401 if missing |
 | `create-portal-session` | `getUser` via JWT | 401 if missing |
 | `delete-account` | `getUser` via JWT and a session created within 5 minutes | Service-role RPC deletes the caller and owned data in one transaction |
-| `stripe-webhook` | Stripe signature | no user session |
+| `paddle-webhook` | Paddle signature | no user session |

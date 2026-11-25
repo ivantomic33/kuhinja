@@ -2,10 +2,12 @@ import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import {
   CacheFirst,
   ExpirationPlugin,
+  NetworkFirst,
   NetworkOnly,
   Serwist,
   StaleWhileRevalidate,
 } from "serwist";
+import { APP_RUNTIME_CACHE_NAMES } from "@/lib/pwa/cache-names";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -27,7 +29,7 @@ const PROTECTED_PREFIXES = [
   "/recipes",
   "/scaler",
   "/shift",
-  "/premium",
+  "/premium/upravljanje",
   "/trebovanje",
   "/raspored",
 ] as const;
@@ -82,7 +84,8 @@ const serwist = new Serwist({
           url.pathname === "/reset-password"),
       handler: new NetworkOnly(),
     },
-    // 5) Supabase REST / Auth / Functions / Realtime — never cache
+    // 5) Supabase REST / Auth / Functions / Realtime — never cache in Cache Storage.
+    // Offline reads go through user-prefixed IndexedDB (lib/offline/cache.ts).
     {
       matcher: ({ url }) => isSupabaseHost(url.hostname),
       handler: new NetworkOnly(),
@@ -97,7 +100,7 @@ const serwist = new Serwist({
       matcher: ({ sameOrigin, url }) =>
         sameOrigin && url.pathname.startsWith("/_next/static/"),
       handler: new CacheFirst({
-        cacheName: "next-static-assets",
+        cacheName: APP_RUNTIME_CACHE_NAMES[0],
         plugins: [
           new ExpirationPlugin({
             maxEntries: 128,
@@ -107,13 +110,13 @@ const serwist = new Serwist({
         ],
       }),
     },
-    // 8) Fonts
+    // 8) Fonts — StaleWhileRevalidate
     {
       matcher: ({ request, url, sameOrigin }) =>
         request.destination === "font" ||
         (sameOrigin && /\.(?:woff2?|ttf|otf|eot)$/i.test(url.pathname)),
-      handler: new CacheFirst({
-        cacheName: "static-fonts",
+      handler: new StaleWhileRevalidate({
+        cacheName: APP_RUNTIME_CACHE_NAMES[1],
         plugins: [
           new ExpirationPlugin({
             maxEntries: 16,
@@ -123,7 +126,24 @@ const serwist = new Serwist({
         ],
       }),
     },
-    // 9) App icons + manifest (no user data)
+    // 9) Images (public marketing / icons content only — not user uploads)
+    {
+      matcher: ({ request, sameOrigin, url }) =>
+        request.destination === "image" ||
+        (sameOrigin &&
+          /\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico)$/i.test(url.pathname)),
+      handler: new StaleWhileRevalidate({
+        cacheName: APP_RUNTIME_CACHE_NAMES[2],
+        plugins: [
+          new ExpirationPlugin({
+            maxEntries: 64,
+            maxAgeSeconds: 60 * 60 * 24 * 30,
+            maxAgeFrom: "last-used",
+          }),
+        ],
+      }),
+    },
+    // 10) App icons + manifest (no user data)
     {
       matcher: ({ sameOrigin, url }) =>
         sameOrigin &&
@@ -131,7 +151,7 @@ const serwist = new Serwist({
           url.pathname === "/manifest.json" ||
           url.pathname === "/favicon.ico"),
       handler: new StaleWhileRevalidate({
-        cacheName: "static-icons",
+        cacheName: APP_RUNTIME_CACHE_NAMES[3],
         plugins: [
           new ExpirationPlugin({
             maxEntries: 32,
@@ -141,7 +161,25 @@ const serwist = new Serwist({
         ],
       }),
     },
-    // 10) Everything else (HTML navigations, RSC, JSON, images of content) — network only
+    // 11) Public HTML navigations — NetworkFirst with short timeout, then offline fallback
+    {
+      matcher: ({ request, sameOrigin, url }) =>
+        sameOrigin &&
+        request.mode === "navigate" &&
+        !isProtectedPath(url.pathname),
+      handler: new NetworkFirst({
+        cacheName: APP_RUNTIME_CACHE_NAMES[4],
+        networkTimeoutSeconds: 3,
+        plugins: [
+          new ExpirationPlugin({
+            maxEntries: 16,
+            maxAgeSeconds: 60 * 60 * 24,
+            maxAgeFrom: "last-used",
+          }),
+        ],
+      }),
+    },
+    // 12) Everything else — network only (no private API leakage into Cache Storage)
     {
       matcher: /.*/i,
       handler: new NetworkOnly(),

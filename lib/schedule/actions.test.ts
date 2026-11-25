@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+import { PLANS } from "@/lib/billing/plans";
 import { loadScheduleReport, updateSchedule } from "./actions";
 
 const getUser = vi.fn();
@@ -100,6 +101,13 @@ it("scopes schedule_command to the verified location and never trusts body user 
       error: null,
     })
     .mockResolvedValueOnce({
+      data: {
+        plan: "starter", status: "active", features: PLANS.starter.features,
+        limits: JSON.parse(JSON.stringify(PLANS.starter.limits)), trial_ends_at: null, grace: false,
+      },
+      error: null,
+    })
+    .mockResolvedValueOnce({
       data: { notified: 2 },
       error: null,
     });
@@ -107,7 +115,7 @@ it("scopes schedule_command to the verified location and never trusts body user 
   const result = await updateSchedule(location, week, { type: "publish" });
 
   expect(result).toEqual({ data: { notified: 2 } });
-  expect(rpc).toHaveBeenNthCalledWith(2, "schedule_command", {
+  expect(rpc).toHaveBeenNthCalledWith(3, "schedule_command", {
     p_action: "publish",
     p_location: location,
     p_week: week,

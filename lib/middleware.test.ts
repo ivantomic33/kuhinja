@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { isPublicPath } from "@/lib/auth/routes";
+import { config, middleware } from "@/middleware";
 
-const updateSession = vi.fn();
-
-vi.mock("@/lib/supabase/middleware", () => ({
-  updateSession: (...args: unknown[]) => updateSession(...args),
-}));
-
+const { updateSession } = vi.hoisted(() => ({ updateSession: vi.fn() }));
+vi.mock("@/lib/supabase/middleware", () => ({ updateSession }));
 vi.mock("@/lib/security/csp", () => ({
   buildCspReportOnly: () => "csp-test",
   createCspNonce: () => "test-nonce",
@@ -14,100 +13,92 @@ vi.mock("@/lib/security/csp", () => ({
   NONCE_HEADER: "x-nonce",
 }));
 
-import { isPublicPath } from "@/lib/auth/public-routes";
-import { middleware } from "@/middleware";
+const publicPaths = [
+  "/", "/login", "/register", "/forgot-password", "/reset-password", "/auth/callback",
+  "/r/", "/r/token", "/premium", "/faq", "/pravila-koriscenja", "/privatnost",
+  "/povracaj-novca", "/robots.txt", "/sitemap.xml",
+];
 
-function makeRequest(path: string, cookieHeader?: string) {
-  const headers = new Headers();
-  if (cookieHeader) headers.set("cookie", cookieHeader);
-  return new NextRequest(new URL(path, "http://localhost:3000"), { headers });
+const protectedPaths = [
+  "/dashboard", "/ingredients", "/recipes", "/recipes/1", "/raspored", "/trebovanje",
+  "/shift", "/shift/1", "/scaler", "/scaler/1", "/settings", "/settings/billing",
+  "/api/versioned-update", "/dummy-new-page", "/private.png", "/premium/upravljanje", "/faq/new",
+  "/privatnost/draft", "/pravila-koriscenja/draft", "/povracaj-novca/draft",
+  "/auth/callback-extra", "/auth/callback/extra", "/recipe-token", "/r-extra/one",
+];
+
+function request(path: string, init: ConstructorParameters<typeof NextRequest>[1] = {}) {
+  return new NextRequest(new URL(path, "https://treuplate.test"), init);
 }
 
-function authCookieHeader(value = "session-value") {
-  return `sb-localhost-auth-token=${value}`;
-}
+const cookie = "sb-localhost-auth-token.0=session-value";
 
-beforeEach(() => {
-  updateSession.mockReset();
+beforeEach(() => updateSession.mockReset());
+afterEach(() => vi.unstubAllEnvs());
+
+it.each(publicPaths)("allows %s anonymously without requesting Auth", async (path) => {
+  expect(isPublicPath(path)).toBe(true);
+  expect((await middleware(request(path))).headers.get("location")).toBeNull();
+  expect(updateSession).not.toHaveBeenCalled();
 });
 
-describe("isPublicPath (default-deny allow-list)", () => {
-  it("allows explicit public routes and prefixes", () => {
-    expect(isPublicPath("/")).toBe(true);
-    expect(isPublicPath("/login")).toBe(true);
-    expect(isPublicPath("/register")).toBe(true);
-    expect(isPublicPath("/forgot-password")).toBe(true);
-    expect(isPublicPath("/premium")).toBe(true);
-    expect(isPublicPath("/opengraph-image")).toBe(true);
-    expect(isPublicPath("/twitter-image")).toBe(true);
-    expect(isPublicPath("/r/share-token")).toBe(true);
-    expect(isPublicPath("/~offline")).toBe(true);
-    expect(isPublicPath("/auth/callback")).toBe(true);
-  });
-
-  it("denies unknown app routes by default", () => {
-    expect(isPublicPath("/dashboard")).toBe(false);
-    expect(isPublicPath("/recipes")).toBe(false);
-    expect(isPublicPath("/dummy-new-page")).toBe(false);
-  });
+it.each(protectedPaths)("requires a session for %s by default", async (path) => {
+  expect(isPublicPath(path)).toBe(false);
+  expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: path })).toBe(true);
+  const response = await middleware(request(path));
+  const location = new URL(response.headers.get("location")!);
+  expect(location.pathname).toBe("/login");
+  expect(location.searchParams.get("next")).toBe(path);
+  expect(updateSession).not.toHaveBeenCalled();
 });
 
-describe("middleware", () => {
-  it("allows anonymous users on a public route", async () => {
-    const response = await middleware(makeRequest("/login"));
+it.each(["/~offline", "/sw.js", "/swe-worker-abc.js", "/manifest.json", "/icons/icon-v3.svg", "/opengraph-image", "/twitter-image", "/_next/static/a.js", "/_next/image"])(
+  "excludes the infrastructure resource %s from session middleware",
+  (path) => expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url: path })).toBe(false)
+);
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("location")).toBeNull();
-    expect(updateSession).not.toHaveBeenCalled();
+it("verifies HTML and preserves refreshed cookie attributes on redirects", async () => {
+  const response = NextResponse.next();
+  response.cookies.set("sb-localhost-auth-token.0", "refreshed", {
+    path: "/", secure: true, httpOnly: true, sameSite: "lax",
   });
-
-  it("redirects anonymous users on a protected route with next=", async () => {
-    const response = await middleware(makeRequest("/dashboard"));
-
-    expect(response.status).toBeGreaterThanOrEqual(300);
-    expect(response.status).toBeLessThan(400);
-    const location = new URL(response.headers.get("location")!);
-    expect(location.pathname).toBe("/login");
-    expect(location.searchParams.get("next")).toBe("/dashboard");
-    expect(updateSession).not.toHaveBeenCalled();
+  updateSession.mockResolvedValue({ supabaseResponse: response, user: { id: "user-1" } });
+  const redirect = await middleware(request("/login", { headers: { cookie, accept: "text/html" } }));
+  expect(new URL(redirect.headers.get("location")!).pathname).toBe("/dashboard");
+  expect(redirect.cookies.get("sb-localhost-auth-token.0")).toMatchObject({
+    value: "refreshed", secure: true, httpOnly: true, sameSite: "lax",
   });
+  expect(updateSession).toHaveBeenCalledOnce();
+});
 
-  it("redirects logged-in users away from /login to /dashboard", async () => {
-    const session = NextResponse.next();
-    session.cookies.set("sb-localhost-auth-token", "refreshed");
-    updateSession.mockResolvedValue({
-      supabaseResponse: session,
-      user: { id: "user-1" },
-    });
+it("redirects a protected document when its session cookie fails verification", async () => {
+  updateSession.mockResolvedValue({ supabaseResponse: NextResponse.next(), user: null });
+  const response = await middleware(request("/dashboard", { headers: { cookie, "sec-fetch-dest": "document" } }));
+  expect(new URL(response.headers.get("location")!).pathname).toBe("/login");
+  expect(updateSession).toHaveBeenCalledOnce();
+});
 
-    const response = await middleware(
-      makeRequest("/login", authCookieHeader()),
-    );
+it.each([
+  ["/dashboard", "POST", "text/html"],
+  ["/dashboard", "GET", "text/x-component"],
+  ["/dashboard", "GET", "application/json"],
+  ["/api/versioned-update", "GET", "text/html"],
+  ["/auth/callback", "GET", "text/html"],
+  ["/robots.txt", "GET", "text/html"],
+  ["/sitemap.xml", "GET", "text/html"],
+])("delegates %s %s %s to the app without requesting Auth in middleware", async (path, method, accept) => {
+  expect((await middleware(request(path, { method, headers: { cookie, accept } }))).headers.get("location")).toBeNull();
+  expect(updateSession).not.toHaveBeenCalled();
+});
 
-    expect(response.status).toBeGreaterThanOrEqual(300);
-    expect(response.status).toBeLessThan(400);
-    const location = new URL(response.headers.get("location")!);
-    expect(location.pathname).toBe("/dashboard");
-    expect(location.search).toBe("");
-    // Session cookies are copied onto the redirect response.
-    expect(response.cookies.get("sb-localhost-auth-token")?.value).toBe(
-      "refreshed",
-    );
-  });
+it("advertises the configured Supabase project only from a staging deployment", async () => {
+  const project = "abcdefghijklmnopqrst";
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", `https://${project}.supabase.co`);
+  vi.stubEnv("TREUPLATE_DEPLOYMENT", "production");
+  expect((await middleware(request("/login"))).headers.has("x-treuplate-environment")).toBe(false);
 
-  it("allows anonymous users on /r/x share links", async () => {
-    const response = await middleware(makeRequest("/r/x"));
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get("location")).toBeNull();
-    expect(updateSession).not.toHaveBeenCalled();
-  });
-
-  it("redirects anonymous users when a dummy app path is not public", async () => {
-    const response = await middleware(makeRequest("/brand-new-page"));
-
-    const location = new URL(response.headers.get("location")!);
-    expect(location.pathname).toBe("/login");
-    expect(location.searchParams.get("next")).toBe("/brand-new-page");
-  });
+  vi.stubEnv("TREUPLATE_DEPLOYMENT", "staging");
+  const headers = (await middleware(request("/login"))).headers;
+  expect(headers.get("x-treuplate-environment")).toBe("staging");
+  expect(headers.get("x-treuplate-supabase-project")).toBe(project);
 });

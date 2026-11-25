@@ -3,12 +3,16 @@
 import { useRef, useState } from "react";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
-const PAGE_SIZE = 25;
+/** Client page size for long workspace lists (pairs with server range of 50). */
+export const WORKSPACE_PAGE_SIZE = 50;
 
-export function useWorkspacePagination<T>(items: T[]) {
+/** Virtualize once a page (or short list) exceeds this many mounted rows. */
+export const WORKSPACE_VIRTUALIZE_THRESHOLD = 40;
+
+export function useWorkspacePagination<T>(items: T[], pageSize = WORKSPACE_PAGE_SIZE) {
   const [requestedPage, setRequestedPage] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const pageCount = items.length > 50 ? Math.ceil(items.length / PAGE_SIZE) : 1;
+  const pageCount = items.length > pageSize ? Math.ceil(items.length / pageSize) : 1;
   const page = Math.min(requestedPage, pageCount - 1);
   if (page !== requestedPage) setRequestedPage(page);
 
@@ -22,7 +26,7 @@ export function useWorkspacePagination<T>(items: T[]) {
     pageCount,
     goToPage,
     scrollRef,
-    visible: pageCount === 1 ? items : items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    visible: pageCount === 1 ? items : items.slice(page * pageSize, (page + 1) * pageSize),
   };
 }
 
