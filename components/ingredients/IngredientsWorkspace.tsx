@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Carrot, Grid2X2, Plus, Search, Table2 } from "lucide-react";
 import { CreateIngredientSheet } from "@/components/create/CreateIngredientSheet";
 import { DeleteIngredientButton } from "@/components/create/DeleteIngredientButton";
+import { ExportButtons } from "@/components/exports/ExportButtons";
 import { usePlanUi } from "@/components/plan/PlanProvider";
 import { BentoCard } from "@/components/ui/BentoCard";
 import { DataTable, sortTableRows, type DataTableColumn, type DataTableSort } from "@/components/ui/DataTable";
@@ -31,11 +32,13 @@ const VIEW_KEY = "treuplate-ingredients-view";
 
 export type IngredientsWorkspaceProps = {
   venueId?: string | null;
+  workspaceId?: string | null;
   loadError?: boolean;
 };
 
 export function IngredientsWorkspace({
   venueId = null,
+  workspaceId = null,
   loadError = false,
 }: IngredientsWorkspaceProps) {
   const { isFree, isPremium } = usePlan();
@@ -160,13 +163,16 @@ export function IngredientsWorkspace({
         title={sr.ingredients.title}
         description={sr.ingredients.subtitle}
         action={!loadError && items.length > 0 ? (
-          <PrimaryButton
-            type="button"
-            leftIcon={<Plus className="size-4" aria-hidden="true" />}
-            onClick={openCreate}
-          >
-            {sr.create.ingredient.add}
-          </PrimaryButton>
+          <>
+            <ExportButtons scope="ingredients" workspaceId={workspaceId} formats={["csv", "xlsx"]} />
+            <PrimaryButton
+              type="button"
+              leftIcon={<Plus className="size-4" aria-hidden="true" />}
+              onClick={openCreate}
+            >
+              {sr.create.ingredient.add}
+            </PrimaryButton>
+          </>
         ) : undefined}
       />
 

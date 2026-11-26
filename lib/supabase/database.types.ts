@@ -127,6 +127,7 @@ export type Database = {
         Row: {
           id: string;
           owner_id: string;
+          workspace_id: string;
           name: string;
           created_at: string;
           updated_at: string;
@@ -134,6 +135,7 @@ export type Database = {
         Insert: {
           id?: string;
           owner_id: string;
+          workspace_id?: string;
           name: string;
           created_at?: string;
           updated_at?: string;
@@ -141,6 +143,7 @@ export type Database = {
         Update: {
           id?: string;
           owner_id?: string;
+          workspace_id?: string;
           name?: string;
           created_at?: string;
           updated_at?: string;
@@ -159,6 +162,7 @@ export type Database = {
         Row: {
           id: string;
           venue_id: string;
+          workspace_id: string;
           name: string;
           unit: IngredientUnit;
           price: number;
@@ -172,6 +176,7 @@ export type Database = {
         Insert: {
           id?: string;
           venue_id: string;
+          workspace_id?: string;
           name: string;
           unit: IngredientUnit;
           price?: number;
@@ -184,6 +189,7 @@ export type Database = {
         Update: {
           id?: string;
           venue_id?: string;
+          workspace_id?: string;
           name?: string;
           unit?: IngredientUnit;
           price?: number;
@@ -287,6 +293,7 @@ export type Database = {
         Row: {
           id: string;
           venue_id: string;
+          workspace_id: string;
           name: string;
           description: string | null;
           portions: number;
@@ -298,6 +305,7 @@ export type Database = {
         Insert: {
           id?: string;
           venue_id: string;
+          workspace_id?: string;
           name: string;
           description?: string | null;
           portions?: number;
@@ -309,6 +317,7 @@ export type Database = {
         Update: {
           id?: string;
           venue_id?: string;
+          workspace_id?: string;
           name?: string;
           description?: string | null;
           portions?: number;

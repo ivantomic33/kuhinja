@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@paddle/paddle-js": "^1.6.6",
+    "@pdf-lib/fontkit": "^1.1.1",
     "@serwist/next": "^9.5.15",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",

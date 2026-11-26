@@ -19,7 +19,7 @@ export default async function RecipesPage() {
   const supabase = await createClient();
   const [plan, venuesRes, recipesRes, ingredientsRes, templatesRes] = await Promise.all([
     getPlan(),
-    supabase.from("venues").select("id").order("created_at", { ascending: true }).limit(1),
+    supabase.from("venues").select("id, workspace_id").order("created_at", { ascending: true }).limit(1),
     supabase
       .from("recipes")
       .select(
@@ -36,6 +36,7 @@ export default async function RecipesPage() {
   ]);
   const canSeeInsights = hasMinPlan(plan, "pro");
   const venueId = venuesRes.data?.[0]?.id ?? null;
+  const workspaceId = venuesRes.data?.[0]?.workspace_id ?? null;
 
   type RecipeIngredient = Pick<Ingredient, "name" | "unit" | "price" | "waste_percent">;
   type RecipeListRow = Pick<Recipe, "id" | "name" | "venue_id" | "portions" | "selling_price" | "description"> & {
@@ -115,6 +116,7 @@ export default async function RecipesPage() {
         <RecipesWorkspace
           canSeeInsights={canSeeInsights}
           venueId={venueId}
+          workspaceId={workspaceId}
           loadError={Boolean(recipesRes.error || venuesRes.error)}
         />
       </Hydrate>

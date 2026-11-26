@@ -8,6 +8,7 @@ import {
   CreateRecipeSheet,
   type CreatedRecipeSummary,
 } from "@/components/create/CreateRecipeSheet";
+import { ExportButtons } from "@/components/exports/ExportButtons";
 import { DeleteRecipeButton } from "@/components/recipes/DeleteRecipeButton";
 import { RecipeFoodCostDialog } from "@/components/recipes/RecipeFoodCostDialog";
 import { usePlanUi } from "@/components/plan/PlanProvider";
@@ -52,12 +53,14 @@ export type RecipeListItem = {
 export type RecipesWorkspaceProps = {
   canSeeInsights: boolean;
   venueId?: string | null;
+  workspaceId?: string | null;
   loadError?: boolean;
 };
 
 export function RecipesWorkspace({
   canSeeInsights,
   venueId = null,
+  workspaceId = null,
   loadError = false,
 }: RecipesWorkspaceProps) {
   const { isFree, isPremium } = usePlan();
@@ -211,6 +214,11 @@ export function RecipesWorkspace({
         description={sr.listStates.recipes.description}
         action={!loadError && recipes.length > 0 ? (
           <>
+            <ExportButtons
+              scope="recipes"
+              workspaceId={workspaceId}
+              formats={["csv", "xlsx"]}
+            />
             <Link
               href="/allergens/print"
               className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-border-strong bg-surface-2 px-4 text-ui-base font-semibold text-text outline-none hover:bg-surface-3"

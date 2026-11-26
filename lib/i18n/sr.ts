@@ -955,6 +955,12 @@ export const sr = {
     traceList: "Mogući tragovi",
     none: "Nema",
   },
+  exports: {
+    groupLabel: "Izvoz podataka",
+    download: "Preuzmi",
+    failed: "Izvoz nije uspeo. Pokušajte ponovo.",
+    recipeCard: "PDF kartica recepta",
+  },
   notFound: {
     title: "Stranica nije pronađena",
     body: "Proverite adresu ili se vratite na početnu.",
