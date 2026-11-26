@@ -7,8 +7,10 @@ import { config, middleware } from "@/middleware";
 const { updateSession } = vi.hoisted(() => ({ updateSession: vi.fn() }));
 vi.mock("@/lib/supabase/middleware", () => ({ updateSession }));
 vi.mock("@/lib/security/csp", () => ({
+  buildCsp: () => "csp-test",
   buildCspReportOnly: () => "csp-test",
   createCspNonce: () => "test-nonce",
+  CSP_HEADER: "Content-Security-Policy",
   CSP_REPORT_ONLY_HEADER: "Content-Security-Policy-Report-Only",
   NONCE_HEADER: "x-nonce",
 }));

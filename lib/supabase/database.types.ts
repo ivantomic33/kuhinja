@@ -203,6 +203,57 @@ export type Database = {
           },
         ];
       };
+      allergens: {
+        Row: {
+          code: string;
+          label: string;
+          regulation_order: number;
+        };
+        Insert: {
+          code: string;
+          label: string;
+          regulation_order: number;
+        };
+        Update: {
+          code?: string;
+          label?: string;
+          regulation_order?: number;
+        };
+        Relationships: [];
+      };
+      ingredient_allergens: {
+        Row: {
+          ingredient_id: string;
+          allergen_code: string;
+          presence: "contains" | "trace";
+        };
+        Insert: {
+          ingredient_id: string;
+          allergen_code: string;
+          presence?: "contains" | "trace";
+        };
+        Update: {
+          ingredient_id?: string;
+          allergen_code?: string;
+          presence?: "contains" | "trace";
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_allergens_allergen_code_fkey";
+            columns: ["allergen_code"];
+            isOneToOne: false;
+            referencedRelation: "allergens";
+            referencedColumns: ["code"];
+          },
+          {
+            foreignKeyName: "ingredient_allergens_ingredient_id_fkey";
+            columns: ["ingredient_id"];
+            isOneToOne: false;
+            referencedRelation: "ingredients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ingredient_price_history: {
         Row: {
           id: string;
@@ -576,7 +627,15 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      recipe_allergens: {
+        Row: {
+          workspace_id: string;
+          recipe_id: string;
+          allergen_code: string;
+          presence: string;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       claim_billing_lock: { Args: { p_key: string; p_token: string }; Returns: boolean };
@@ -592,6 +651,18 @@ export type Database = {
       is_venue_owner: {
         Args: { p_venue_id: string };
         Returns: boolean;
+      };
+      is_member: {
+        Args: { p_workspace_id: string; p_min_role: string };
+        Returns: boolean;
+      };
+      workspace_has_feature: {
+        Args: { p_workspace_id: string; p_feature: string };
+        Returns: boolean;
+      };
+      set_ingredient_allergens: {
+        Args: { p_ingredient_id: string; p_items: Json };
+        Returns: undefined;
       };
       restock_ingredient: {
         Args: { p_ingredient_id: string; p_new_price: number; p_note?: string | null };

@@ -9,41 +9,26 @@
  *    down; nonce must be generated in middleware (not next.config headers),
  *    because a fixed nonce in config would be reusable by attackers.
  *
- * We ship `Content-Security-Policy-Report-Only` first so violations show in
- * DevTools/reporting without breaking the app. Flip to enforcing
- * `Content-Security-Policy` after the report noise is clean.
+ * Enforcing `Content-Security-Policy` (not Report-Only). Next.js applies the
+ * request nonce to its own inline scripts when the CSP header is forwarded
+ * on the request.
  *
- * Styles: Report-Only allows `'self'` only. React `style={...}` attributes may
- * report; if needed later, prefer hashes or a narrow `'unsafe-inline'` on
- * style-src only (never on script-src).
+ * Styles: `style-src` uses the same nonce for `<style>` tags (next/font).
+ * React `style={...}` attributes use `style-src-attr 'unsafe-inline'` only —
+ * never on script-src.
+ *
+ * Fonts: `next/font/google` self-hosts Inter under `/_next/static/media`,
+ * so `font-src 'self'` is enough (no fonts.googleapis.com).
  *
  * PWA: `worker-src` / `manifest-src` `'self'` keep `/sw.js` and
  * `/manifest.json` allowed. Middleware matcher already skips those files so
  * they are not gated by auth.
  */
 
-export const SECURITY_HEADERS = [
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains",
-  },
-  {
-    key: "X-Content-Type-Options",
-    value: "nosniff",
-  },
-  {
-    key: "X-Frame-Options",
-    value: "DENY",
-  },
-  {
-    key: "Referrer-Policy",
-    value: "strict-origin-when-cross-origin",
-  },
-  {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
-  },
-] as const;
+import { getSecurityHeaders } from "./headers";
+
+/** @deprecated Use getSecurityHeaders() — HSTS is production-only. */
+export const SECURITY_HEADERS = getSecurityHeaders();
 
 export function createCspNonce(): string {
   return Buffer.from(crypto.randomUUID()).toString("base64");
@@ -63,29 +48,41 @@ function supabaseConnectSources(): string[] {
   }
 }
 
-/** Build a Report-Only CSP value with a per-request script nonce. */
-export function buildCspReportOnly(nonce: string): string {
+/** Build an enforcing CSP value with a per-request script nonce. */
+export function buildCsp(
+  nonce: string,
+  production = process.env.NODE_ENV === "production",
+): string {
   const connectSrc = ["'self'", ...supabaseConnectSources(), "https://*.paddle.com"].join(" ");
 
-  return [
+  const directives = [
     "default-src 'self'",
-    // Nonce + strict-dynamic: no 'unsafe-inline' on scripts.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
-    "style-src 'self'",
-    "img-src 'self' data:",
+    // Nonce + strict-dynamic. No 'unsafe-inline'. 'unsafe-eval' is dev-only
+    // so Turbopack / React Refresh can run; production scripts stay locked.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${production ? "" : " 'unsafe-eval'"}`,
+    `style-src 'self' 'nonce-${nonce}'`,
+    "style-src-attr 'unsafe-inline'",
+    "img-src 'self' data: blob:",
     "font-src 'self'",
     `connect-src ${connectSrc}`,
     "frame-src 'self' https://*.paddle.com",
     // Service worker + any same-origin workers (Serwist).
-    "worker-src 'self'",
+    "worker-src 'self' blob:",
     "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "upgrade-insecure-requests",
-  ].join("; ");
+  ];
+  if (production) directives.push("upgrade-insecure-requests");
+  return directives.join("; ");
 }
 
+/** @deprecated Use buildCsp — CSP is now enforcing. */
+export function buildCspReportOnly(nonce: string): string {
+  return buildCsp(nonce);
+}
+
+export const CSP_HEADER = "Content-Security-Policy";
 export const CSP_REPORT_ONLY_HEADER = "Content-Security-Policy-Report-Only";
 export const NONCE_HEADER = "x-nonce";

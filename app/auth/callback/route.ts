@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { persistPendingLegalConsent } from "@/lib/legal/consent";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Ensure a venue exists using the signed-in user's JWT + RLS
@@ -32,14 +33,6 @@ async function ensureVenueForUser(
   } catch (err) {
     console.error("Failed to ensure venue after auth callback:", err);
   }
-}
-
-/** Only same-origin relative paths — block open redirects. */
-function safeRedirectPath(next: string | null): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("://")) {
-    return "/dashboard";
-  }
-  return next;
 }
 
 export async function GET(request: NextRequest) {

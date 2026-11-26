@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { sr } from "@/lib/i18n/sr";
 import { authErrorMessage, zodFieldErrors } from "@/lib/auth/errors";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { checkoutReturnPath } from "@/lib/billing/checkout-intent";
 import { currentConsent, persistPendingLegalConsent } from "@/lib/legal/consent";
 import {
@@ -298,7 +299,7 @@ export async function getGoogleOAuthUrl(
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(parsed.data.nextPath)}`,
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeRedirectPath(parsed.data.nextPath))}`,
       skipBrowserRedirect: true,
     },
   });

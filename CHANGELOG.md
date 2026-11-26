@@ -2,6 +2,10 @@
 
 ## Nepublikovano
 
+- Alergeni: normalizovan katalog 14 alergena sa RLS-om, urednik sastojaka, automatska unija alergena u receptu i štampiva tabela jelovnika na `/allergens/print`.
+
+- Faza 1 (bezbednost): CSP je obavezujući, sa nonce-om po zahtevu. Rute su podeljene na public, guest i auth. Open redirect je blokiran. Sesijski kolačić ostaje čitljiv browser klijentu jer `@supabase/ssr` čita sesiju iz `document.cookie`; u produkciji važe `Secure` i `SameSite=Lax`.
+
 - P8 F4: upozorenja o niskim zalihama (`low_stock`), dobavljači, `stock_movements`, narudžbenice po dobavljaču (iz upozorenja / trebovanja), PDF/tekst slanje, atomičan prijem robe (`receive_purchase_order`) koji ažurira zalihe i cene. Plan flagovi `stockAlerts` (Starter+) i `purchaseOrders` (Pro+). E-pošta ostaje isključena dok nema mail providera (Edge Function 501).
 
 - P7 dodaje kanonske URL-ove, metapodatke za društvene mreže, strukturirane podatke i sitemap za šest javnih stranica. Privatne rute i deljeni rasporedi imaju `noindex`. Produkcijski build zahteva validan `NEXT_PUBLIC_SITE_URL`.

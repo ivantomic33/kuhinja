@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { cache } from "react";
+import { getSupabaseCookieOptions, mergeSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 
 /**
  * One Supabase server client per request (React cache).
@@ -15,6 +16,7 @@ export const createClient = cache(async () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: getSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -22,7 +24,7 @@ export const createClient = cache(async () => {
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
+              cookieStore.set(name, value, mergeSupabaseCookieOptions(options));
             });
           } catch {
             // setAll can be called from a Server Component where cookies

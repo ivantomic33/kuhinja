@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { RecipeAllergenMatrix } from "@/components/allergens/RecipeAllergenMatrix";
 import {
   FoodCostCalculator,
   type CalculatorIngredient,
@@ -223,6 +224,8 @@ export default async function RecipeFoodCostPage({ params }: RecipePageProps) {
         initialLines={initialLines}
         allowPersist
       />
+
+      <RecipeAllergenMatrix recipeId={recipe.id} />
 
       <Suspense
         fallback={

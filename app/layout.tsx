@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 import { APP_SHORT_NAME } from "@/lib/config/app";
 import icons from "@/lib/config/pwa-icons.json";
 import { openGraphCard, twitterCard } from "@/lib/seo/social-card";
@@ -75,13 +76,16 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Dynamic render so Next can stamp this request's CSP nonce on its scripts.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
-    <html lang="sr" className={inter.variable} suppressHydrationWarning>
+    <html lang="sr" className={inter.variable} suppressHydrationWarning nonce={nonce}>
       <body className={`${inter.className} antialiased`}>
         {children}
       </body>

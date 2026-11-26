@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSupabaseCookieOptions, mergeSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 
 /**
  * @param requestHeaders - Optional mutated request headers (e.g. x-nonce for CSP).
@@ -28,6 +29,7 @@ export async function updateSession(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: getSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -39,7 +41,7 @@ export async function updateSession(
           requestHeaders?.set("cookie", request.cookies.toString());
           supabaseResponse = nextWithHeaders();
           cookiesToSet.forEach(({ name, value, options }) => {
-            supabaseResponse.cookies.set(name, value, options);
+            supabaseResponse.cookies.set(name, value, mergeSupabaseCookieOptions(options));
           });
         },
       },

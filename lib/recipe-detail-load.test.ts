@@ -9,6 +9,9 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/components/offline/OfflineCacheSeeder", () => ({
   OfflineCacheSeeder: ({ recipeDetail }: { recipeDetail: unknown }) => JSON.stringify(recipeDetail),
 }));
+vi.mock("@/components/allergens/RecipeAllergenMatrix", () => ({
+  RecipeAllergenMatrix: () => null,
+}));
 vi.mock("@/components/recipes/FoodCostCalculator", () => ({
   FoodCostCalculator: ({ recipeName }: { recipeName: string }) => recipeName,
 }));

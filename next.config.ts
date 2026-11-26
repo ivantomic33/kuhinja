@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from "next/constants";
 import { getSiteUrl } from "./lib/config/env";
 import icons from "./lib/config/pwa-icons.json";
-import { SECURITY_HEADERS } from "./lib/security/csp";
+import { getSecurityHeaders } from "./lib/security/headers";
 
 const iconUrls = Object.values(icons);
 const offlineEntrypoints = ["main-app", "app/layout", "app/~offline/page"];
@@ -29,13 +29,13 @@ const nextConfig: NextConfig = {
     return [{ source: "/podesavanja", destination: "/settings", permanent: false }];
   },
   async headers() {
+    const baseline = getSecurityHeaders().map(({ key, value }) => ({ key, value }));
     return [
-      // Baseline browser hardening for every path (including sw.js / manifest).
-      // CSP-Report-Only is set in middleware.ts with a per-request nonce —
-      // a static CSP here cannot safely nonce Next.js inline scripts.
+      // Matcher-skipped files (sw.js, icons, _next/static) never see middleware.
+      // CSP stays there — it needs a per-request nonce. These headers do not.
       {
         source: "/:path*",
-        headers: [...SECURITY_HEADERS],
+        headers: baseline,
       },
       ...[...privatePrefixes, "r"].map((prefix) => ({
         source: `/${prefix}/:path*`,
@@ -50,6 +50,15 @@ const nextConfig: NextConfig = {
           },
         ],
       })),
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+        ],
+      },
       {
         source: "/manifest.json",
         headers: [

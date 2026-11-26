@@ -7,6 +7,7 @@ import { AuthError } from "@/components/auth/AuthError";
 import { AuthField } from "@/components/auth/AuthField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { resetPasswordAction } from "@/lib/auth/actions";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { resetPasswordSchema } from "@/lib/schemas/auth";
 import { sr } from "@/lib/i18n/sr";
 
@@ -57,7 +58,7 @@ export function ResetPasswordForm() {
       setSuccessMessage(result.message ?? sr.auth.passwordUpdated);
 
       window.setTimeout(() => {
-        router.replace(result.url ?? "/dashboard");
+        router.replace(safeRedirectPath(result.url));
         router.refresh();
       }, 1200);
     } catch {

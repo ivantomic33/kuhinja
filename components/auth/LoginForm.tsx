@@ -10,6 +10,7 @@ import { GoogleButton } from "@/components/auth/GoogleButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { loginAction } from "@/lib/auth/actions";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { checkoutReturnPath } from "@/lib/billing/checkout-intent";
 import { loginSchema } from "@/lib/schemas/auth";
 import { sr } from "@/lib/i18n/sr";
@@ -17,7 +18,7 @@ import { sr } from "@/lib/i18n/sr";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") || "/dashboard";
+  const nextPath = safeRedirectPath(searchParams.get("next"));
   const checkout = checkoutReturnPath(nextPath);
 
   const [email, setEmail] = useState("");

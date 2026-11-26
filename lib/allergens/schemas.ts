@@ -18,9 +18,24 @@ export const setIngredientAllergensSchema = z
   })
   .strict();
 
+export const getIngredientAllergensSchema = z
+  .object({
+    ingredientId: z.string().uuid(),
+  })
+  .strict();
+
 export const getRecipeAllergenMatrixSchema = z
   .object({
     recipeId: z.string().uuid(),
+  })
+  .strict();
+
+export const getMenuAllergenMatrixSchema = z
+  .object({
+    recipeIds: z.array(z.string().uuid()).min(1).max(200).refine(
+      (ids) => new Set(ids).size === ids.length,
+      "Recepti moraju biti jedinstveni.",
+    ),
   })
   .strict();
 

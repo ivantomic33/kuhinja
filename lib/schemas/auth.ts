@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { sr } from "@/lib/i18n/sr";
 import { registerLegalConsentSchema } from "@/lib/schemas/legal";
 
@@ -52,8 +53,8 @@ export const googleOAuthInputSchema = z
     nextPath: z
       .string()
       .max(500)
-      .regex(/^\/(?!\/)/, "Invalid redirect path")
-      .default("/dashboard"),
+      .default("/dashboard")
+      .refine((value) => safeRedirectPath(value) === value, "Invalid redirect path"),
   })
   .strict();
 

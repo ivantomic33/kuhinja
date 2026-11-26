@@ -1,8 +1,9 @@
 "use client";
 
 import { memo, startTransition, useEffect, useId, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Info, Plus, Search } from "lucide-react";
+import { BookOpen, Info, Plus, Printer, Search } from "lucide-react";
 import {
   CreateRecipeSheet,
   type CreatedRecipeSummary,
@@ -209,13 +210,22 @@ export function RecipesWorkspace({
         title={sr.recipes.title}
         description={sr.listStates.recipes.description}
         action={!loadError && recipes.length > 0 ? (
-          <PrimaryButton
-            type="button"
-            leftIcon={<Plus className="size-4" aria-hidden="true" />}
-            onClick={openCreate}
-          >
-            {sr.create.recipe.add}
-          </PrimaryButton>
+          <>
+            <Link
+              href="/allergens/print"
+              className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-border-strong bg-surface-2 px-4 text-ui-base font-semibold text-text outline-none hover:bg-surface-3"
+            >
+              <Printer className="size-4" aria-hidden="true" />
+              {sr.allergens.menuPrintLink}
+            </Link>
+            <PrimaryButton
+              type="button"
+              leftIcon={<Plus className="size-4" aria-hidden="true" />}
+              onClick={openCreate}
+            >
+              {sr.create.recipe.add}
+            </PrimaryButton>
+          </>
         ) : undefined}
       />
 

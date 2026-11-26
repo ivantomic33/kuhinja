@@ -42,6 +42,7 @@ flowchart LR
 - Javni Supabase klijent koristi korisničku sesiju. Svaka tabela sa korisničkim podacima ima RLS. Pravila vezuju red za `auth.uid()`, vlasništvo lokala ili aktivno članstvo. Politike upisa proveravaju stanje reda posle izmene pomoću `WITH CHECK`.
 - Ograničen pristup važi i za direktne pozive iz browsera. RPC koristi ulogu pozivaoca gde je moguće. Servisni ključ ostaje na serveru, a RPC sa `SECURITY DEFINER` proverava identitet, obim pristupa i dozvolu izvršavanja.
 - Promene šeme idu u nove, vremenski prefiksirane migracije. SQL test proverava da dva korisnika imaju izolovane podatke. [Audit arhitekture](docs/architecture-audit.md) · [SQL test](supabase/tests/rls.test.sql)
+- Alergeni koriste katalog 14 alergena i RLS-zaštićene veze sa sastojcima. Na detalju recepta prikazuje se automatska unija, a `/allergens/print` priprema tabelu jelovnika za štampu. SQL regresioni scenario je u `supabase/tests/allergens.sql`.
 
 ## Preduslovi
 
@@ -115,6 +116,7 @@ flowchart LR
 | `pnpm dev` | Razvojni server sa Turbopack-om. |
 | `pnpm build` / `pnpm start` | Gradi i pokreće produkcijsku verziju sa servisnim radnikom. |
 | `pnpm lint` | Proverava TypeScript i React izvore ESLint-om. |
+| `pnpm typecheck` | Proverava tipove sa `tsc --noEmit`. |
 | `pnpm test` / `pnpm test:watch` | Pokreće Vitest jednom ili prati izmene. |
 | `pnpm test:coverage` | Meri pokrivenost proračuna u `lib/calc`. |
 | `pnpm db:types` | Generiše `lib/supabase/database.types.ts` iz pokrenute lokalne baze. |
@@ -125,6 +127,7 @@ flowchart LR
 
 ```bash
 pnpm lint
+pnpm typecheck
 pnpm test
 pnpm test:coverage
 ```
@@ -201,7 +204,11 @@ ostanu usklađene (`pnpm check:pwa-icons`).
 
 [Smernice za dizajn](DESIGN.md) · [Istorija promena](CHANGELOG.md)
 
+## Paketi
+
+Naplatni paketi u aplikaciji su Free, Starter, Pro i Advanced. **Team** plan je **planned** dok se ne implementira.
+
 ## Vlasnik i licenca
 
 - **Vlasnik** — _biće dodat_.
-- **Licenca** — _čeka odluku vlasnika_.
+- **Licenca** — nije dodeljena. U saglasnosti sa vlasnikom, projekat ostaje privatan dok vlasnik ne odluči o licenci. Korišćenje i distribucija van ovog repozitorijuma traže saglasnost vlasnika.

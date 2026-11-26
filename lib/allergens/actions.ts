@@ -14,6 +14,8 @@ import {
 } from "./catalog";
 import { buildRecipeAllergenMatrix, dedupeAllergenItems } from "./matrix";
 import {
+  getIngredientAllergensSchema,
+  getMenuAllergenMatrixSchema,
   getRecipeAllergenMatrixSchema,
   setIngredientAllergensSchema,
 } from "./schemas";
@@ -34,6 +36,14 @@ export type RecipeAllergenMatrixData = {
     presence: AllergenPresence | null;
   }[];
   totals: { code: AllergenCode; presence: AllergenPresence }[];
+};
+
+export type MenuAllergenMatrixData = {
+  recipes: {
+    id: string;
+    name: string;
+    totals: { code: AllergenCode; presence: AllergenPresence }[];
+  }[];
 };
 
 function mapRpcError(error: {
@@ -204,18 +214,111 @@ export async function getRecipeAllergenMatrix(
   });
 }
 
+export async function getMenuAllergenMatrix(
+  input: unknown,
+): Promise<ActionResult<MenuAllergenMatrixData>> {
+  const auth = await requireActionUser();
+  if ("error" in auth) return auth;
+
+  const parsed = parseActionInput(getMenuAllergenMatrixSchema, input);
+  if ("error" in parsed) return parsed;
+
+  const { data: recipes, error: recipesError } = await auth.supabase
+    .from("recipes")
+    .select("id, name, workspace_id")
+    .in("id", parsed.data.recipeIds)
+    .order("name", { ascending: true });
+
+  if (recipesError) {
+    return actionError("INTERNAL_ERROR", recipesError.message);
+  }
+  if (!recipes || recipes.length !== parsed.data.recipeIds.length) {
+    return actionError("NOT_FOUND", "Neki recepti nisu pronađeni.");
+  }
+
+  const workspaceIds = [...new Set(recipes.map((recipe) => recipe.workspace_id))];
+  for (const workspaceId of workspaceIds) {
+    const { data: isMember, error: memberError } = await auth.supabase.rpc(
+      "is_member",
+      { p_workspace_id: workspaceId, p_min_role: "cook" },
+    );
+    if (memberError) {
+      return actionError("INTERNAL_ERROR", memberError.message);
+    }
+    if (!isMember) {
+      return actionError("FORBIDDEN", "Nemate pristup ovom radnom prostoru.");
+    }
+
+    const { data: hasFeature, error: featureError } = await auth.supabase.rpc(
+      "workspace_has_feature",
+      { p_workspace_id: workspaceId, p_feature: "allergens" },
+    );
+    if (featureError) {
+      return actionError("INTERNAL_ERROR", featureError.message);
+    }
+    if (!hasFeature) {
+      return actionError(
+        "UPGRADE_REQUIRED",
+        "Štampa alergena dostupna je na Pro paketu.",
+      );
+    }
+  }
+
+  const recipeIds = recipes.map((recipe) => recipe.id);
+  const { data: rows, error: matrixError } = await auth.supabase
+    .from("recipe_allergens")
+    .select("recipe_id, allergen_code, presence")
+    .in("recipe_id", recipeIds);
+
+  if (matrixError) {
+    return actionError("INTERNAL_ERROR", matrixError.message);
+  }
+
+  const totalsByRecipe = new Map<
+    string,
+    Map<AllergenCode, AllergenPresence>
+  >();
+  for (const row of rows ?? []) {
+    const code = row.allergen_code as string;
+    const presence = row.presence as string;
+    if (!(ALLERGEN_CODES as readonly string[]).includes(code)) continue;
+    if (presence !== "contains" && presence !== "trace") continue;
+
+    const recipeTotals = totalsByRecipe.get(row.recipe_id) ?? new Map();
+    const current = recipeTotals.get(code as AllergenCode);
+    if (!current || (current === "trace" && presence === "contains")) {
+      recipeTotals.set(code as AllergenCode, presence as AllergenPresence);
+    }
+    totalsByRecipe.set(row.recipe_id, recipeTotals);
+  }
+
+  return actionData({
+    recipes: recipes.map((recipe) => {
+      const totals = totalsByRecipe.get(recipe.id);
+      return {
+        id: recipe.id,
+        name: recipe.name,
+        totals: ALLERGEN_CODES.flatMap((code) => {
+          const presence = totals?.get(code);
+          return presence ? [{ code, presence }] : [];
+        }),
+      };
+    }),
+  });
+}
+
 /**
  * Load allergens for one ingredient (editor). Empty when locked / none set.
  */
 export async function getIngredientAllergens(
-  ingredientId: string,
+  input: unknown,
 ): Promise<ActionResult<{ items: IngredientAllergenItem[]; locked: boolean }>> {
   const auth = await requireActionUser();
   if ("error" in auth) return auth;
 
-  if (!zUuid(ingredientId)) {
-    return actionError("VALIDATION_ERROR", "Neispravan identifikator sastojka.");
-  }
+  const parsed = parseActionInput(getIngredientAllergensSchema, input);
+  if ("error" in parsed) return parsed;
+  const { ingredientId } = parsed.data;
 
   const { data: ingredient, error: ingredientError } = await auth.supabase
     .from("ingredients")
@@ -230,11 +333,17 @@ export async function getIngredientAllergens(
     return actionError("NOT_FOUND", "Sastojak nije pronađen.");
   }
 
-  const { data: hasFeature } = await auth.supabase.rpc("workspace_has_feature", {
+  const { data: hasFeature, error: featureError } = await auth.supabase.rpc(
+    "workspace_has_feature",
+    {
     p_workspace_id: ingredient.workspace_id,
     p_feature: "allergens",
-  });
+    },
+  );
 
+  if (featureError) {
+    return actionError("INTERNAL_ERROR", featureError.message);
+  }
   if (!hasFeature) {
     return actionData({ items: [], locked: true });
   }
@@ -259,10 +368,4 @@ export async function getIngredientAllergens(
   );
 
   return actionData({ items, locked: false });
-}
-
-function zUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value,
-  );
 }
