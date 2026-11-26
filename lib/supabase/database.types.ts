@@ -123,6 +123,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          workspace_id: string;
+          kind: "ingredient_price_change" | "recipe_cost_change";
+          title: string;
+          message: string;
+          data: Json;
+          created_at: string;
+          read_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          workspace_id: string;
+          kind: "ingredient_price_change" | "recipe_cost_change";
+          title: string;
+          message: string;
+          data?: Json;
+          created_at?: string;
+          read_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          workspace_id?: string;
+          kind?: "ingredient_price_change" | "recipe_cost_change";
+          title?: string;
+          message?: string;
+          data?: Json;
+          created_at?: string;
+          read_at?: string | null;
+        };
+        Relationships: [];
+      };
       venues: {
         Row: {
           id: string;

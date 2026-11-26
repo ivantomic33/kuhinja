@@ -44,6 +44,7 @@ flowchart LR
 - Promene šeme idu u nove, vremenski prefiksirane migracije. SQL test proverava da dva korisnika imaju izolovane podatke. [Audit arhitekture](docs/architecture-audit.md) · [SQL test](supabase/tests/rls.test.sql)
 - Alergeni koriste katalog 14 alergena i RLS-zaštićene veze sa sastojcima. Na detalju recepta prikazuje se automatska unija, a `/allergens/print` priprema tabelu jelovnika za štampu. SQL regresioni scenario je u `supabase/tests/allergens.sql`.
 - Izvoz sastojaka i recepata pravi CSV ili XLSX; detalj recepta može da preuzme PDF karticu sa troškom porcije. Izvoz koristi postojeći workspace RLS, pa ne dodaje tabele ni migraciju.
+- Obaveštenja su privatna po korisniku i nastaju kada cena sastojka promeni više od 10% ili trošak porcije recepta više od 5%. Dostupna su na `/notifications`; SQL scenario je u `supabase/tests/notifications.sql`.
 
 ## Preduslovi
 

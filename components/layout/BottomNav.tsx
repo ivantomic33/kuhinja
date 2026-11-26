@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bell,
   BookOpen,
   Carrot,
   LayoutDashboard,
@@ -43,6 +44,7 @@ const TABS = [
 
 const MORE_LINKS = [
   ...workspaceLinks,
+  { href: "/notifications", label: sr.notifications.navLabel, icon: Bell },
   { href: "/premium", label: sr.premium.title, icon: Sparkles },
 ];
 

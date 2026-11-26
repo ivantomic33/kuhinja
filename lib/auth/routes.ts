@@ -34,6 +34,7 @@ const EXACT_ROUTES: Record<string, RouteAccess> = {
   "/dashboard": "auth",
   "/allergens/print": "auth",
   "/ingredients": "auth",
+  "/notifications": "auth",
   "/otpad": "auth",
   "/premium/ponuda": "auth",
   "/premium/upravljanje": "auth",

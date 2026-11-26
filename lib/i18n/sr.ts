@@ -961,6 +961,17 @@ export const sr = {
     failed: "Izvoz nije uspeo. Pokušajte ponovo.",
     recipeCard: "PDF kartica recepta",
   },
+  notifications: {
+    navLabel: "Obaveštenja",
+    title: "Obaveštenja",
+    description: "Važne promene cena i troškova u vašem workspace-u.",
+    empty: "Još nema obaveštenja.",
+    loadFailed: "Obaveštenja nisu učitana.",
+    markRead: "Označi kao pročitano",
+    markFailed: "Obaveštenje nije označeno kao pročitano.",
+    read: "Pročitano",
+    unread: "Nepročitano",
+  },
   notFound: {
     title: "Stranica nije pronađena",
     body: "Proverite adresu ili se vratite na početnu.",
