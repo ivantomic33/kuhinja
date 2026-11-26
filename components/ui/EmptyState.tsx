@@ -6,6 +6,7 @@ import { PrimaryButton } from "./PrimaryButton";
 export type EmptyStateProps = {
   icon?: ReactNode;
   title?: string;
+  titleAs?: "p" | "h1";
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
@@ -16,6 +17,7 @@ export type EmptyStateProps = {
 export function EmptyState({
   icon,
   title = sr.ui.emptyState.defaultTitle,
+  titleAs: Title = "p",
   description,
   actionLabel = sr.ui.emptyState.defaultAction,
   onAction,
@@ -40,9 +42,9 @@ export function EmptyState({
       ) : null}
 
       <div className="flex max-w-[40ch] flex-col gap-2">
-        <p className="text-ui-md font-semibold text-text">
+        <Title className="text-ui-md font-semibold text-text">
           {title}
-        </p>
+        </Title>
         {description ? (
           <p className="text-ui-sm text-text-2">
             {description}

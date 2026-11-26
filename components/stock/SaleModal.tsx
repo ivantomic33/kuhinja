@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, use, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { memo, use, useCallback, useEffect, useId, useMemo, useRef, useState, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
 import { SaleFoodCost } from "@/components/stock/SaleFoodCost";
@@ -66,20 +66,22 @@ const SaleRecipeRow = memo(function SaleRecipeRow({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="icon-btn size-9"
-          aria-label={sr.common.delete}
+          className="icon-btn size-11"
+          aria-label={`Smanji količinu: ${recipe.name}`}
           onClick={() => changeCount(recipe.id, -1)}
         >
-          <Minus className="size-4" />
+          <Minus className="size-4" aria-hidden="true" />
         </button>
-        <span className="w-8 text-center text-sm font-semibold tabular-nums">{count}</span>
+        <span className="w-8 text-center text-sm font-semibold tabular-nums" aria-live="polite">
+          {count}
+        </span>
         <button
           type="button"
-          className="icon-btn size-9"
-          aria-label={sr.common.next}
+          className="icon-btn size-11"
+          aria-label={`Povećaj količinu: ${recipe.name}`}
           onClick={() => changeCount(recipe.id, 1)}
         >
-          <Plus className="size-4" />
+          <Plus className="size-4" aria-hidden="true" />
         </button>
       </div>
     </li>
@@ -137,6 +139,7 @@ export function SaleModal({
   const canSeeDishes = hasMinPlan(plan, "pro");
   const [date, setDate] = useState("");
   const [shift, setShift] = useState("");
+  const fieldId = useId();
   const [portions, setPortions] = useState<Record<string, number>>({});
   const [previewPortions, setPreviewPortions] = useState(portions);
   const [loading, setLoading] = useState(false);
@@ -308,8 +311,8 @@ export function SaleModal({
         size="lg"
         footer={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-text-2">
-              {t.saleTotal}: {totalPortions}
+            <p id={`${fieldId}-portions`} className="text-sm text-text-2">
+              {totalPortions === 0 ? "Dodaj najmanje jednu porciju da evidentiraš prodaju." : `${t.saleTotal}: ${totalPortions}`}
             </p>
             <div className="flex gap-2">
               <PrimaryButton variant="secondary" disabled={loading} onClick={closeEntry}>
@@ -318,6 +321,7 @@ export function SaleModal({
               <PrimaryButton
                 loading={loading}
                 disabled={totalPortions === 0}
+                aria-describedby={totalPortions === 0 ? `${fieldId}-portions` : undefined}
                 onClick={() => void commit(false)}
               >
                 {t.saleSubmit}
@@ -328,18 +332,20 @@ export function SaleModal({
       >
         <fieldset disabled={loading} className="flex min-w-0 flex-col gap-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-ui-xs text-text-2">
+            <label htmlFor={`${fieldId}-date`} className="flex flex-col gap-1 text-ui-xs text-text-2">
               {t.saleDate}
               <input
+                id={`${fieldId}-date`}
                 type="date"
                 className="field-control"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
             </label>
-            <label className="flex flex-col gap-1 text-ui-xs text-text-2">
+            <label htmlFor={`${fieldId}-shift`} className="flex flex-col gap-1 text-ui-xs text-text-2">
               {t.saleShift}
               <select
+                id={`${fieldId}-shift`}
                 className="field-control"
                 value={shift}
                 onChange={(e) => setShift(e.target.value)}

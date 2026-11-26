@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { parseDecimal } from "@/lib/domain/parse";
 import { sr } from "@/lib/i18n/sr";
 import { stockSr as t } from "@/lib/i18n/stock";
@@ -17,6 +17,7 @@ export function StockMinimum({ row, onSetUp, onSaved }: {
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const inputId = useId();
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,25 +44,32 @@ export function StockMinimum({ row, onSetUp, onSaved }: {
 
   return editing ? (
     <form onSubmit={save} className="flex flex-col items-end gap-1">
+      <label htmlFor={inputId} className="text-xs text-text-2">
+        {t.colMin} ({row.unit})
+      </label>
       <div className="flex items-center gap-1">
         <input
+          id={inputId}
           autoFocus
-          aria-label={`${t.colMin} ${row.name} (${row.unit})`}
           aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${inputId}-error` : undefined}
           className="min-input"
           inputMode="decimal"
           value={value}
           disabled={saving}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            setValue(event.target.value);
+            setError("");
+          }}
           onKeyDown={(event) => {
             if (event.key !== "Escape") return;
             setEditing(false);
             setError("");
           }}
         />
-        <button className="btn-set-min" type="submit" disabled={saving}>{sr.common.save}</button>
+        <button className="btn-set-min" type="submit" disabled={saving}>{saving ? "Čuvanje…" : sr.common.save}</button>
       </div>
-      {error ? <span className="whitespace-normal text-xs text-danger" role="alert">{error}</span> : null}
+      {error ? <span id={`${inputId}-error`} className="whitespace-normal text-xs text-danger" role="alert">{error}</span> : null}
     </form>
   ) : (
     <button className="btn-set-min" type="button" onClick={row.hasLevel ? () => setEditing(true) : onSetUp}>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LogoMark } from "@/components/brand/LogoMark";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { primaryCtaClass, secondaryCtaClass } from "@/components/marketing/landing-links";
 import { APP_NAME } from "@/lib/config/app";
 import { getServerUser } from "@/lib/supabase/server";
 
@@ -27,22 +27,16 @@ export default async function WelcomePage() {
       </div>
       <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
         {user ? (
-          <Link href="/dashboard" className="w-full sm:w-auto">
-            <PrimaryButton fullWidth className="min-h-[46px]">
-              Idi na kontrolnu tablu
-            </PrimaryButton>
+          <Link href="/dashboard" className={primaryCtaClass}>
+            Idi na kontrolnu tablu
           </Link>
         ) : (
-          <Link href="/login" className="w-full sm:w-auto">
-            <PrimaryButton fullWidth className="min-h-[46px]">
-              Prijavi se
-            </PrimaryButton>
+          <Link href="/login" className={primaryCtaClass}>
+            Prijavi se
           </Link>
         )}
-        <Link href="/premium" className="w-full sm:w-auto">
-          <PrimaryButton fullWidth variant="secondary" className="min-h-[46px]">
-            Nazad na pakete
-          </PrimaryButton>
+        <Link href="/premium" className={secondaryCtaClass}>
+          Nazad na pakete
         </Link>
       </div>
     </main>

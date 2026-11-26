@@ -20,17 +20,14 @@ function hasSupabaseAuthCookie(request: NextRequest) {
   );
 }
 
-function redirectWithSession(
-  url: URL,
+function copySessionCookies(
+  response: NextResponse,
   session: NextResponse,
-  cspValue: string,
 ) {
-  const redirect = NextResponse.redirect(url);
   session.cookies.getAll().forEach((cookie) => {
-    redirect.cookies.set(cookie);
+    response.cookies.set(cookie);
   });
-  redirect.headers.set(CSP_REPORT_ONLY_HEADER, cspValue);
-  return redirect;
+  return response;
 }
 
 function loginRedirectUrl(request: NextRequest) {
@@ -78,10 +75,14 @@ export async function middleware(request: NextRequest) {
     return finish(NextResponse.redirect(loginRedirectUrl(request)));
   }
 
-  // Route handlers and Flight requests verify their own session.
+  // Premium has separate guest and account trees for both HTML and Flight.
+  const premiumOffer = pathname === "/premium";
+  const htmlNavigation = isHtmlNavigation(request);
+  // Other route handlers and Flight requests verify their own session.
   if (
     pathname.startsWith("/api/") || pathname === "/auth/callback" ||
-    pathname === "/robots.txt" || pathname === "/sitemap.xml" || !isHtmlNavigation(request)
+    pathname === "/robots.txt" || pathname === "/sitemap.xml" ||
+    (!premiumOffer && !htmlNavigation)
   ) {
     return next();
   }
@@ -89,22 +90,26 @@ export async function middleware(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(
     request,
     requestHeaders,
+    htmlNavigation ? "user" : "claims",
   );
 
   // Default-deny: every non-public HTML route needs a verified session user.
   if (!user && !publicRoute) {
-    return redirectWithSession(
-      loginRedirectUrl(request),
-      supabaseResponse,
-      cspValue,
-    );
+    return finish(copySessionCookies(NextResponse.redirect(loginRedirectUrl(request)), supabaseResponse));
   }
 
   if (user && isAuthEntryPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";
-    return redirectWithSession(url, supabaseResponse, cspValue);
+    return finish(copySessionCookies(NextResponse.redirect(url), supabaseResponse));
+  }
+
+  if (user && premiumOffer) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/premium/ponuda";
+    const rewrite = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    return finish(copySessionCookies(rewrite, supabaseResponse));
   }
 
   return finish(supabaseResponse);

@@ -660,9 +660,10 @@ button.r-cell:not(:disabled):hover,
     min-height: 26px;
   }
 
-  .r-scard header b {
+  .r-scard header h3 {
     color: var(--text);
     font-size: var(--fs-base);
+    font-weight: 700;
   }
 
   .r-scard header > .r-sw {

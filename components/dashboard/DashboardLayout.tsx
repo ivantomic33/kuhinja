@@ -10,8 +10,9 @@ const previewHeight = "h-[184px]";
 export const dashboardRowClass =
   "flex h-14 min-w-0 items-center gap-2 rounded-lg bg-surface-2 px-3";
 
-export function DashboardLayout({ heading, kpis, children, notice, footer }: {
+export function DashboardLayout({ heading, intro, kpis, children, notice, footer }: {
   heading: ReactNode;
+  intro?: ReactNode;
   kpis: ReactNode;
   children: ReactNode;
   notice?: ReactNode;
@@ -20,6 +21,7 @@ export function DashboardLayout({ heading, kpis, children, notice, footer }: {
   return (
     <div className="flex flex-col gap-6">
       <div className="h-28 sm:h-20 [&_h1]:truncate">{heading}</div>
+      {intro}
       <section aria-label="Ključni pokazatelji" className="grid grid-cols-2 gap-3 min-[1080px]:grid-cols-4 md:gap-4">
         {kpis}
       </section>
@@ -82,6 +84,7 @@ export function DashboardSkeleton() {
       <DashboardLayout
         heading={
           <div className="flex flex-wrap items-center justify-between gap-4">
+            <h1 className="sr-only">{sr.dashboard.title}</h1>
             <div className="grid gap-2">
               <Skeleton className="h-7 w-44" />
               <Skeleton className="h-4 w-36" />

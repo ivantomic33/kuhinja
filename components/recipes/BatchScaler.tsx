@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect, useId } from "react";
 import {
   Check,
   ClipboardCopy,
@@ -62,6 +62,7 @@ export function BatchScaler({
   baseTimeMinutes,
   ingredients,
 }: BatchScalerProps) {
+  const scalerId = useId();
   const safeBase = baseServings > 0 ? baseServings : 1;
 
   const [targetServings, setTargetServings] = useState(() =>
@@ -240,9 +241,10 @@ export function BatchScaler({
             label={sr.scaler.targetServings}
           />
 
-          <label className="flex flex-col gap-1">
-            <span className="sr-only">{sr.scaler.targetServings}</span>
+          <label htmlFor={`${scalerId}-slider`} className="flex flex-col gap-1">
+            <span className="text-sm text-muted">{sr.scaler.targetServings} (klizač)</span>
             <input
+              id={`${scalerId}-slider`}
               type="range"
               min={MIN_SERVINGS}
               max={MAX_SERVINGS}
@@ -256,9 +258,10 @@ export function BatchScaler({
             />
           </label>
 
-          <label className="flex flex-col gap-1">
+          <label htmlFor={`${scalerId}-servings`} className="flex flex-col gap-1">
             <span className="text-sm text-muted">{sr.scaler.targetServings}</span>
             <input
+              id={`${scalerId}-servings`}
               type="number"
               inputMode="numeric"
               min={MIN_SERVINGS}
@@ -339,9 +342,13 @@ export function BatchScaler({
         }
       >
         <div className="flex flex-col gap-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-muted">{sr.scaler.ovenCapacity}</span>
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`${scalerId}-capacity`} className="text-sm text-muted">
+              {sr.scaler.ovenCapacity}
+            </label>
             <input
+              id={`${scalerId}-capacity`}
+              aria-describedby={`${scalerId}-capacity-hint`}
               type="number"
               inputMode="numeric"
               min={1}
@@ -358,10 +365,10 @@ export function BatchScaler({
                 "outline-none focus-visible:ring-2 focus-visible:ring-accent"
               )}
             />
-            <span className="text-sm text-muted">
+            <span id={`${scalerId}-capacity-hint`} className="text-sm text-muted">
               {sr.scaler.ovenCapacityHint}
             </span>
-          </label>
+          </div>
 
           <p className="text-sm text-muted">
             {sr.scaler.baseTime}: {baseTimeMinutes} {sr.scaler.ovenMinutes}

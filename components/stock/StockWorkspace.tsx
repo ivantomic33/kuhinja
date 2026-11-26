@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useId, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
   AlertTriangle,
@@ -161,6 +161,7 @@ export function StockWorkspace({
   const { showFreeLimit } = usePlanUi();
   const [rows, setRows] = useState(initialRows);
   const [query, setQuery] = useState("");
+  const searchId = useId();
   const [page, setPage] = useState(0);
   const [view, setView] = useState<ViewMode>("table");
   const [focusMinRequested, setFocusMinRequested] = useState(false);
@@ -533,11 +534,11 @@ export function StockWorkspace({
           >
             <AlertTriangle className="size-5 shrink-0" aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <p id="stock-runout-heading" className="font-semibold">
+              <h2 id="stock-runout-heading" className="font-semibold">
                 {leadAlert.soon
                   ? alertsText.soonTitle(runoutSoon.length)
                   : alertsText.goneTitle(gone.length)}
-              </p>
+              </h2>
               <p className="text-text-2">
                 {leadAlert.soon ? soonNames.join(", ") : `${goneNames.join(", ")} — ${alertsText.stockZero}`}
               </p>
@@ -666,19 +667,23 @@ export function StockWorkspace({
           }
           header={
             <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-3">
-              <label className="field-input w-full md:w-[46%] md:max-w-[480px]">
-                <Search className="size-4" aria-hidden="true" />
-                <span className="sr-only">{t.searchPlaceholder}</span>
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setPage(0);
-                  }}
-                  placeholder={t.searchPlaceholder}
-                />
-              </label>
+              <h2 className="sr-only">{t.kpiItems}</h2>
+              <div className="grid w-full gap-1 md:w-[46%] md:max-w-[480px]">
+                <label className="text-sm text-text-2" htmlFor={searchId}>Pretraga sastojaka</label>
+                <div className="field-input">
+                  <Search className="size-4" aria-hidden="true" />
+                  <input
+                    id={searchId}
+                    type="search"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setPage(0);
+                    }}
+                    placeholder={t.searchPlaceholder}
+                  />
+                </div>
+              </div>
               <SegmentedControl
                 ariaLabel={t.viewTable}
                 size="sm"
@@ -927,10 +932,10 @@ export function StockWorkspace({
         header={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="flex flex-wrap items-center gap-2 text-ui-md font-semibold text-text">
+              <h2 className="flex flex-wrap items-center gap-2 text-ui-md font-semibold text-text">
                 {t.buyTitle}
                 <span className="count-pill">{buyList.length}</span>
-              </p>
+              </h2>
               <p className="mt-1 text-ui-sm text-text-2">
                 {t.buySub}
               </p>

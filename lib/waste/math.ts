@@ -50,7 +50,7 @@ export function reasonShares(
     };
   });
 
-  let allocated = work.reduce((sum, row) => sum + row.percent, 0);
+  const allocated = work.reduce((sum, row) => sum + row.percent, 0);
   let leftover = Math.round((100 - allocated) * 100) / 100;
   work.sort((a, b) => b.remainder - a.remainder || b.amount - a.amount);
   let i = 0;

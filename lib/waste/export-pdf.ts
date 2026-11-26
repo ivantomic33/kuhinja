@@ -26,7 +26,7 @@ export async function buildWastePdf(input: WastePdfInput): Promise<Uint8Array> {
 
   const doc = await PDFDocument.create();
   const fontBytes = await readFile(FONT_PATH);
-  let font;
+  let font: Awaited<ReturnType<typeof doc.embedFont>>;
   try {
     font = await doc.embedFont(fontBytes, { subset: true });
   } catch {

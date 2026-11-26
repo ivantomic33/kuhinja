@@ -1,7 +1,6 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
 export type ChipProps = Omit<
@@ -44,11 +43,6 @@ export function Chip({
       type={type}
       disabled={disabled}
       aria-pressed={selectable ? selected : undefined}
-      aria-label={
-        selectable && selected
-          ? `${String(children)} — ${sr.ui.chip.selected}`
-          : undefined
-      }
       onClick={handleClick}
       className={cn(
         "inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-pill)] px-3",

@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Carrot, Grid2X2, Plus, Search, Table2 } from "lucide-react";
 import { CreateIngredientSheet } from "@/components/create/CreateIngredientSheet";
@@ -47,6 +47,7 @@ export function IngredientsWorkspace({
   const [editTarget, setEditTarget] = useState<CachedIngredient | null>(null);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const searchId = useId();
   const hasQuery = Boolean(query.trim());
   const [sort, setSort] = useState<DataTableSort>();
   const [view, setView] = useState<ViewMode>("table");
@@ -185,22 +186,25 @@ export function IngredientsWorkspace({
           header={
             <div className="flex w-full min-w-0 flex-col gap-3">
               <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <label className="field-input w-full min-w-0 max-w-[480px] max-[900px]:max-w-none">
-                  <Search className="size-4" aria-hidden="true" />
-                  <span className="sr-only">{sr.common.search}</span>
-                  <input
-                    ref={searchRef}
-                    type="search"
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      startTransition(() => {
-                        setQuery(value);
-                        goToPage(0);
-                      });
-                    }}
-                    placeholder="Pretraži sastojke..."
-                  />
-                </label>
+                <div className="w-full min-w-0 max-w-[480px] max-[900px]:max-w-none">
+                  <label htmlFor={searchId} className="field-label">Pretraži sastojke</label>
+                  <div className="field-input">
+                    <Search className="size-4" aria-hidden="true" />
+                    <input
+                      id={searchId}
+                      ref={searchRef}
+                      type="search"
+                      onChange={(event) => {
+                        const value = event.currentTarget.value;
+                        startTransition(() => {
+                          setQuery(value);
+                          goToPage(0);
+                        });
+                      }}
+                      placeholder="Pretraži sastojke..."
+                    />
+                  </div>
+                </div>
                 <div className="hidden shrink-0 md:block">
                   <SegmentedControl<ViewMode>
                     ariaLabel="Prikaz"
@@ -239,7 +243,8 @@ export function IngredientsWorkspace({
             <EmptyState
               icon={<Carrot className="size-7" aria-hidden="true" />}
               title={hasQuery ? sr.listStates.noResults : sr.listStates.ingredients.empty}
-              actionLabel={hasQuery ? sr.listStates.clearSearch : sr.create.ingredient.add}
+              description={hasQuery ? undefined : sr.listStates.ingredients.emptyDescription}
+              actionLabel={hasQuery ? sr.listStates.clearSearch : sr.listStates.ingredients.emptyAction}
               onAction={hasQuery ? () => {
                 setQuery("");
                 goToPage(0);

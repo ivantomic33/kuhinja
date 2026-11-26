@@ -7,7 +7,7 @@ import {
   Serwist,
   StaleWhileRevalidate,
 } from "serwist";
-import { APP_RUNTIME_CACHE_NAMES } from "@/lib/pwa/cache-names";
+import { APP_RUNTIME_CACHE_NAMES, LEGACY_PUBLIC_NAVIGATIONS_CACHE_NAME } from "@/lib/pwa/cache-names";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -18,35 +18,14 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
-/**
- * Authenticated app routes. Never cache HTML, RSC, or data for these —
- * kitchen tablets are shared and must not leak the previous user's pages.
- */
-const PROTECTED_PREFIXES = [
-  "/dashboard",
-  "/settings",
-  "/ingredients",
-  "/recipes",
-  "/scaler",
-  "/shift",
-  "/premium/upravljanje",
-  "/trebovanje",
-  "/raspored",
-] as const;
-
-function isProtectedPath(pathname: string): boolean {
-  return PROTECTED_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
-
-function isSupabaseHost(hostname: string): boolean {
-  return (
-    hostname.endsWith(".supabase.co") ||
-    hostname.endsWith(".supabase.in") ||
-    hostname.includes("supabase")
-  );
-}
+const PUBLIC_DOCUMENT_PATHS = new Set([
+  "/",
+  "/kako-poceti",
+  "/faq",
+  "/pravila-koriscenja",
+  "/privatnost",
+  "/povracaj-novca",
+]);
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
@@ -55,47 +34,41 @@ const serwist = new Serwist({
   // Navigation preload can race with auth cookies on shared devices.
   navigationPreload: false,
   runtimeCaching: [
-    // 1) Protected app routes — never cache (HTML, RSC, prefetch, etc.)
+    // App APIs and all cross-origin requests, including Supabase, bypass Cache Storage.
     {
       matcher: ({ sameOrigin, url }) =>
-        sameOrigin && isProtectedPath(url.pathname),
+        !sameOrigin || url.pathname === "/api" || url.pathname.startsWith("/api/"),
       handler: new NetworkOnly(),
     },
-    // 2) Public share links and schedule tokens — network only
     {
-      matcher: ({ sameOrigin, url }) =>
-        sameOrigin && url.pathname.startsWith("/r/"),
-      handler: new NetworkOnly(),
+      matcher: ({ request, url }) =>
+        request.mode === "navigate" && PUBLIC_DOCUMENT_PATHS.has(url.pathname),
+      handler: new NetworkFirst({
+        cacheName: APP_RUNTIME_CACHE_NAMES[4],
+        networkTimeoutSeconds: 3,
+        plugins: [
+          {
+            cacheWillUpdate: async ({ response }) =>
+              response.status === 200 && !response.redirected &&
+              response.headers.get("content-type")?.startsWith("text/html") &&
+              !/(?:^|,)\s*(?:private|no-store)\b/i.test(response.headers.get("cache-control") ?? "")
+                ? response
+                : null,
+          },
+          new ExpirationPlugin({
+            maxEntries: 16,
+            maxAgeSeconds: 60 * 60 * 24,
+            maxAgeFrom: "last-used",
+          }),
+        ],
+      }),
     },
-    // 3) Same-origin API — never cache user data
+    // Includes account-aware /premium, checkout, auth forms, and private share links.
     {
-      matcher: ({ sameOrigin, url }) =>
-        sameOrigin && url.pathname.startsWith("/api/"),
+      matcher: ({ request }) => request.mode === "navigate",
       handler: new NetworkOnly(),
     },
-    // 4) Auth callback / session routes
-    {
-      matcher: ({ sameOrigin, url }) =>
-        sameOrigin &&
-        (url.pathname.startsWith("/auth/") ||
-          url.pathname === "/login" ||
-          url.pathname === "/register" ||
-          url.pathname === "/forgot-password" ||
-          url.pathname === "/reset-password"),
-      handler: new NetworkOnly(),
-    },
-    // 5) Supabase REST / Auth / Functions / Realtime — never cache in Cache Storage.
-    // Offline reads go through user-prefixed IndexedDB (lib/offline/cache.ts).
-    {
-      matcher: ({ url }) => isSupabaseHost(url.hostname),
-      handler: new NetworkOnly(),
-    },
-    // 6) Any cross-origin request (APIs, JSON) — never cache user payloads
-    {
-      matcher: ({ sameOrigin }) => !sameOrigin,
-      handler: new NetworkOnly(),
-    },
-    // 7) Next static build assets only
+    // Next's hashed build assets also include the self-hosted Inter fonts.
     {
       matcher: ({ sameOrigin, url }) =>
         sameOrigin && url.pathname.startsWith("/_next/static/"),
@@ -110,28 +83,11 @@ const serwist = new Serwist({
         ],
       }),
     },
-    // 8) Fonts — StaleWhileRevalidate
+    // Public marketing assets. Other images may contain private data.
     {
-      matcher: ({ request, url, sameOrigin }) =>
-        request.destination === "font" ||
-        (sameOrigin && /\.(?:woff2?|ttf|otf|eot)$/i.test(url.pathname)),
-      handler: new StaleWhileRevalidate({
-        cacheName: APP_RUNTIME_CACHE_NAMES[1],
-        plugins: [
-          new ExpirationPlugin({
-            maxEntries: 16,
-            maxAgeSeconds: 60 * 60 * 24 * 365,
-            maxAgeFrom: "last-used",
-          }),
-        ],
-      }),
-    },
-    // 9) Images (public marketing / icons content only — not user uploads)
-    {
-      matcher: ({ request, sameOrigin, url }) =>
-        request.destination === "image" ||
-        (sameOrigin &&
-          /\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico)$/i.test(url.pathname)),
+      matcher: ({ request, url }) =>
+        request.destination === "image" &&
+        (url.pathname.startsWith("/landing/") || url.pathname === "/opengraph-image" || url.pathname === "/twitter-image"),
       handler: new StaleWhileRevalidate({
         cacheName: APP_RUNTIME_CACHE_NAMES[2],
         plugins: [
@@ -143,7 +99,7 @@ const serwist = new Serwist({
         ],
       }),
     },
-    // 10) App icons + manifest (no user data)
+    // App icons and manifest
     {
       matcher: ({ sameOrigin, url }) =>
         sameOrigin &&
@@ -161,25 +117,7 @@ const serwist = new Serwist({
         ],
       }),
     },
-    // 11) Public HTML navigations — NetworkFirst with short timeout, then offline fallback
-    {
-      matcher: ({ request, sameOrigin, url }) =>
-        sameOrigin &&
-        request.mode === "navigate" &&
-        !isProtectedPath(url.pathname),
-      handler: new NetworkFirst({
-        cacheName: APP_RUNTIME_CACHE_NAMES[4],
-        networkTimeoutSeconds: 3,
-        plugins: [
-          new ExpirationPlugin({
-            maxEntries: 16,
-            maxAgeSeconds: 60 * 60 * 24,
-            maxAgeFrom: "last-used",
-          }),
-        ],
-      }),
-    },
-    // 12) Everything else — network only (no private API leakage into Cache Storage)
+    // RSC responses and other fetches are network-only by default.
     {
       matcher: /.*/i,
       handler: new NetworkOnly(),
@@ -195,6 +133,10 @@ const serwist = new Serwist({
       },
     ],
   },
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(caches.delete(LEGACY_PUBLIC_NAVIGATIONS_CACHE_NAME));
 });
 
 serwist.addEventListeners();

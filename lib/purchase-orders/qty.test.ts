@@ -86,7 +86,7 @@ describe("purchase order zod", () => {
     expect(emailSchema.safeParse("  Chef@Example.COM ").success).toBe(true);
     expect(emailSchema.parse("  Chef@Example.COM ")).toBe("chef@example.com");
 
-    const lines = Array.from({ length: 201 }, (_, i) => ({
+    const lines = Array.from({ length: 201 }, () => ({
       itemId: "11111111-1111-4111-8111-111111111111",
       qtyReceived: 1,
       unitPrice: null,

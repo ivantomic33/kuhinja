@@ -55,14 +55,7 @@ export function WasteSummaryWidget({
         <SectionCardHeader
           title="Otpad (tekući mesec)"
           singleLine
-          action={
-            <Link
-              href="/otpad"
-              className="text-ui-xs font-semibold text-accent hover:underline"
-            >
-              Otvori
-            </Link>
-          }
+          href="/otpad"
         />
       }
     >

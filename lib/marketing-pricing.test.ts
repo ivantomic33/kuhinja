@@ -26,11 +26,9 @@ afterEach(() => vi.unstubAllEnvs());
 
 it("uses the same Paddle prices in the cards and structured offers", async () => {
   const html = renderToStaticMarkup(await MarketingPage());
-  const pricing = html.match(/<section id="cenovnik"[^>]*>(.*?)<\/section>/)?.[1];
-  for (const value of ["Free", "Starter", "Pro", "47,00 EUR", "19,00 EUR"]) {
-    expect(pricing).toContain(value);
-  }
-  expect(pricing).not.toContain(">9,00 EUR<");
+  // Landing body no longer embeds the pricing table; prices live on /premium and in JSON-LD.
+  expect(html).not.toMatch(/id="cenovnik"/);
+  expect(html).not.toContain(">9,00 EUR<");
   const [software, organization] = Array.from(
     html.matchAll(/<script type="application\/ld\+json">([^<]*)<\/script>/g),
     (match) => JSON.parse(match[1]),
@@ -54,12 +52,8 @@ it("uses the same Paddle prices in the cards and structured offers", async () =>
   ]);
   expect(html.match(/<h1\b/g)).toHaveLength(1);
   expect(html.match(/<main\b/g)).toHaveLength(1);
-  const images = html.match(/<img\b[^>]*>/g) ?? [];
-  expect(images).toHaveLength(4);
-  for (const image of images) {
-    expect(image).toMatch(/\balt="[^"]+"/);
-    expect(image).toMatch(/\bwidth="\d+"/);
-    expect(image).toMatch(/\bheight="\d+"/);
-  }
-  expect(html).toMatch(/<link\b(?=[^>]*rel="preload")(?=[^>]*as="image")/);
+  // Landing uses a CSS food-cost example card instead of marketing screenshots.
+  expect(html.match(/<img\b[^>]*>/g) ?? []).toHaveLength(0);
+  expect(html).toContain('href="/premium"');
+  expect(html).toContain('href="/kako-poceti"');
 });

@@ -1,28 +1,50 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME } from "@/lib/config/app";
+import { APP_SHORT_NAME } from "@/lib/config/app";
 import icons from "@/lib/config/pwa-icons.json";
-import { SITE_TITLE_TEMPLATE, socialMetadata } from "@/lib/seo/metadata";
-import { getSiteUrl } from "@/lib/seo/site";
-import manifest from "@/public/manifest.json";
+import { openGraphCard, twitterCard } from "@/lib/seo/social-card";
+import {
+  DEFAULT_DESCRIPTION,
+  getSiteUrl,
+  SITE_NAME,
+} from "@/lib/seo/site";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
   display: "swap",
   variable: "--font-inter",
-  weight: "variable",
+  weight: ["400", "500", "600", "700"],
 });
+
+const defaultTitle = "TreuPlate: kalkulator troška porcije za kuhinju";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: APP_NAME,
-    template: SITE_TITLE_TEMPLATE,
+    default: defaultTitle,
+    template: "%s | TreuPlate",
   },
-  description: APP_DESCRIPTION,
-  applicationName: APP_NAME,
-  ...socialMetadata(APP_NAME, APP_DESCRIPTION, "/"),
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    locale: "sr_RS",
+    siteName: SITE_NAME,
+    title: defaultTitle,
+    description: DEFAULT_DESCRIPTION,
+    images: [openGraphCard],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: defaultTitle,
+    description: DEFAULT_DESCRIPTION,
+    images: [twitterCard],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -46,7 +68,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: manifest.theme_color,
+  themeColor: "#0B0B0E",
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,

@@ -22,7 +22,7 @@ export function AuthField({
   ...rest
 }: AuthFieldProps) {
   const fallbackId = useId();
-  const fieldId = id ?? rest.name ?? fallbackId;
+  const fieldId = id ?? fallbackId;
   const errorId = `${fieldId}-error`;
   const describedBy = [description, error && errorId].filter(Boolean).join(" ");
   const [visible, setVisible] = useState(false);

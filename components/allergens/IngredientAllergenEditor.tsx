@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useId, useState, useTransition } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AllergenNotice } from "@/components/allergens/AllergenNotice";
 import { AllergenUpgradePlaceholder } from "@/components/allergens/AllergenUpgradePlaceholder";
@@ -31,6 +31,7 @@ export function IngredientAllergenEditor({
   className?: string;
 }) {
   const { toast } = useToast();
+  const editorId = useId();
   const queryClient = useQueryClient();
   const [pending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,7 @@ export function IngredientAllergenEditor({
     setLoading(true);
     const result = await getIngredientAllergens(ingredientId);
     if ("error" in result) {
-      toast({ title: result.error.message, tone: "danger" });
+      toast(result.error.message, "danger");
       setLoading(false);
       return;
     }
@@ -81,10 +82,10 @@ export function IngredientAllergenEditor({
         items,
       });
       if ("error" in result) {
-        toast({ title: result.error.message, tone: "danger" });
+        toast(result.error.message, "danger");
         return;
       }
-      toast({ title: sr.allergens.saved, tone: "success" });
+      toast(sr.allergens.saved, "success");
       // Invalidate recipe lists so recipe matrices refetch without hard reload.
       void queryClient.invalidateQueries({ queryKey: queryKeys.recipes(venueId ?? null) });
       void queryClient.invalidateQueries({ queryKey: ["recipe-allergens"] });
@@ -116,15 +117,16 @@ export function IngredientAllergenEditor({
       <ul className="divide-y divide-border rounded-[var(--radius-card)] border border-border">
         {ALLERGEN_CATALOG.map((entry) => {
           const current = map[entry.code] ?? null;
-          const containsId = `allergen-${entry.code}-contains`;
-          const traceId = `allergen-${entry.code}-trace`;
+          const nameId = `${editorId}-${entry.code}`;
+          const containsId = `${nameId}-contains`;
+          const traceId = `${nameId}-trace`;
           return (
             <li
               key={entry.code}
               className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
             >
-              <span className="text-sm font-medium text-text">
-                <span className="tabular-nums text-text-2">{entry.uredba}.</span>{" "}
+              <span id={nameId} className="text-sm font-medium text-text">
+                <span aria-hidden="true" className="tabular-nums text-text-2">{entry.uredba}.</span>{" "}
                 {entry.label}
               </span>
               <div className="flex flex-wrap gap-4">
@@ -134,6 +136,7 @@ export function IngredientAllergenEditor({
                 >
                   <input
                     id={containsId}
+                    aria-labelledby={`${containsId}-label ${nameId}`}
                     type="checkbox"
                     className="size-4 rounded border-border-strong"
                     checked={current === "contains"}
@@ -144,7 +147,7 @@ export function IngredientAllergenEditor({
                       );
                     }}
                   />
-                  <span>{sr.allergens.contains}</span>
+                  <span id={`${containsId}-label`}>{sr.allergens.contains}</span>
                 </label>
                 <label
                   htmlFor={traceId}
@@ -152,6 +155,7 @@ export function IngredientAllergenEditor({
                 >
                   <input
                     id={traceId}
+                    aria-labelledby={`${traceId}-label ${nameId}`}
                     type="checkbox"
                     className="size-4 rounded border-border-strong"
                     checked={current === "trace"}
@@ -162,7 +166,7 @@ export function IngredientAllergenEditor({
                       );
                     }}
                   />
-                  <span>{sr.allergens.trace}</span>
+                  <span id={`${traceId}-label`}>{sr.allergens.trace}</span>
                 </label>
               </div>
             </li>

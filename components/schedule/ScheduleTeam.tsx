@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { CalendarDays, Check, Repeat2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
@@ -134,6 +134,7 @@ function RequestSheet({ type, dates, upcoming, coworkers, onSave, onClose }: {
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const fieldId = useId();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -153,18 +154,18 @@ function RequestSheet({ type, dates, upcoming, coworkers, onSave, onClose }: {
   }
 
   return <BottomSheet open title={requestActions[type]} description="Šef dobija zahtev i odobrava jednim klikom." onClose={() => { if (!pending) onClose(); }}>
-    <form className="r-form" onSubmit={(event) => void submit(event)}>
+    <form className="r-form" aria-describedby={error ? `${fieldId}-error` : undefined} onSubmit={(event) => void submit(event)}>
       <fieldset className="r-form"><legend className="rp-label">Koji dan</legend>
-        {upcoming.map((shift, index) => <label className="r-pick" key={shift.date}>
-          <input type="radio" name="day" value={shift.date} defaultChecked={index === 0} required />
+        {upcoming.map((shift, index) => <label htmlFor={`${fieldId}-${shift.date}`} className="r-pick" key={shift.date}>
+          <input id={`${fieldId}-${shift.date}`} type="radio" name="day" value={shift.date} defaultChecked={index === 0} required />
           <span><b>{displayRequestDate(shift.date, dates, true)}</b><small>{showShift(shift)}</small></span>
         </label>)}
       </fieldset>
-      {type === "zamena" ? <label>Ko te menja<select className="field-control" name="coworker" required>
+      {type === "zamena" ? <label htmlFor={`${fieldId}-coworker`}>Ko te menja<select id={`${fieldId}-coworker`} className="field-control" name="coworker" required>
         {coworkers.map((person) => <option key={person.id} value={person.id}>{person.full_name}</option>)}
       </select></label> : null}
-      <label>Poruka šefu (nije obavezno)<textarea className="field-control" name="note" placeholder="npr. porodična obaveza" maxLength={500} /></label>
-      {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
+      <label htmlFor={`${fieldId}-note`}>Poruka šefu (nije obavezno)<textarea id={`${fieldId}-note`} className="field-control" name="note" placeholder="npr. porodična obaveza" maxLength={500} /></label>
+      {error ? <p id={`${fieldId}-error`} role="alert" className="text-sm text-danger">{error}</p> : null}
       <div className="r-form-actions"><PrimaryButton variant="ghost" disabled={pending} onClick={onClose}>Otkaži</PrimaryButton>
         <PrimaryButton type="submit" loading={pending}>Pošalji zahtev</PrimaryButton></div>
     </form>

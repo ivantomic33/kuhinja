@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { BookOpen, Carrot, ClipboardList, History, Plus } from "lucide-react";
 import { CreateTemplateSheet } from "@/components/create/CreateTemplateSheet";
 import { usePlanUi } from "@/components/plan/PlanProvider";
@@ -24,6 +24,10 @@ import { getEntitlements, planDisplayName, type PlanId } from "@/lib/plan/entitl
 import { sr } from "@/lib/i18n/sr";
 import { queryKeys } from "@/lib/query/keys";
 import { useHydratedData } from "@/lib/query/use-hydrated-data";
+import {
+  FirstRunChecklist,
+  type FirstRunChecklistStep,
+} from "./FirstRunChecklist";
 import { DashboardLayout, dashboardKpiHeight } from "./DashboardLayout";
 
 export type DashboardData = {
@@ -38,6 +42,12 @@ export type DashboardData = {
   templates: TemplateRow[];
   initialTemplateCount: number | null;
   loadError: boolean;
+  /** First-run flags derived on the server from existing list queries. */
+  onboarding: {
+    hasIngredient: boolean;
+    hasPricedIngredient: boolean;
+    hasRecipe: boolean;
+  };
 };
 
 export type DashboardClientProps = {
@@ -47,18 +57,29 @@ export type DashboardClientProps = {
 };
 
 const copy = sr.dashboard;
+const checklistCopy = sr.onboarding.checklist;
 
 export function DashboardClient({
   venueId, recipeFoodCosts, trends,
 }: DashboardClientProps) {
   const {
     firstName, greeting, plan, recipes, recipeCount, ingredients, ingredientCount,
-    stockAlertCount, templates, initialTemplateCount, loadError,
+    stockAlertCount, templates, initialTemplateCount, loadError, onboarding,
   } = useHydratedData<DashboardData>(queryKeys.dashboard(venueId));
   const { showFreeLimit } = usePlanUi();
   const [templateOpen, setTemplateOpen] = useState(false);
   const [templateList, setTemplateList] = useState(templates);
+  const [hasRecipeCost, setHasRecipeCost] = useState(false);
   useEffect(() => setTemplateList(templates), [templates]);
+  useEffect(() => {
+    let active = true;
+    void recipeFoodCosts.then((costs) => {
+      if (active) setHasRecipeCost(costs.size > 0);
+    });
+    return () => {
+      active = false;
+    };
+  }, [recipeFoodCosts]);
   const entitlements = getEntitlements(plan);
   const templateCount = initialTemplateCount === null ? null : initialTemplateCount + templateList.length - templates.length;
   const metrics = [
@@ -66,6 +87,40 @@ export function DashboardClient({
     { label: copy.kpiIngredients, count: ingredientCount, icon: Carrot, trend: trends.ingredients },
     { label: "Šabloni smene", count: templateCount, icon: ClipboardList, trend: trends.templates },
   ];
+
+  const checklistSteps = useMemo<FirstRunChecklistStep[]>(() => {
+    const stepCopy = checklistCopy.steps;
+    return [
+      {
+        id: "ingredient",
+        title: stepCopy.ingredient.title,
+        hint: stepCopy.ingredient.hint,
+        href: "/ingredients",
+        done: onboarding.hasIngredient || ingredients.length > 0,
+      },
+      {
+        id: "price",
+        title: stepCopy.price.title,
+        hint: stepCopy.price.hint,
+        href: "/ingredients",
+        done: onboarding.hasPricedIngredient || ingredients.some((row) => row.price > 0),
+      },
+      {
+        id: "recipe",
+        title: stepCopy.recipe.title,
+        hint: stepCopy.recipe.hint,
+        href: "/recipes",
+        done: onboarding.hasRecipe || recipes.length > 0,
+      },
+      {
+        id: "cost",
+        title: stepCopy.cost.title,
+        hint: stepCopy.cost.hint,
+        href: "/recipes",
+        done: hasRecipeCost,
+      },
+    ];
+  }, [hasRecipeCost, ingredients, onboarding, recipes.length]);
 
   function openTemplate() {
     if (plan === "free" && (templateCount ?? templateList.length) >= entitlements.maxShiftTemplates) {
@@ -78,57 +133,60 @@ export function DashboardClient({
   return (
     <>
       <OfflineCacheSeeder recipes={recipes} ingredients={ingredients} templates={templateList} />
-      <DashboardLayout
-        heading={
-          <PageHeader
-            title={`${greeting}, ${firstName}`}
-            description="Pregled vaše kuhinje"
-            action={
-              <>
-                <Badge variant="neutral">{planDisplayName(plan)}</Badge>
-                <PrimaryButton leftIcon={<Plus aria-hidden="true" />} onClick={openTemplate}>
-                  Novi šablon smene
-                </PrimaryButton>
-              </>
-            }
-          />
-        }
-        kpis={
-          <>
-            {metrics.map(({ label, count, icon: Icon, trend }) => (
-              <KpiCard
-                key={label}
-                className={dashboardKpiHeight}
-                label={label}
-                value={count === null ? "—" : <BigNumber label={label} value={count} />}
-                icon={<Icon className="size-5" />}
-                hint={trend}
-              />
-            ))}
-            <KpiCard
-              className={dashboardKpiHeight}
-              label="Istorija cena"
-              value={<span className="text-4xl font-semibold text-text-2">—</span>}
-              icon={<History className="size-5" />}
-              locked={!entitlements.priceHistory}
-              lockedTitle="Dostupno od Pro plana."
-              lockedHref="/premium#plan-pro"
-              lockedLinkLabel="Otključaj istoriju cena"
-              hint="Podaci još nisu povezani."
+      <div className="flex flex-col gap-6">
+        <DashboardLayout
+          heading={
+            <PageHeader
+              title={`${greeting}, ${firstName}`}
+              description="Pregled vaše kuhinje"
+              action={
+                <>
+                  <Badge variant="neutral">{planDisplayName(plan)}</Badge>
+                  <PrimaryButton leftIcon={<Plus aria-hidden="true" />} onClick={openTemplate}>
+                    Novi šablon smene
+                  </PrimaryButton>
+                </>
+              }
             />
-          </>
-        }
-        notice={loadError ? <RouteError message={sr.listStates.dashboard.error} /> : null}
-        footer={stockAlertCount > 0 ? (
-          <Link href="/trebovanje" className="text-ui-sm font-semibold text-accent hover:underline">
-            {plan === "free" ? "Nestalo sa stanja" : "Zalihe koje zahtevaju pažnju"} · {stockAlertCount}
-          </Link>
-        ) : null}
-      >
-        <RecentRecipesCard initialRecipes={recipes} initialCount={recipeCount} recipeFoodCosts={recipeFoodCosts} venueId={venueId} />
-        <IngredientsCard initialIngredients={ingredients} initialCount={ingredientCount} venueId={venueId} />
-        <ShiftTemplatesCard initialTemplates={templateList} count={templateCount} onRequestCreate={openTemplate} />
-      </DashboardLayout>
+          }
+          intro={<FirstRunChecklist steps={checklistSteps} />}
+          kpis={
+            <>
+              {metrics.map(({ label, count, icon: Icon, trend }) => (
+                <KpiCard
+                  key={label}
+                  className={dashboardKpiHeight}
+                  label={label}
+                  value={count === null ? "—" : <BigNumber label={label} value={count} />}
+                  icon={<Icon className="size-5" />}
+                  hint={trend}
+                />
+              ))}
+              <KpiCard
+                className={dashboardKpiHeight}
+                label="Istorija cena"
+                value={<span className="text-4xl font-semibold text-text-2">—</span>}
+                icon={<History className="size-5" />}
+                locked={!entitlements.priceHistory}
+                lockedTitle="Dostupno od Pro plana."
+                lockedHref="/premium#plan-pro"
+                lockedLinkLabel="Otključaj istoriju cena"
+                hint="Podaci još nisu povezani."
+              />
+            </>
+          }
+          notice={loadError ? <RouteError message={sr.listStates.dashboard.error} /> : null}
+          footer={stockAlertCount > 0 ? (
+            <Link href="/trebovanje" className="text-ui-sm font-semibold text-accent hover:underline">
+              {plan === "free" ? "Nestalo sa stanja" : "Zalihe koje zahtevaju pažnju"} · {stockAlertCount}
+            </Link>
+          ) : null}
+        >
+          <RecentRecipesCard initialRecipes={recipes} initialCount={recipeCount} recipeFoodCosts={recipeFoodCosts} venueId={venueId} />
+          <IngredientsCard initialIngredients={ingredients} initialCount={ingredientCount} venueId={venueId} />
+          <ShiftTemplatesCard initialTemplates={templateList} count={templateCount} onRequestCreate={openTemplate} />
+        </DashboardLayout>
+      </div>
 
       <CreateTemplateSheet
         open={templateOpen}

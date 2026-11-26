@@ -9,8 +9,11 @@ import { LogoMark } from "@/components/brand/LogoMark";
 import { AppShell } from "@/components/layout/AppShell";
 import { AppQueryProvider } from "@/lib/query/provider";
 import manifest from "@/public/manifest.json";
+import { DEFAULT_DESCRIPTION } from "@/lib/seo/site";
 import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME } from "./app";
 import icons from "./pwa-icons.json";
+
+const defaultTitle = "TreuPlate: kalkulator troška porcije za kuhinju";
 
 vi.mock("next/font/google", () => ({
   Inter: () => ({ className: "", variable: "" }),
@@ -30,15 +33,16 @@ beforeAll(async () => {
 it("uses the same brand in the title, Open Graph, and PWA manifest", () => {
   const { metadata, viewport } = layout;
   expect(APP_NAME).toBe("TreuPlate");
-  expect(metadata.title).toEqual({ default: APP_NAME, template: `%s | ${APP_NAME}` });
-  expect(metadata.description).toBe(APP_DESCRIPTION);
+  expect(metadata.title).toEqual({ default: defaultTitle, template: `%s | ${APP_NAME}` });
+  expect(metadata.description).toBe(DEFAULT_DESCRIPTION);
   expect(APP_DESCRIPTION.length).toBeGreaterThanOrEqual(150);
   expect(APP_DESCRIPTION.length).toBeLessThanOrEqual(160);
   expect(metadata.metadataBase?.origin).toBe("https://treuplate.example");
   expect(metadata.keywords).toBeUndefined();
   expect(metadata.openGraph).toMatchObject({
     siteName: APP_NAME,
-    description: APP_DESCRIPTION,
+    title: defaultTitle,
+    description: DEFAULT_DESCRIPTION,
     images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
   });
   expect(manifest).toMatchObject({

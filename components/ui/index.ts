@@ -11,6 +11,7 @@ export {
 export { BigNumber, type BigNumberProps } from "./BigNumber";
 export { NumericKeypad, type NumericKeypadProps } from "./NumericKeypad";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
+export { FieldHelp, type FieldHelpProps } from "./FieldHelp";
 export { Badge, type BadgeProps } from "./Badge";
 export { ProgressBar, type ProgressBarProps } from "./ProgressBar";
 export { LimitMeter, type LimitMeterProps } from "./LimitMeter";

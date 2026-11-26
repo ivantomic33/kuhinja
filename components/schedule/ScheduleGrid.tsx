@@ -215,6 +215,7 @@ function WeekGrid({
 
   return (
     <div ref={grid} className="r-schedule-grid">
+      <h2 className="sr-only">Nedeljni pregled</h2>
       <div className="r-desktop">
         <div className="r-grid-wrap app-scroll">
           <table className="r-grid">
@@ -314,7 +315,6 @@ function WeekGrid({
       </div>
 
       <div className="r-mobile">
-        <h2 className="sr-only">Nedeljni pregled</h2>
         {mode === "shift" && <div className="r-days" role="group" aria-label="Dan u nedelji">
           {dates.map((date, index) => {
             const dailyWarnings = warnings.filter(warning => warning.day === index || warning.cellMessages?.some(message => message.day === index));
@@ -339,7 +339,7 @@ function WeekGrid({
               return (
                 <section className="r-scard gap" key={id}>
                   <header>
-                    <b>{shift.name}</b><span>{shift.time}</span>
+                    <h3>{shift.name}</h3><span>{shift.time}</span>
                     <span className="r-gap">{gap === "j" ? "Ujutru" : "Uveče"} 0</span>
                   </header>
                   <div className="r-gap-body">Niko nije u smeni.
@@ -356,7 +356,7 @@ function WeekGrid({
               const shift = shifts[code];
               return (
                 <section key={code} className={`r-scard ${shift.className}`}>
-                  <header><span className={`r-sw ${shift.className}`} /><b>{shift.name}</b><span>{shift.time}</span><Badge>{rows.length}</Badge></header>
+                  <header><span className={`r-sw ${shift.className}`} /><h3>{shift.name}</h3><span>{shift.time}</span><Badge>{rows.length}</Badge></header>
                   {rows.map(({ employee, assignment }) => {
                     const messages = cellWarnings(warningsByEmployee.get(employee.id) ?? noWarnings, day);
                     const level = warningLevel(messages);

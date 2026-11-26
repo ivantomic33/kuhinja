@@ -24,7 +24,7 @@ export function Tabs<T extends string>({
     <div
       role="tablist"
       className={cn(
-        "flex gap-1 overflow-x-auto border-b border-border",
+        "flex gap-1 overflow-x-auto border-b border-border p-1",
         className
       )}
     >

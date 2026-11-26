@@ -12,7 +12,7 @@ export function PublicLegalLayout({ children }: { children: ReactNode }) {
         <div className="page-gutter mx-auto flex h-16 max-w-app items-center justify-between gap-4">
           <Link
             href="/"
-            className="flex items-center gap-3 text-xl font-semibold tracking-tight text-text"
+            className="focus-ring flex min-h-11 items-center gap-3 rounded-md text-xl font-semibold tracking-tight text-text"
           >
             <LogoMark className="size-8" />
             {sr.app.name}
@@ -20,19 +20,19 @@ export function PublicLegalLayout({ children }: { children: ReactNode }) {
           <nav className="flex items-center gap-2 sm:gap-4" aria-label="Glavna navigacija">
             <Link
               href="/faq"
-              className="hidden text-sm text-muted hover:text-text sm:block"
+              className="focus-ring hidden min-h-11 items-center rounded-md px-2 text-sm text-muted hover:text-text sm:inline-flex"
             >
               FAQ
             </Link>
             <Link
               href="/login"
-              className="flex min-h-11 items-center rounded-[var(--radius-input)] px-2 text-sm text-muted hover:text-text"
+              className="focus-ring flex min-h-11 items-center rounded-[var(--radius-input)] px-2 text-sm text-muted hover:text-text"
             >
               {sr.marketing.navLogin}
             </Link>
             <Link
               href="/register"
-              className="flex min-h-11 items-center rounded-[var(--radius-input)] bg-accent px-4 text-sm font-semibold text-accent-ink hover:bg-accent-hover"
+              className="focus-ring flex min-h-11 items-center rounded-[var(--radius-input)] bg-accent px-4 text-sm font-semibold text-accent-ink hover:bg-accent-hover"
             >
               {sr.marketing.navRegister}
             </Link>

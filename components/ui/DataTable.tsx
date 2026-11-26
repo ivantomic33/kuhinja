@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { ArrowDown, ArrowDownUp, ArrowUp } from "lucide-react";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
@@ -66,6 +66,7 @@ export function DataTable<T>({
   const [internalSort, setInternalSort] = useState<DataTableSort>();
   const [internalSelection, setInternalSelection] = useState<Set<string>>(() => new Set());
   const selectAllRef = useRef<HTMLInputElement>(null);
+  const tableId = useId();
   const checkboxes = useRef(new Map<string, HTMLInputElement>());
   const range = useRef<{ anchor: string; last: string; baseline: Set<string> } | null>(null);
   const activeSort = onSortChange ? sort : internalSort;
@@ -144,7 +145,7 @@ export function DataTable<T>({
 
   const sortableColumns = columns.filter(column => column.compare);
   return (
-    <div className={cn("data-table min-w-0", className)} data-density={density}>
+    <div className={cn("data-table min-w-0 [--table-check-width:5.5rem]", className)} data-density={density}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2">
         <div role="group" aria-label="Gustina tabele" className="flex rounded-lg bg-background p-1">
           {densities.map(option => (
@@ -160,9 +161,10 @@ export function DataTable<T>({
           ))}
         </div>
         {stacked && sortableColumns.length > 0 ? (
-          <label className="flex min-w-0 items-center gap-2 text-ui-sm md:hidden">
-            <span className="sr-only">Sortiranje</span>
+          <label htmlFor={`${tableId}-sort`} className="flex min-w-0 items-center gap-2 text-ui-sm md:hidden">
+            <span>Sortiranje</span>
             <select
+              id={`${tableId}-sort`}
               className="field-control min-w-0 max-w-full"
               value={activeSort ? `${activeSort.column}:${activeSort.direction}` : ""}
               onChange={event => {
@@ -188,25 +190,29 @@ export function DataTable<T>({
             <tr role="row">
               {selectable ? (
                 <th scope="col" role="columnheader" className="data-table-check">
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
-                    checked={allSelected}
-                    aria-label={`Izaberi sve redove: ${label}`}
-                    onChange={() => {
-                      range.current = null;
-                      const next = new Set(selection);
-                      for (const id of allIds) {
-                        if (allSelected) next.delete(id);
-                        else next.add(id);
-                      }
-                      if (onToggleSelectAll) {
-                        if (!selectedIds) setInternalSelection(next);
-                        onToggleSelectAll(allIds);
-                      } else updateSelection(next);
-                    }}
-                    className="focus-ring size-4 accent-accent"
-                  />
+                  <label htmlFor={`${tableId}-select-all`} className="flex items-center gap-2 text-ui-sm">
+                    <input
+                      id={`${tableId}-select-all`}
+                      ref={selectAllRef}
+                      type="checkbox"
+                      aria-label={`Sve: ${label}`}
+                      checked={allSelected}
+                      onChange={() => {
+                        range.current = null;
+                        const next = new Set(selection);
+                        for (const id of allIds) {
+                          if (allSelected) next.delete(id);
+                          else next.add(id);
+                        }
+                        if (onToggleSelectAll) {
+                          if (!selectedIds) setInternalSelection(next);
+                          onToggleSelectAll(allIds);
+                        } else updateSelection(next);
+                      }}
+                      className="focus-ring size-4 shrink-0 accent-accent"
+                    />
+                    <span>Sve</span>
+                  </label>
                 </th>
               ) : null}
               {columns.map((column, index) => {
@@ -262,8 +268,9 @@ export function DataTable<T>({
                 >
                   {selectable ? (
                     <td role="cell" className="data-table-check">
-                      <label className="inline-flex min-h-9 items-center gap-2">
+                      <label htmlFor={`${tableId}-row-${id}`} className="inline-flex min-h-9 items-center gap-2">
                         <input
+                          id={`${tableId}-row-${id}`}
                           ref={element => {
                             if (element) checkboxes.current.set(id, element);
                             else checkboxes.current.delete(id);
@@ -279,9 +286,9 @@ export function DataTable<T>({
                             event.preventDefault();
                             extendSelection(id, event.key === "ArrowUp" ? -1 : 1);
                           }}
-                          className="focus-ring size-4 accent-accent"
+                          className="focus-ring size-4 shrink-0 accent-accent"
                         />
-                        {stacked ? <span className="text-ui-sm text-text-2 md:hidden">Izaberi</span> : null}
+                        <span className="text-ui-sm text-text-2">{sr.common.select}</span>
                       </label>
                     </td>
                   ) : null}

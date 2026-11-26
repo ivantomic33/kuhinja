@@ -4,17 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import PremiumPage from "@/components/billing/PremiumPage";
 import type { Tier } from "@/lib/billing/tiers";
 
-vi.mock("@/lib/hooks/usePlan", () => ({
-  usePlan: () => ({
-    plan: "free",
-    isFree: true,
-    isLoading: false,
-    isPremium: false,
-    email: null,
-    paddleCustomerId: null,
-  }),
-}));
-
 vi.mock("@/components/billing/PricingTiers", () => ({
   PricingTiers: ({
     tiers,
@@ -45,6 +34,7 @@ vi.mock("@/components/billing/PricingTiers", () => ({
 
 const sampleTiers: Tier[] = [
   {
+    key: "starter",
     name: "Starter",
     description: "Starter plan",
     features: ["Feature A"],
@@ -54,6 +44,7 @@ const sampleTiers: Tier[] = [
     },
   },
   {
+    key: "pro",
     name: "Pro",
     description: "Pro plan",
     featured: true,
@@ -64,6 +55,7 @@ const sampleTiers: Tier[] = [
     },
   },
   {
+    key: "advanced",
     name: "Advanced",
     description: "Advanced plan",
     features: ["Feature C"],

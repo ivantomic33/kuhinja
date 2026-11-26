@@ -79,6 +79,32 @@ it("redirects a protected document when its session cookie fails verification", 
 });
 
 it.each([
+  ["accept", "text/html"],
+  ["rsc", "1"],
+])("routes verified premium requests with %s to the protected shell", async (header, value) => {
+  const session = NextResponse.next();
+  session.cookies.set("sb-localhost-auth-token.0", "refreshed");
+  updateSession.mockResolvedValue({ supabaseResponse: session, user: { id: "user-1" } });
+
+  const response = await middleware(request("/premium?campaign=trial", { headers: { [header]: value, cookie } }));
+
+  expect(response.headers.get("x-middleware-rewrite")).toBe("https://treuplate.test/premium/ponuda?campaign=trial");
+  expect(response.cookies.get("sb-localhost-auth-token.0")?.value).toBe("refreshed");
+  expect(updateSession).toHaveBeenCalledWith(expect.anything(), expect.any(Headers), header === "rsc" ? "claims" : "user");
+});
+
+it("keeps stale premium sessions on guest pricing and returns the refreshed cookies", async () => {
+  const session = NextResponse.next();
+  session.cookies.set("sb-localhost-auth-token.0", "", { maxAge: 0 });
+  updateSession.mockResolvedValue({ supabaseResponse: session, user: null });
+
+  const response = await middleware(request("/premium", { headers: { cookie, rsc: "1" } }));
+
+  expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+  expect(response.cookies.get("sb-localhost-auth-token.0")?.maxAge).toBe(0);
+});
+
+it.each([
   ["/dashboard", "POST", "text/html"],
   ["/dashboard", "GET", "text/x-component"],
   ["/dashboard", "GET", "application/json"],

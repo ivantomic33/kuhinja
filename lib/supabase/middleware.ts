@@ -4,10 +4,12 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * @param requestHeaders - Optional mutated request headers (e.g. x-nonce for CSP).
  *   When set, forwarded on every NextResponse.next so Server Components see them.
+ * @param authCheck - Use verified JWT claims when routing only needs a session identity.
  */
 export async function updateSession(
   request: NextRequest,
   requestHeaders?: Headers,
+  authCheck: "user" | "claims" = "user",
 ) {
   const nextWithHeaders = () =>
     NextResponse.next(
@@ -43,6 +45,15 @@ export async function updateSession(
       },
     }
   );
+
+  if (authCheck === "claims") {
+    const { data, error } = await supabase.auth.getClaims();
+    const claims = data?.claims;
+    const user = !error && claims?.sub && claims.role === "authenticated"
+      ? { id: claims.sub }
+      : null;
+    return { supabase, supabaseResponse, user };
+  }
 
   // Refresh session — important for Server Components
   const {

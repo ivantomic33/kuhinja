@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Lock } from "lucide-react";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
@@ -31,14 +30,12 @@ export function AllergenUpgradePlaceholder({
         <p className="text-sm font-semibold text-text">{title}</p>
         <p className="max-w-md text-ui-sm text-text-2">{message}</p>
       </div>
-      <PrimaryButton asChild={false}>
-        <Link
-          href="/premium"
-          className="inline-flex items-center justify-center gap-2"
-        >
-          {sr.allergens.viewPlans}
-        </Link>
-      </PrimaryButton>
+      <Link
+        href="/premium"
+        className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-accent px-5 text-ui-base font-semibold text-text-on-accent outline-none enabled:hover:bg-accent-hover"
+      >
+        {sr.allergens.viewPlans}
+      </Link>
     </div>
   );
 }

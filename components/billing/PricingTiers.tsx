@@ -4,13 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import type { CountryCode } from "@paddle/paddle-js";
 import { previewPrices } from "@/lib/billing/paddle-browser";
-import { startAuthorizedCheckout } from "@/lib/billing/start-checkout";
 import type { Tier, TierInterval } from "@/lib/billing/tiers";
 import { Badge } from "@/components/ui/Badge";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StateLink } from "@/components/ui/RouteStates";
-import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
 type BillingPeriod = "monthly" | "yearly";
@@ -22,6 +20,8 @@ type PricingTiersProps = {
   /** When true, Subscribe sends guests to login first. */
   requireAuth?: boolean;
   guest?: boolean;
+  signInLabel: string;
+  checkoutErrorLabel: string;
 };
 
 function intervalFromPeriod(period: BillingPeriod): TierInterval {
@@ -33,6 +33,8 @@ export function PricingTiers({
   country,
   requireAuth = false,
   guest = false,
+  signInLabel,
+  checkoutErrorLabel,
 }: PricingTiersProps) {
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
   const interval = intervalFromPeriod(period);
@@ -86,22 +88,16 @@ export function PricingTiers({
     setBusyPriceId(priceId);
 
     try {
-      if (guest && requireAuth) {
-        window.location.assign(
-          `/login?next=${encodeURIComponent(`/premium#plan-${tier.name.toLowerCase()}`)}`,
-        );
-        return;
-      }
-
       // Authorized server checkout binds the Paddle customer + transaction so
       // the webhook can grant the paid plan. Never open a bare price-id overlay.
+      const { startAuthorizedCheckout } = await import("@/lib/billing/start-checkout");
       await startAuthorizedCheckout(
         tier.key,
         period === "yearly" ? "yearly" : "monthly",
       );
     } catch (error) {
       setCheckoutError(
-        error instanceof Error ? error.message : sr.billing.checkoutError,
+        error instanceof Error ? error.message : checkoutErrorLabel,
       );
     } finally {
       setBusyPriceId(null);
@@ -217,10 +213,11 @@ export function PricingTiers({
                 {guest && requireAuth ? (
                   <StateLink
                     href={`/login?next=${encodeURIComponent(`/premium#plan-${tier.name.toLowerCase()}`)}`}
+                    prefetch={false}
                     fullWidth
                     variant={featured ? undefined : "secondary"}
                   >
-                    {sr.auth.signInForPlan}
+                    {signInLabel}
                   </StateLink>
                 ) : (
                   <PrimaryButton

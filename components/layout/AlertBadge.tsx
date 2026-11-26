@@ -19,7 +19,7 @@ export function AlertBadge({ count, className, compact = false }: AlertBadgeProp
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-danger text-ui-xs font-bold text-white",
+        "inline-flex items-center gap-1 rounded-full bg-danger text-ui-xs font-bold text-accent-ink",
         compact ? "min-h-5 min-w-5 justify-center px-1" : "h-5 px-1.5",
         className,
       )}

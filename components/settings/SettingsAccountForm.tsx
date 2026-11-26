@@ -23,22 +23,26 @@ export function SettingsAccountForm({
   const [name, setName] = useState(initialName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [nameError, setNameError] = useState<string | undefined>();
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(undefined);
+    setNameError(undefined);
     setLoading(true);
 
     try {
       const result = await updateProfileAction({ full_name: name.trim() });
 
       if ("error" in result) {
+        if (result.error.code === "VALIDATION_ERROR") {
+          setNameError(result.error.message);
+          return;
+        }
         setError(
           result.error.code === "UNAUTHORIZED"
             ? "Morate biti prijavljeni."
-            : result.error.code === "VALIDATION_ERROR"
-              ? result.error.message
-              : "Čuvanje nije uspelo. Pokušajte ponovo."
+            : "Čuvanje nije uspelo. Pokušajte ponovo."
         );
         return;
       }
@@ -68,11 +72,21 @@ export function SettingsAccountForm({
             id="settings-name"
             name="fullName"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              setNameError(undefined);
+            }}
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? "settings-name-error" : undefined}
             autoComplete="name"
             placeholder="Vaše ime"
           />
         </div>
+        {nameError ? (
+          <p id="settings-name-error" role="alert" className="mt-1 text-ui-sm text-danger">
+            {nameError}
+          </p>
+        ) : null}
       </div>
 
       <div>

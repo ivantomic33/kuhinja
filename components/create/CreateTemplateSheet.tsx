@@ -330,7 +330,7 @@ export function CreateTemplateSheet({
             />
           </div>
           {nameError ? (
-            <p id={nameId + "-error"} className="mt-2 text-ui-sm text-danger">
+            <p id={nameId + "-error"} role="alert" className="mt-2 text-ui-sm text-danger">
               {nameError}
             </p>
           ) : null}
@@ -344,16 +344,12 @@ export function CreateTemplateSheet({
             <span className="count-pill">{items.length}</span>
           </div>
 
-          <div className="mb-2 hidden grid-cols-[32px_minmax(0,1fr)_110px_minmax(0,.8fr)_44px] gap-3 px-1 text-ui-xs font-semibold uppercase tracking-[0.06em] text-text-3 min-[720px]:grid">
-            <span>#</span>
-            <span>Naziv stavke</span>
-            <span>Minuti</span>
-            <span>Grupa (opciono)</span>
-            <span />
-          </div>
-
           <ul className="flex flex-col gap-3">
-            {items.map((item, index) => (
+            {items.map((item, index) => {
+              const rowId = `${formId}-${item.key}`;
+              const labelError = fieldErrors[`label-${item.key}`];
+              const minutesError = fieldErrors[`minutes-${item.key}`];
+              return (
               <li
                 key={item.key}
                 className={cn(
@@ -367,28 +363,31 @@ export function CreateTemplateSheet({
                   {index + 1}
                 </span>
                 <div className="contents min-[720px]:contents max-[720px]:col-span-1 max-[720px]:flex max-[720px]:flex-col max-[720px]:gap-2">
-                  <div
-                    className={cn(
-                      "field-input",
-                      fieldErrors[`label-${item.key}`] && "invalid",
-                      "max-[720px]:col-auto"
-                    )}
-                  >
+                  <div className="grid gap-1">
+                    <label className="text-ui-xs text-text-2" htmlFor={`${rowId}-label`}>Naziv stavke</label>
+                    <div className={cn("field-input", labelError && "invalid")}>
                     <input
+                      id={`${rowId}-label`}
                       name={`item-label-${item.key}`}
-                      aria-label={`Naziv stavke ${index + 1}`}
-                      aria-invalid={fieldErrors[`label-${item.key}`] ? true : undefined}
+                      aria-invalid={labelError ? true : undefined}
+                      aria-describedby={labelError ? `${rowId}-label-error` : undefined}
                       value={item.label}
                       onChange={(e) =>
                         updateItem(item.key, { label: e.target.value })
                       }
                       placeholder="Naziv stavke"
                     />
+                    </div>
+                    {labelError ? <p id={`${rowId}-label-error`} role="alert" className="text-ui-xs text-danger">{labelError}</p> : null}
                   </div>
-                  <div className="field-input max-[720px]:w-full">
+                  <div className="grid gap-1">
+                    <label className="text-ui-xs text-text-2" htmlFor={`${rowId}-minutes`}>Minuti</label>
+                    <div className={cn("field-input", minutesError && "invalid")}>
                     <input
+                      id={`${rowId}-minutes`}
                       name={`item-minutes-${item.key}`}
-                      aria-label={`Minuti za stavku ${index + 1}`}
+                      aria-invalid={minutesError ? true : undefined}
+                      aria-describedby={minutesError ? `${rowId}-minutes-error` : undefined}
                       type="number"
                       min={0}
                       inputMode="decimal"
@@ -398,17 +397,22 @@ export function CreateTemplateSheet({
                       }
                       placeholder="Minuti"
                     />
+                    </div>
+                    {minutesError ? <p id={`${rowId}-minutes-error`} role="alert" className="text-ui-xs text-danger">{minutesError}</p> : null}
                   </div>
-                  <div className="field-input max-[720px]:w-full min-[720px]:block">
+                  <div className="grid gap-1">
+                    <label className="text-ui-xs text-text-2" htmlFor={`${rowId}-group`}>Grupa (opciono)</label>
+                    <div className="field-input">
                     <input
+                      id={`${rowId}-group`}
                       name={`item-group-${item.key}`}
-                      aria-label={`Grupa za stavku ${index + 1} (opciono)`}
                       value={item.group}
                       onChange={(e) =>
                         updateItem(item.key, { group: e.target.value })
                       }
                       placeholder="Grupa (opciono)"
                     />
+                    </div>
                   </div>
                 </div>
                 <button
@@ -423,7 +427,8 @@ export function CreateTemplateSheet({
                   <Trash2 className="size-4" aria-hidden="true" />
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
 
           <button

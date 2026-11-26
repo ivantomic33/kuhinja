@@ -13,6 +13,7 @@ const PUBLIC_EXACT = new Set([
   "/reset-password",
   "/checkout",
   "/premium", // The management subroute requires a session by default.
+  "/kako-poceti",
   "/welcome",
   "/faq",
   "/pravila-koriscenja",

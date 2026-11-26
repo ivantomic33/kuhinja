@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthField } from "@/components/auth/AuthField";
 import { usePlanUi } from "@/components/plan/PlanProvider";
 import { BigNumber } from "@/components/ui/BigNumber";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { FieldHelp } from "@/components/ui/FieldHelp";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useToast } from "@/components/ui/Toast";
@@ -83,6 +84,7 @@ export function CreateIngredientSheet({
   const [duplicateName, setDuplicateName] = useState(false);
   const [formError, setFormError] = useState<string | undefined>();
   const [conflict, setConflict] = useState(false);
+  const formId = useId();
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -111,7 +113,6 @@ export function CreateIngredientSheet({
     ingredientNotes: ingredientInsertSchema.shape.notes.safeParse(notes).success ? undefined : copy.notesTooLong,
   };
   const firstInvalid = Object.keys(errors).find(key => errors[key as keyof typeof errors]);
-  const isValid = !firstInvalid;
   const wasteNum = Math.min(MAX_WASTE, Math.max(0, Number((wasteValue ?? 0).toFixed(2))));
   const wasteText = `${wasteNum.toLocaleString("sr-Latn", { maximumFractionDigits: 2 })}%`;
   const adjustedPrice = unitPricePreview !== null && wasteValue !== null && !errors.ingredientWasteInput
@@ -280,7 +281,7 @@ export function CreateIngredientSheet({
       footer={
         <div className="grid gap-3">
           <IngredientPricePreview {...preview} compact />
-          {formError ? <p role="alert" className="text-sm text-danger">{formError}</p> : null}
+          {formError ? <p id={`${formId}-error`} role="alert" className="text-sm text-danger">{formError}</p> : null}
           <div className="flex flex-wrap justify-end gap-2">
             {conflict ? (
               <PrimaryButton type="button" variant="secondary" onClick={() => window.location.reload()}>
@@ -292,9 +293,10 @@ export function CreateIngredientSheet({
             </PrimaryButton>
             <PrimaryButton
               type="submit"
-              form="create-ingredient-form"
+              form={formId}
               loading={loading}
-              disabled={!isValid || conflict}
+              disabled={conflict}
+              aria-describedby={conflict && formError ? `${formId}-error` : undefined}
             >
               {ingredient ? sr.common.save : copy.submit}
             </PrimaryButton>
@@ -303,16 +305,9 @@ export function CreateIngredientSheet({
       }
     >
       <form
-        id="create-ingredient-form"
+        id={formId}
         className="grid items-start gap-4 md:grid-cols-2"
         onSubmit={onSubmit}
-        onKeyDown={event => {
-          if (event.key !== "Enter" || isValid || event.nativeEvent.isComposing ||
-            !(event.target instanceof HTMLInputElement) || event.target.type === "range") return;
-          // A disabled submit button suppresses implicit submission from text fields.
-          event.preventDefault();
-          event.currentTarget.requestSubmit();
-        }}
         noValidate
       >
         <div className="grid min-w-0 gap-2 md:gap-3">
@@ -332,7 +327,10 @@ export function CreateIngredientSheet({
           />
 
           <div className="grid min-w-0 gap-1">
-            <p className="text-sm font-medium text-text">{copy.unit} *</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-text">{copy.unit} *</p>
+              <FieldHelp label={copy.unit}>{sr.onboarding.fieldHelp.unit}</FieldHelp>
+            </div>
             <SegmentedControl<IngredientUnitInput>
               ariaLabel={copy.unit}
               value={unit}
@@ -357,16 +355,19 @@ export function CreateIngredientSheet({
           />
 
           <div className="grid gap-1">
-            <label htmlFor="ingredientPrice" className="text-sm font-medium text-text">
-              {copy.price} *
-              <span className="sr-only"> ({copy.pricePrefix})</span>
-            </label>
+            <div className="flex items-center gap-2">
+              <label htmlFor={`${formId}-price`} className="text-sm font-medium text-text">
+                {copy.price} *
+                <span className="sr-only"> ({copy.pricePrefix})</span>
+              </label>
+              <FieldHelp label={copy.price}>{sr.onboarding.fieldHelp.price}</FieldHelp>
+            </div>
             <div className="relative">
               <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">
                 {copy.pricePrefix}
               </span>
               <input
-                id="ingredientPrice"
+                id={`${formId}-price`}
                 name="ingredientPrice"
                 inputMode="decimal"
                 value={price}
@@ -375,7 +376,7 @@ export function CreateIngredientSheet({
                 placeholder="1990,00"
                 required
                 aria-invalid={priceError ? true : undefined}
-                aria-describedby={priceError ? "ingredient-price-error" : undefined}
+                aria-describedby={priceError ? `${formId}-price-error` : undefined}
                 className={cn(
                   "focus-ring h-12 w-full rounded-[var(--radius-input)] border bg-surface-2 py-2 pl-11 pr-3 md:h-13",
                   "text-base tabular-nums text-text outline-none placeholder:text-muted",
@@ -383,19 +384,22 @@ export function CreateIngredientSheet({
                 )}
               />
             </div>
-            {priceError ? <p id="ingredient-price-error" role="alert" className="text-sm text-danger">{priceError}</p> : null}
+            {priceError ? <p id={`${formId}-price-error`} role="alert" className="text-sm text-danger">{priceError}</p> : null}
           </div>
 
           <div className="grid grid-cols-[minmax(0,1fr)_5rem] items-end gap-x-3 gap-y-1">
             <div className="grid min-w-0 gap-1">
               <div className="flex items-center justify-between gap-2">
-                <label htmlFor="ingredientWaste" className="text-sm font-medium text-text">{copy.waste}</label>
+                <span className="flex min-w-0 items-center gap-2">
+                  <label htmlFor={`${formId}-waste`} className="text-sm font-medium text-text">{copy.waste}</label>
+                  <FieldHelp label={copy.waste}>{sr.onboarding.fieldHelp.waste}</FieldHelp>
+                </span>
                 <span aria-hidden="true" className="text-sm font-semibold tabular-nums text-text">
                   {errors.ingredientWasteInput ? "—" : wasteText}
                 </span>
               </div>
               <input
-                id="ingredientWaste"
+                id={`${formId}-waste`}
                 name="ingredientWaste"
                 type="range"
                 min={0}
@@ -416,10 +420,10 @@ export function CreateIngredientSheet({
               onBlur={() => touch("ingredientWasteInput")}
               aria-label={`${copy.waste} · ${copy.wasteInput}`}
               aria-invalid={wasteError ? true : undefined}
-              aria-describedby={wasteError ? "ingredient-waste-error" : undefined}
+              aria-describedby={wasteError ? `${formId}-waste-error` : undefined}
               className="h-11 min-h-11 tabular-nums"
             />
-            {wasteError ? <p id="ingredient-waste-error" role="alert" className="col-span-full text-sm text-danger">{wasteError}</p> : null}
+            {wasteError ? <p id={`${formId}-waste-error`} role="alert" className="col-span-full text-sm text-danger">{wasteError}</p> : null}
           </div>
 
           <AuthField

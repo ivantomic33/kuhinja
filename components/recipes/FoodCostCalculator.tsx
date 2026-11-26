@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil, Plus, Save, Trash2, UtensilsCrossed } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   EditRecipeSheet,
@@ -136,6 +136,7 @@ export function FoodCostCalculator({
   const router = useRouter();
   const online = useOnline(true);
   const { handleError } = usePlanUiOptional();
+  const calculatorId = useId();
 
   const ingredientMap = useMemo(() => {
     const map = new Map<string, CalculatorIngredient>();
@@ -190,6 +191,11 @@ export function FoodCostCalculator({
   const [conflict, setConflict] = useState(false);
 
   const canPersist = Boolean(allowPersist && recipeId && header.venue_id && header.version);
+  const lineErrorId = statusError === sr.recipes.foodCost.saveLinesEmpty ||
+    statusError === sr.recipes.foodCost.saveLinesDuplicate ||
+    statusError === sr.recipes.foodCost.saveLinesInvalid
+    ? `${calculatorId}-error`
+    : undefined;
 
   const calcLines: IngredientLineInput[] = useMemo(() => {
     return lines
@@ -468,17 +474,29 @@ export function FoodCostCalculator({
             </h2>
           }
           footer={
-            <PrimaryButton
-              type="button"
-              fullWidth
-              loading={applyLoading}
-              disabled={!online || result.netPrice <= 0 || conflict}
-              onClick={() => {
-                void handleApplySuggestedPrice();
-              }}
-            >
-              {sr.recipes.foodCost.applyPrice}
-            </PrimaryButton>
+            <div className="grid gap-2">
+              {!online || result.netPrice <= 0 || conflict ? (
+                <p id={`${calculatorId}-price-disabled`} className="text-sm text-muted">
+                  {!online
+                    ? sr.create.offline
+                    : conflict
+                      ? sr.pwa.versionConflict
+                      : "Predložena cena mora biti veća od nule."}
+                </p>
+              ) : null}
+              <PrimaryButton
+                type="button"
+                fullWidth
+                loading={applyLoading}
+                disabled={!online || result.netPrice <= 0 || conflict}
+                aria-describedby={!online || result.netPrice <= 0 || conflict ? `${calculatorId}-price-disabled` : undefined}
+                onClick={() => {
+                  void handleApplySuggestedPrice();
+                }}
+              >
+                {sr.recipes.foodCost.applyPrice}
+              </PrimaryButton>
+            </div>
           }
         >
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -573,11 +591,12 @@ export function FoodCostCalculator({
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {mode === "target_food_cost" ? (
-            <label className="flex flex-col gap-1">
+            <label htmlFor={`${calculatorId}-target`} className="flex flex-col gap-1">
               <span className="text-sm font-medium text-text">
                 {sr.recipes.foodCost.targetPercent}
               </span>
               <input
+                id={`${calculatorId}-target`}
                 type="number"
                 inputMode="decimal"
                 min={0.01}
@@ -591,11 +610,12 @@ export function FoodCostCalculator({
               />
             </label>
           ) : (
-            <label className="flex flex-col gap-1">
+            <label htmlFor={`${calculatorId}-margin`} className="flex flex-col gap-1">
               <span className="text-sm font-medium text-text">
                 {sr.recipes.foodCost.marginPercent}
               </span>
               <input
+                id={`${calculatorId}-margin`}
                 type="number"
                 inputMode="decimal"
                 min={0}
@@ -610,11 +630,12 @@ export function FoodCostCalculator({
             </label>
           )}
 
-          <label className="flex flex-col gap-1">
+          <label htmlFor={`${calculatorId}-vat`} className="flex flex-col gap-1">
             <span className="text-sm font-medium text-text">
               {sr.recipes.foodCost.vatPercent}
             </span>
             <input
+              id={`${calculatorId}-vat`}
               type="number"
               inputMode="decimal"
               min={0}
@@ -653,12 +674,14 @@ export function FoodCostCalculator({
               >
                 {sr.recipes.foodCost.addLine}
               </PrimaryButton>
+              {canPersist && !online ? <p id={`${calculatorId}-save-offline`} className="text-sm text-muted">{sr.create.offline}</p> : null}
               {canPersist ? (
                 <PrimaryButton
                   type="button"
                   fullWidth
                   loading={saveLoading}
                   disabled={!online}
+                  aria-describedby={!online ? `${calculatorId}-save-offline` : undefined}
                   leftIcon={<Save className="size-4" aria-hidden="true" />}
                   onClick={() => {
                     void handleSaveLines();
@@ -679,6 +702,7 @@ export function FoodCostCalculator({
         ) : (
           <ul className="flex flex-col gap-2">
             {lines.map((line, index) => {
+              const lineId = `${calculatorId}-line-${line.key}`;
               const ingredient = ingredientMap.get(line.ingredientId);
               const units = compatibleUnits(ingredient?.unit ?? null);
               const displayCost = perLineDisplayCosts[index];
@@ -692,11 +716,13 @@ export function FoodCostCalculator({
                   className="flex flex-col gap-4 rounded-xl border border-border bg-surface-2/40 p-4"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <label className="flex min-w-0 flex-1 flex-col gap-1">
+                    <label htmlFor={`${lineId}-ingredient`} className="flex min-w-0 flex-1 flex-col gap-1">
                       <span className="text-sm font-medium text-text">
                         {sr.recipes.foodCost.ingredient}
                       </span>
                       <select
+                        id={`${lineId}-ingredient`}
+                        aria-describedby={lineErrorId}
                         value={line.ingredientId}
                         onChange={(event) =>
                           updateLine(line.key, {
@@ -732,11 +758,13 @@ export function FoodCostCalculator({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="flex flex-col gap-1">
+                    <label htmlFor={`${lineId}-quantity`} className="flex flex-col gap-1">
                       <span className="text-sm font-medium text-text">
                         {sr.recipes.foodCost.quantity}
                       </span>
                       <input
+                        id={`${lineId}-quantity`}
+                        aria-describedby={lineErrorId}
                         type="number"
                         inputMode="decimal"
                         min={0}
@@ -751,11 +779,14 @@ export function FoodCostCalculator({
                       />
                     </label>
 
-                    <label className="flex flex-col gap-1">
+                    <label htmlFor={`${lineId}-unit`} className="flex flex-col gap-1">
                       <span className="text-sm font-medium text-text">
                         {sr.recipes.foodCost.unit}
                       </span>
                       <select
+                        id={`${lineId}-unit`}
+                        aria-invalid={unitMismatch || undefined}
+                        aria-describedby={unitMismatch ? `${lineId}-unit-error` : lineErrorId}
                         value={line.unit}
                         onChange={(event) =>
                           updateLine(line.key, {
@@ -779,6 +810,8 @@ export function FoodCostCalculator({
                     </span>
                     <span
                       data-numeric
+                      id={unitMismatch ? `${lineId}-unit-error` : undefined}
+                      role={unitMismatch ? "alert" : undefined}
                       className="text-sm font-semibold tabular-nums text-text"
                     >
                       {unitMismatch
@@ -800,7 +833,7 @@ export function FoodCostCalculator({
 
       {statusError ? (
         <div role="alert" className="order-4 grid gap-2 text-sm text-danger xl:col-span-2">
-          <p>{statusError}</p>
+          <p id={`${calculatorId}-error`}>{statusError}</p>
           {conflict ? (
             <PrimaryButton type="button" variant="secondary" onClick={() => {
               window.location.reload();

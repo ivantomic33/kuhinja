@@ -44,7 +44,7 @@ export function SectionCardHeader({
             {href && showOpen ? (
               <Link
                 href={href}
-                className="inline-flex h-9 items-center gap-1 rounded-[10px] px-3 text-ui-sm font-semibold text-text-2 no-underline hover:bg-surface-2 hover:text-text"
+                className="focus-ring inline-flex min-h-11 items-center gap-1 rounded-[10px] px-3 text-ui-sm font-semibold text-text-2 no-underline hover:bg-surface-2 hover:text-text"
               >
                 {sr.common.open}
                 <ArrowRight className="size-4" aria-hidden="true" />
@@ -54,8 +54,8 @@ export function SectionCardHeader({
               <button
                 type="button"
                 onClick={onAdd}
-                aria-label={addLabel ?? sr.common.next}
-                className="icon-btn bordered size-9"
+                aria-label={addLabel ?? `Dodaj: ${title}`}
+                className="icon-btn bordered focus-ring size-11"
               >
                 <Plus className="size-4" aria-hidden="true" />
               </button>

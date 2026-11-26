@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useToast } from "@/components/ui/Toast";
@@ -34,6 +34,7 @@ export function InventoryModal({
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const formId = useId();
 
   const tracked = useMemo(
     () => rows.filter((row) => row.hasLevel).sort((a, b) => a.name.localeCompare(b.name, "sr")),
@@ -104,6 +105,7 @@ export function InventoryModal({
             <PrimaryButton
               loading={loading}
               disabled={tracked.length === 0}
+              aria-describedby={tracked.length === 0 ? `${formId}-empty` : undefined}
               onClick={() => void handleSave()}
             >
               {t.inventorySave}
@@ -113,7 +115,7 @@ export function InventoryModal({
       }
     >
       {tracked.length === 0 ? (
-        <p className="text-sm text-text-2">{t.emptyHint}</p>
+        <p id={`${formId}-empty`} className="text-sm text-text-2">{t.emptyHint}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-left text-sm">
@@ -121,28 +123,36 @@ export function InventoryModal({
               <tr className="border-b border-border text-ui-xs text-text-3">
                 <th className="px-2 py-2 font-medium">{t.colIngredient}</th>
                 <th className="px-2 py-2 font-medium">{t.inventoryExpected}</th>
-                <th className="px-2 py-2 font-medium">{t.inventoryActual}</th>
+                <th id={`${formId}-actual`} className="px-2 py-2 font-medium">{t.inventoryActual}</th>
                 <th className="px-2 py-2 font-medium">{t.inventoryDelta}</th>
               </tr>
             </thead>
             <tbody>
               {tracked.map((row) => {
-                const counted = parseDecimal(counts[row.ingredientId] ?? "");
+                const count = counts[row.ingredientId];
+                const counted = parseDecimal(count ?? "");
+                const invalid = count !== undefined && (counted === null || counted < 0);
+                const rowId = `${formId}-${row.ingredientId}`;
                 const delta =
                   counted == null ? 0 : counted - row.qty;
                 const din = delta * (row.price || 0);
                 return (
                   <tr key={row.ingredientId} className="border-b border-border/70">
-                    <th scope="row" className="px-2 py-3 font-medium text-text">{row.name}</th>
+                    <th scope="row" className="px-2 py-3 font-medium text-text">
+                      <label id={`${rowId}-label`} htmlFor={rowId}>{row.name}</label>
+                    </th>
                     <td className="px-2 py-3 tabular-nums text-text-2">
                       {formatQty(row.qty)} {row.unit}
                     </td>
                     <td className="px-2 py-3">
                       <input
-                        aria-label={`${t.inventoryActual}: ${row.name} (${row.unit})`}
+                        id={rowId}
+                        aria-labelledby={`${formId}-actual ${rowId}-label`}
+                        aria-invalid={invalid || undefined}
+                        aria-describedby={`${rowId}-unit${invalid ? ` ${rowId}-error` : ""}`}
                         className="field-control w-28 tabular-nums"
                         inputMode="decimal"
-                        value={counts[row.ingredientId] ?? ""}
+                        value={count ?? ""}
                         onChange={(e) =>
                           setCounts((prev) => ({
                             ...prev,
@@ -150,6 +160,8 @@ export function InventoryModal({
                           }))
                         }
                       />
+                      <span id={`${rowId}-unit`} className="sr-only">Jedinica: {row.unit}</span>
+                      {invalid ? <p id={`${rowId}-error`} role="alert" className="mt-1 text-xs text-danger">Unesi količinu od nula ili više.</p> : null}
                     </td>
                     <td
                       className={cn(

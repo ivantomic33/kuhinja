@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Plus, Trash2 } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
@@ -26,6 +26,15 @@ function newKey() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : String(Date.now() + Math.random());
+}
+
+function hasInvalidPrice(draft: RowDraft) {
+  const qty = parseDecimal(draft.qty);
+  return Boolean(draft.ingredientId && qty !== null && qty > 0 && draft.price.trim() &&
+    !restockIngredientPriceSchema.safeParse({
+      ingredientId: draft.ingredientId,
+      newPrice: parseDecimal(draft.price),
+    }).success);
 }
 
 export type RestockModalProps = {
@@ -63,6 +72,8 @@ export function RestockModal({
   const [drafts, setDrafts] = useState<RowDraft[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPriceErrors, setShowPriceErrors] = useState(false);
+  const formId = useId();
 
   const limited = maxStockItems != null && Number.isFinite(maxStockItems);
   const canAddNew = !limited || stockItemCount < (maxStockItems as number);
@@ -88,6 +99,7 @@ export function RestockModal({
       },
     ]);
     setError(null);
+    setShowPriceErrors(false);
     setLoading(false);
   }, [open, preferIngredientId, rows, selectableRows]);
 
@@ -152,15 +164,9 @@ export function RestockModal({
   }
 
   async function handleSave() {
-    if (canSetPrice && drafts.some((draft) => {
-      const qty = parseDecimal(draft.qty);
-      return draft.ingredientId && qty != null && qty > 0 && draft.price.trim() &&
-        !restockIngredientPriceSchema.safeParse({
-          ingredientId: draft.ingredientId,
-          newPrice: parseDecimal(draft.price),
-        }).success;
-    })) {
-      setError(t.restockPriceError);
+    if (canSetPrice && drafts.some(hasInvalidPrice)) {
+      setError(null);
+      setShowPriceErrors(true);
       return;
     }
 
@@ -243,9 +249,10 @@ export function RestockModal({
       className="md:w-[min(100%-32px,820px)]"
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <p className="text-sm tabular-nums text-text-2">
-            {t.restockCount}:{" "}
-            <span className="font-semibold text-text">{validCount}</span>
+          <p id={`${formId}-count`} className="text-sm tabular-nums text-text-2">
+            {validCount === 0
+              ? rows.length === 0 ? t.emptyHint : "Izaberi sastojak i unesi količinu veću od nule."
+              : `${t.restockCount}: ${validCount}`}
           </p>
           <div className="flex gap-2">
             <PrimaryButton variant="secondary" onClick={onClose}>
@@ -254,6 +261,7 @@ export function RestockModal({
             <PrimaryButton
               loading={loading}
               disabled={validCount === 0}
+              aria-describedby={validCount === 0 ? `${formId}-count` : undefined}
               onClick={() => void handleSave()}
             >
               {t.restockSave}
@@ -263,14 +271,6 @@ export function RestockModal({
       }
     >
       <div className="restock-list">
-        <div className="restock-head" aria-hidden="true">
-          <span>{t.restockIngredient}</span>
-          <span>{t.restockQty}</span>
-          <span>{t.restockUnit}</span>
-          <span>{t.restockPrice}</span>
-          <span />
-        </div>
-
         {drafts.map((draft) => {
           const selected = rows.find(
             (r) => r.ingredientId === draft.ingredientId
@@ -281,13 +281,17 @@ export function RestockModal({
               ? String(selected.price)
               : t.restockPricePh;
           const options = optionsFor(draft);
+          const rowId = `${formId}-${draft.key}`;
+          const qty = parseDecimal(draft.qty);
+          const invalidQty = Boolean(draft.qty.trim()) && (qty === null || qty <= 0);
+          const invalidPrice = canSetPrice && showPriceErrors && hasInvalidPrice(draft);
 
           return (
             <div key={draft.key} className="restock-row">
-              <label className="restock-field restock-ing">
-                <span>{t.restockIngredient}</span>
+              <div className="restock-field restock-ing">
+                <label htmlFor={`${rowId}-ingredient`} className="text-ui-xs text-text-2">{t.restockIngredient}</label>
                 <select
-                  aria-label={t.restockIngredient}
+                  id={`${rowId}-ingredient`}
                   className="field-control"
                   value={draft.ingredientId}
                   onChange={(e) =>
@@ -314,12 +318,14 @@ export function RestockModal({
                       : null}
                   </p>
                 ) : null}
-              </label>
+              </div>
 
-              <label className="restock-field">
-                <span>{t.restockQty}</span>
+              <div className="restock-field">
+                <label htmlFor={`${rowId}-qty`} className="text-ui-xs text-text-2">{t.restockQty}</label>
                 <input
-                  aria-label={t.restockQty}
+                  id={`${rowId}-qty`}
+                  aria-invalid={invalidQty || undefined}
+                  aria-describedby={invalidQty ? `${rowId}-qty-error` : undefined}
                   className="field-control tabular-nums"
                   inputMode="decimal"
                   value={draft.qty}
@@ -328,18 +334,21 @@ export function RestockModal({
                     updateDraft(draft.key, { qty: e.target.value })
                   }
                 />
-              </label>
+                {invalidQty ? <p id={`${rowId}-qty-error`} role="alert" className="text-xs text-danger">Unesi količinu veću od nule.</p> : null}
+              </div>
 
-              <label className="restock-field">
-                <span>{t.restockUnit}</span>
-                <input aria-label={t.restockUnit} className="field-control" value={unit} disabled />
-              </label>
+              <div className="restock-field">
+                <label htmlFor={`${rowId}-unit`} className="text-ui-xs text-text-2">{t.restockUnit}</label>
+                <input id={`${rowId}-unit`} className="field-control" value={unit} readOnly />
+              </div>
 
-              <label className="restock-field restock-price">
-                <span>{t.restockPrice}</span>
+              <div className="restock-field restock-price">
+                <label htmlFor={`${rowId}-price`} className="text-ui-xs text-text-2">{t.restockPrice}</label>
                 {canSetPrice ? (
                   <input
-                    aria-label={t.restockPrice}
+                    id={`${rowId}-price`}
+                    aria-invalid={invalidPrice || undefined}
+                    aria-describedby={invalidPrice ? `${rowId}-price-error` : undefined}
                     className="field-control tabular-nums"
                     inputMode="decimal"
                     placeholder={pricePlaceholder}
@@ -351,16 +360,18 @@ export function RestockModal({
                 ) : (
                   <div className="restock-price-lock">
                     <input
+                      id={`${rowId}-price`}
                       className="field-control tabular-nums"
                       value=""
                       placeholder={t.restockPricePh}
                       disabled
-                      aria-label={t.restockPriceLocked}
+                      aria-describedby={`${formId}-price-locked`}
                     />
                     <Lock aria-hidden="true" />
                   </div>
                 )}
-              </label>
+                {invalidPrice ? <p id={`${rowId}-price-error`} role="alert" className="text-xs text-danger">{t.restockPriceError}</p> : null}
+              </div>
 
               <button
                 type="button"
@@ -391,7 +402,7 @@ export function RestockModal({
         {!canSetPrice ? (
           <p className="flex flex-wrap items-center gap-2 text-sm text-text-2">
             <Lock className="size-3.5 shrink-0" aria-hidden="true" />
-            <span>{t.restockPriceLocked}</span>
+            <span id={`${formId}-price-locked`}>{t.restockPriceLocked}</span>
             <button
               type="button"
               onClick={goUpgrade}

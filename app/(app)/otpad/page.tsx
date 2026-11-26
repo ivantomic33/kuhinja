@@ -28,7 +28,14 @@ export default async function WastePage() {
   let topIngredients: Array<{ name: string; amount: number }> = [];
   let entries: WasteEntryRow[] = [];
   let ingredients: CachedIngredient[] = [];
-  let recipes: Array<{ id: string; name: string; venue_id: string; portions: number }> = [];
+  let recipes: Array<{
+    id: string;
+    name: string;
+    venue_id: string;
+    portions: number;
+    selling_price: number;
+    description: string | null;
+  }> = [];
   let recipeCosts: Record<string, number> = {};
 
   if (workspaceId) {

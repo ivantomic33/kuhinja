@@ -7,7 +7,6 @@ import {
   ROLES,
   sqlMinRoleForAction,
   type PermissionAction,
-  type Role,
   roleRank,
 } from "./permissions";
 

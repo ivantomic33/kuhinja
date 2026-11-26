@@ -14,11 +14,14 @@ type Props = {
 export function LegalConsentFields({
   acceptTerms, marketingOptIn, onAcceptTerms, onMarketingOptIn, error,
 }: Props) {
-  const errorId = useId();
+  const termsId = useId();
+  const marketingId = useId();
+  const errorId = `${termsId}-error`;
   return (
     <div className="space-y-2 text-sm text-text">
-      <label className="flex items-start gap-2">
+      <label htmlFor={termsId} className="flex items-start gap-2">
         <input
+          id={termsId}
           type="checkbox"
           name="acceptTerms"
           required
@@ -38,8 +41,9 @@ export function LegalConsentFields({
         ))}
       </div>
       {error ? <p id={errorId} role="alert" className="text-error">{error}</p> : null}
-      <label className="flex items-start gap-2">
+      <label htmlFor={marketingId} className="flex items-start gap-2">
         <input
+          id={marketingId}
           type="checkbox"
           name="marketingOptIn"
           checked={marketingOptIn}

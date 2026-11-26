@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { APP_NAME } from "@/lib/config/app";
 import { openGraphCard, twitterCard } from "./social-card";
+import { SITE_NAME } from "./site";
 
-export const SITE_TITLE_TEMPLATE = `%s | ${APP_NAME}`;
+export const SITE_TITLE_TEMPLATE = `%s | ${SITE_NAME}`;
 
 export function socialMetadata(title: string, description: string, path: string): Metadata {
   return {
     openGraph: {
       type: "website",
       locale: "sr_RS",
-      siteName: APP_NAME,
+      siteName: SITE_NAME,
       title,
       description,
       url: path,

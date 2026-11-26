@@ -43,7 +43,7 @@ function money(value: number) {
 }
 
 export function WasteWorkspace(props: WasteWorkspaceProps) {
-  const toast = useToast();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const entitlements = getEntitlements(props.plan);
   const canAdjustStock =
@@ -72,13 +72,12 @@ export function WasteWorkspace(props: WasteWorkspaceProps) {
 
   function guardExport(format: "csv" | "pdf" | "xlsx", allowed: boolean) {
     if (!allowed) {
-      toast.show({
-        variant: "error",
-        title:
-          format === "csv"
-            ? "CSV zahteva Starter+"
-            : "PDF/Excel zahtevaju Pro paket",
-      });
+      toast(
+        format === "csv"
+          ? "CSV zahteva Starter+."
+          : "PDF/Excel zahtevaju Pro paket.",
+        "danger",
+      );
       return false;
     }
     return true;

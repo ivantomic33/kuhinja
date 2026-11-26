@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState, type SetStateAction } from "react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { NumericKeypad } from "@/components/ui/NumericKeypad";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
@@ -61,7 +61,8 @@ export function WasteEntryForm({
   recipeCosts,
   onSaved,
 }: WasteEntryFormProps) {
-  const toast = useToast();
+  const { toast } = useToast();
+  const id = useId();
   const online = useOnline(true);
   const [step, setStep] = useState<1 | 2>(1);
   const [query, setQuery] = useState("");
@@ -71,6 +72,8 @@ export function WasteEntryForm({
   const [adjustStock, setAdjustStock] = useState(false);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [quantityError, setQuantityError] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [offlinePool, setOfflinePool] = useState<{
     ingredients: CachedIngredient[];
     recipes: Array<{ id: string; name: string }>;
@@ -110,7 +113,14 @@ export function WasteEntryForm({
     setReason("istek");
     setAdjustStock(false);
     setNote("");
+    setQuantityError(false);
+    setSaveError(null);
     setOfflinePool(null);
+  }
+
+  function updateQuantity(next: SetStateAction<string>) {
+    setQtyText(next);
+    setQuantityError(false);
   }
 
   function handleClose() {
@@ -120,11 +130,7 @@ export function WasteEntryForm({
 
   function pickIngredient(row: CachedIngredient) {
     if (!(row.price >= 0) || !Number.isFinite(row.price)) {
-      toast.show({
-        variant: "error",
-        title: "Cena nije u kešu",
-        description: "Unos offline nije moguć bez cene sastojka.",
-      });
+      toast("Cena nije u kešu. Unos offline nije moguć bez cene sastojka.", "danger");
       return;
     }
     setSubject({ kind: "ingredient", row });
@@ -134,13 +140,12 @@ export function WasteEntryForm({
   function pickRecipe(id: string, name: string) {
     const unitCost = recipeCosts[id];
     if (unitCost == null || !Number.isFinite(unitCost) || unitCost < 0) {
-      toast.show({
-        variant: "error",
-        title: "Trošak porcije nije dostupan",
-        description: online
-          ? "Recept nema izračunat trošak porcije."
-          : "Offline unos recepta zahteva keširan trošak porcije.",
-      });
+      toast(
+        online
+          ? "Trošak porcije nije dostupan. Recept nema izračunat trošak porcije."
+          : "Trošak porcije nije dostupan. Offline unos recepta zahteva keširan trošak porcije.",
+        "danger",
+      );
       return;
     }
     setSubject({ kind: "recipe", id, name, unitCost });
@@ -149,12 +154,10 @@ export function WasteEntryForm({
 
   async function submit() {
     if (!subject) return;
+    setSaveError(null);
     const quantity = parseDecimal(qtyText);
     if (quantity == null || quantity <= 0) {
-      toast.show({
-        variant: "error",
-        title: "Unesite količinu",
-      });
+      setQuantityError(true);
       return;
     }
 
@@ -170,10 +173,7 @@ export function WasteEntryForm({
     try {
       if (!online) {
         if (!Number.isFinite(unitCost)) {
-          toast.show({
-            variant: "error",
-            title: "Cena nije dostupna offline",
-          });
+          setSaveError("Cena nije dostupna offline.");
           return;
         }
         await enqueueWasteEntry({
@@ -190,11 +190,7 @@ export function WasteEntryForm({
           unit_cost_snapshot: unitCost,
           name_snapshot: name,
         });
-        toast.show({
-          variant: "success",
-          title: "Sačuvano offline",
-          description: "Unos će se poslati kad se mreža vrati.",
-        });
+        toast("Sačuvano offline. Unos će se poslati kad se mreža vrati.", "success");
       } else {
         const result = await addWasteEntry({
           ingredientId: subject.kind === "ingredient" ? subject.row.id : null,
@@ -208,21 +204,15 @@ export function WasteEntryForm({
           unitCostSnapshot: null,
         });
         if ("error" in result) {
-          toast.show({
-            variant: "error",
-            title: result.error.message,
-          });
+          setSaveError(result.error.message);
           return;
         }
-        toast.show({ variant: "success", title: "Otpad je zabeležen" });
+        toast("Otpad je zabeležen.", "success");
       }
       onSaved?.();
       handleClose();
     } catch (error) {
-      toast.show({
-        variant: "error",
-        title: error instanceof Error ? error.message : "Greška pri čuvanju",
-      });
+      setSaveError(error instanceof Error ? error.message : "Greška pri čuvanju.");
     } finally {
       setSaving(false);
     }
@@ -254,7 +244,9 @@ export function WasteEntryForm({
     >
       {step === 1 ? (
         <div className="grid gap-3">
+          <label htmlFor={`${id}-search`} className="text-sm text-text-2">Pretraži sastojak ili recept</label>
           <input
+            id={`${id}-search`}
             type="search"
             value={query}
             onFocus={() => void ensureOfflinePool()}
@@ -305,37 +297,44 @@ export function WasteEntryForm({
                 key={chip.label}
                 type="button"
                 className="rounded-full bg-surface-2 px-3 py-1 text-ui-xs font-semibold text-text"
-                onClick={() => setQtyText(String(chip.value).replace(".", ","))}
+                onClick={() => updateQuantity(String(chip.value).replace(".", ","))}
               >
                 {chip.label}
               </button>
             ))}
           </div>
+          <label htmlFor={`${id}-quantity`} className="text-sm text-text-2">Količina</label>
           <input
+            id={`${id}-quantity`}
             value={qtyText}
-            onChange={(event) => setQtyText(event.target.value)}
+            onChange={(event) => updateQuantity(event.target.value)}
             inputMode="decimal"
             className="input w-full text-center text-2xl tabular-nums"
             placeholder="0"
-            aria-label="Količina"
+            aria-invalid={quantityError || undefined}
+            aria-describedby={quantityError ? `${id}-quantity-error` : undefined}
           />
+          {quantityError ? <p id={`${id}-quantity-error`} role="alert" className="text-sm text-danger-text">Unesite količinu veću od nule.</p> : null}
           <NumericKeypad
             onKey={(key) =>
-              setQtyText((prev) => (prev + key).replace(/^0+(?=\d)/, ""))
+              updateQuantity((prev) => (prev + key).replace(/^0+(?=\d)/, ""))
             }
-            onBackspace={() => setQtyText((prev) => prev.slice(0, -1))}
-            onClear={() => setQtyText("")}
+            onBackspace={() => updateQuantity((prev) => prev.slice(0, -1))}
+            onClear={() => updateQuantity("")}
             decimalChar=","
           />
-          <div className="flex flex-wrap gap-2">
+          <fieldset>
+            <legend className="mb-2 text-sm text-text-2">Razlog otpisa</legend>
+            <div className="flex flex-wrap gap-2">
             {WASTE_REASONS.map((value) => (
               <button
                 key={value}
                 type="button"
+                aria-pressed={reason === value}
                 className={cn(
-                  "rounded-full px-3 py-1 text-ui-xs font-semibold",
+                  "focus-ring min-h-11 rounded-full px-3 py-2 text-ui-xs font-semibold outline-none",
                   reason === value
-                    ? "bg-accent text-white"
+                    ? "bg-accent text-text-on-accent"
                     : "bg-surface-2 text-text",
                 )}
                 onClick={() => setReason(value)}
@@ -343,10 +342,12 @@ export function WasteEntryForm({
                 {REASON_LABEL[value]}
               </button>
             ))}
-          </div>
+            </div>
+          </fieldset>
           {canAdjustStock && subject?.kind === "ingredient" && online ? (
-            <label className="flex items-center gap-2 text-sm text-text-2">
+            <label htmlFor={`${id}-stock`} className="flex items-center gap-2 text-sm text-text-2">
               <input
+                id={`${id}-stock`}
                 type="checkbox"
                 checked={adjustStock}
                 onChange={(event) => setAdjustStock(event.target.checked)}
@@ -354,13 +355,16 @@ export function WasteEntryForm({
               Skini i sa zaliha
             </label>
           ) : null}
+          <label htmlFor={`${id}-note`} className="text-sm text-text-2">Napomena (opciono)</label>
           <textarea
+            id={`${id}-note`}
             value={note}
             onChange={(event) => setNote(event.target.value.slice(0, 500))}
             rows={2}
             className="input w-full"
             placeholder="Napomena (opciono)"
           />
+          {saveError ? <p role="alert" className="text-sm text-danger-text">{saveError}</p> : null}
           <button
             type="button"
             className="text-ui-xs font-semibold text-accent"

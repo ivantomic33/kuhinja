@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { memo, startTransition, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Info, Plus, Search } from "lucide-react";
 import {
@@ -68,6 +68,7 @@ export function RecipesWorkspace({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const searchId = useId();
   const hasQuery = Boolean(query.trim());
   const [sort, setSort] = useState<DataTableSort>();
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
@@ -165,7 +166,7 @@ export function RecipesWorkspace({
           <div className="flex flex-wrap items-center gap-2 md:flex-nowrap md:justify-end">
             <button
               type="button"
-              className="icon-btn size-11"
+              className="icon-btn focus-ring size-11"
               aria-label={`Food cost: ${recipe.name}`}
               aria-haspopup="dialog"
               onClick={openRecipe}
@@ -233,22 +234,25 @@ export function RecipesWorkspace({
           bodyClassName="min-w-0"
           header={
             <div className="flex w-full min-w-0 flex-col gap-3">
-              <label className="field-input w-full min-w-0 max-w-[480px] max-[900px]:max-w-none">
-                <Search className="size-4" aria-hidden="true" />
-                <span className="sr-only">{sr.common.search}</span>
-                <input
-                  ref={searchRef}
-                  type="search"
-                  onChange={(event) => {
-                    const value = event.currentTarget.value;
-                    startTransition(() => {
-                      setQuery(value);
-                      goToPage(0);
-                    });
-                  }}
-                  placeholder="Pretraži recepte..."
-                />
-              </label>
+              <div className="w-full min-w-0 max-w-[480px] max-[900px]:max-w-none">
+                <label htmlFor={searchId} className="field-label">Pretraži recepte</label>
+                <div className="field-input">
+                  <Search className="size-4" aria-hidden="true" />
+                  <input
+                    id={searchId}
+                    ref={searchRef}
+                    type="search"
+                    onChange={(event) => {
+                      const value = event.currentTarget.value;
+                      startTransition(() => {
+                        setQuery(value);
+                        goToPage(0);
+                      });
+                    }}
+                    placeholder="Pretraži recepte..."
+                  />
+                </div>
+              </div>
               <WorkspacePagination page={page} pageCount={pageCount} goToPage={goToPage} />
             </div>
           }
@@ -267,7 +271,8 @@ export function RecipesWorkspace({
             <EmptyState
               icon={<BookOpen className="size-7" aria-hidden="true" />}
               title={hasQuery ? sr.listStates.noResults : sr.listStates.recipes.empty}
-              actionLabel={hasQuery ? sr.listStates.clearSearch : sr.create.recipe.add}
+              description={hasQuery ? undefined : sr.listStates.recipes.emptyDescription}
+              actionLabel={hasQuery ? sr.listStates.clearSearch : sr.listStates.recipes.emptyAction}
               onAction={hasQuery ? () => {
                 setQuery("");
                 goToPage(0);

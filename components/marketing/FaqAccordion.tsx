@@ -2,16 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
-import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
-
-const FAQS = [
-  { q: sr.marketing.faq1Q, a: sr.marketing.faq1A },
-  { q: sr.marketing.faq2Q, a: sr.marketing.faq2A },
-  { q: sr.marketing.faq3Q, a: sr.marketing.faq3A },
-  { q: sr.marketing.faq4Q, a: sr.marketing.faq4A },
-  { q: sr.marketing.faq5Q, a: sr.marketing.faq5A },
-] as const;
 
 type FaqItem = {
   q: string;
@@ -19,14 +10,14 @@ type FaqItem = {
 };
 
 type FaqAccordionProps = {
-  items?: readonly FaqItem[];
-  title?: string;
+  items: readonly FaqItem[];
+  title: string;
   initiallyOpen?: boolean;
 };
 
 export function FaqAccordion({
-  items = FAQS,
-  title = sr.marketing.faqTitle,
+  items,
+  title,
   initiallyOpen = true,
 }: FaqAccordionProps) {
   const baseId = useId();

@@ -2,10 +2,8 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
-import {
-  PLAN_QUERY_KEY,
-  type PlanQueryResult,
-} from "@/lib/hooks/usePlan";
+import type { PlanQueryResult } from "@/lib/hooks/usePlan";
+import { queryKeys } from "@/lib/query/keys";
 
 type PlanBootstrapProps = {
   initial: PlanQueryResult;
@@ -21,7 +19,7 @@ export function PlanBootstrap({ initial }: PlanBootstrapProps) {
 
   if (!seeded.current) {
     seeded.current = true;
-    queryClient.setQueryData(PLAN_QUERY_KEY, initial);
+    queryClient.setQueryData(queryKeys.plan, initial);
   }
 
   return null;

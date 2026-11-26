@@ -8,21 +8,25 @@ import TermsPage, { metadata as terms } from "@/app/(legal)/pravila-koriscenja/p
 import PrivacyPage, { metadata as privacy } from "@/app/(legal)/privatnost/page";
 import RefundPage, { metadata as refund } from "@/app/(legal)/povracaj-novca/page";
 import { metadata as home } from "@/app/(marketing)/page";
+import { metadata as kakoPoceti } from "@/app/(marketing)/kako-poceti/page";
 import FaqPage, { metadata as faq } from "@/app/faq/page";
 import { metadata as premium } from "@/app/premium/page";
 import { metadata as login } from "@/app/(auth)/login/page";
 import { metadata as register } from "@/app/(auth)/register/page";
+import { metadata as resetPassword } from "@/app/(auth)/reset-password/page";
 import { metadata as sharedSchedule } from "@/app/r/[token]/page";
+import { metadata as appShell } from "@/app/(app)/layout";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { FAQ_ITEMS } from "@/content/faq";
-import { getSiteUrl } from "./site";
+import { DEFAULT_DESCRIPTION, getSiteUrl, SITE_NAME } from "./site";
 
 const origin = "https://treuplate.example";
 const pages = [
   ["/", home],
   ["/premium", premium],
+  ["/kako-poceti", kakoPoceti],
   ["/faq", faq],
   ["/pravila-koriscenja", terms],
   ["/privatnost", privacy],
@@ -32,15 +36,27 @@ const pages = [
 beforeEach(() => vi.stubEnv("NEXT_PUBLIC_SITE_URL", origin));
 afterEach(() => vi.unstubAllEnvs());
 
-it("requires an absolute HTTP(S) origin without the trailing slash", () => {
+it("resolves SITE_URL without throwing and falls back to localhost", () => {
   expect(getSiteUrl()).toBe(origin);
-  for (const value of [undefined, "", "treuplate.example", origin + "/", origin + "/?x=1", origin + "/faq", "ftp://treuplate.example", "https://user@treuplate.example"]) {
+  expect(SITE_NAME).toBe("TreuPlate");
+  expect(DEFAULT_DESCRIPTION.toLowerCase()).toMatch(/sastojk/);
+  expect(DEFAULT_DESCRIPTION.toLowerCase()).toMatch(/recept/);
+  expect(DEFAULT_DESCRIPTION.toLowerCase()).toMatch(/nabavn/);
+  expect(DEFAULT_DESCRIPTION.toLowerCase()).toMatch(/zal/);
+  expect(DEFAULT_DESCRIPTION.toLowerCase()).toMatch(/smen/);
+  expect(DEFAULT_DESCRIPTION.toLowerCase()).toMatch(/trošak porcije|trosak porcije/);
+
+  for (const value of [undefined, "", "treuplate.example", origin + "/faq", "ftp://treuplate.example", "https://user@treuplate.example"]) {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", value);
-    expect(getSiteUrl).toThrow(/NEXT_PUBLIC_SITE_URL/);
+    expect(getSiteUrl()).toBe("http://localhost:3000");
   }
+
+  vi.stubEnv("NEXT_PUBLIC_SITE_URL", origin + "/");
+  expect(getSiteUrl()).toBe(origin);
 });
 
 it("gives each public page distinct metadata and a self-canonical URL", () => {
+  const corePaths = new Set(["/", "/premium", "/kako-poceti"]);
   const titles = new Set<string>();
   const descriptions = new Set<string>();
   for (const [path, metadata] of pages) {
@@ -50,6 +66,9 @@ it("gives each public page distinct metadata and a self-canonical URL", () => {
     titles.add(title);
     expect(metadata.description).toBeTruthy();
     expect(metadata.description!.length).toBeLessThanOrEqual(160);
+    if (corePaths.has(path)) {
+      expect(metadata.description!.length).toBeGreaterThanOrEqual(120);
+    }
     descriptions.add(metadata.description!);
     expect(metadata.alternates?.canonical).toBe(path);
     expect(metadata.openGraph).toMatchObject({ type: "website", locale: "sr_RS", siteName: "TreuPlate", url: path, title, description: metadata.description });
@@ -59,16 +78,34 @@ it("gives each public page distinct metadata and a self-canonical URL", () => {
   expect(descriptions.size).toBe(pages.length);
 });
 
-it("includes only indexable public routes in the sitemap and permits crawling noindex pages", async () => {
+it("lists core public routes in the sitemap and blocks private paths in robots", async () => {
   const entries = sitemap();
-  expect(entries.map(({ url }) => new URL(url).pathname).sort()).toEqual(pages.map(([path]) => path).sort());
-  for (const { url, lastModified } of entries) {
+  const paths = entries.map(({ url }) => {
+    const pathname = new URL(url).pathname;
+    return pathname === "" ? "/" : pathname;
+  }).sort();
+  expect(paths).toEqual(["/", "/kako-poceti", "/premium"].sort());
+  for (const { url, lastModified, changeFrequency, priority } of entries) {
     expect(new URL(url).origin).toBe(origin);
-    expect(lastModified).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(lastModified).toBeTruthy();
+    expect(changeFrequency).toBeTruthy();
+    expect(typeof priority).toBe("number");
   }
-  expect(robots()).toEqual({ rules: { userAgent: "*", allow: "/" }, sitemap: origin + "/sitemap.xml" });
-  for (const metadata of [login, register, sharedSchedule]) {
-    expect(metadata.robots).toMatchObject({ index: false });
+  const homeEntry = entries.find((entry) => {
+    const pathname = new URL(entry.url).pathname;
+    return pathname === "/" || pathname === "";
+  });
+  expect(homeEntry?.priority).toBe(1);
+  expect(robots()).toEqual({
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/api/", "/auth/", "/dashboard", "/ingredients", "/recipes", "/settings"],
+    },
+    sitemap: origin + "/sitemap.xml",
+  });
+  for (const metadata of [login, register, resetPassword, sharedSchedule, appShell]) {
+    expect(metadata.robots).toMatchObject({ index: false, follow: false });
   }
   const config = await nextConfig(PHASE_DEVELOPMENT_SERVER);
   const headers = await config.headers?.();

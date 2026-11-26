@@ -1,6 +1,4 @@
-"use client";
-
-import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   BarChart3,
   CreditCard,
@@ -11,9 +9,9 @@ import {
 } from "lucide-react";
 import { PricingTiers } from "@/components/billing/PricingTiers";
 import { FaqAccordion } from "@/components/marketing/FaqAccordion";
-import type { Tier } from "@/lib/billing/tiers";
+import { tryLoadTiers, type Tier } from "@/lib/billing/tiers";
+import { getVisitorCountry } from "@/lib/billing/visitor-country";
 import { APP_NAME } from "@/lib/config/app";
-import { usePlan } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
 
 const FEATURE_STRIP = [
@@ -34,20 +32,34 @@ const FEATURE_STRIP = [
   },
 ] as const;
 
+export async function PremiumOffer({ guest, accountNotice }: { guest?: boolean; accountNotice?: ReactNode }) {
+  const tierResult = tryLoadTiers();
+
+  return (
+    <PremiumPage
+      guest={guest}
+      tiers={"tiers" in tierResult ? tierResult.tiers : null}
+      tiersError={"error" in tierResult ? tierResult.error : null}
+      country={await getVisitorCountry()}
+      accountNotice={accountNotice}
+    />
+  );
+}
+
 export default function PremiumPage({
   guest = false,
   tiers,
   tiersError,
   country,
+  accountNotice,
 }: {
   guest?: boolean;
   tiers: Tier[] | null;
   tiersError?: string | null;
   /** ISO country from the request edge. Undefined → Paddle IP detect. */
   country?: string;
+  accountNotice?: ReactNode;
 }) {
-  const { isFree, isLoading } = usePlan(!guest);
-
   return (
     <div className="flex min-w-0 flex-col gap-10 pb-8">
       <header className="prem-hero mx-auto mt-2 max-w-[820px] text-center">
@@ -69,20 +81,15 @@ export default function PremiumPage({
           tiers={tiers}
           country={country}
           guest={guest}
+          signInLabel={sr.auth.signInForPlan}
+          checkoutErrorLabel={sr.billing.checkoutError}
           // Guests must sign in first so checkout can bind the Paddle customer
           // and authorize the transaction before the webhook grants the plan.
           requireAuth={guest}
         />
       )}
 
-      {!guest && !isLoading && !isFree ? (
-        <p className="mx-auto text-center text-ui-sm text-text-2">
-          Već imate plaćeni plan.{" "}
-          <Link href="/premium/upravljanje" className="font-semibold text-accent underline">
-            {sr.settings.manageBilling}
-          </Link>
-        </p>
-      ) : null}
+      {accountNotice}
 
       <div className="trust mx-auto flex max-w-[960px] flex-wrap items-center justify-center gap-7 text-ui-sm text-text-2">
         <span className="inline-flex items-center gap-2">

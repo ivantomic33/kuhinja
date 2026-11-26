@@ -20,17 +20,29 @@ export default function MarketingLayout({
             {sr.app.name}
           </Link>
           <nav className="flex items-center gap-2 sm:gap-5" aria-label="Glavna navigacija">
-            <Link href="/#features" className="focus-ring hidden min-h-11 min-w-11 items-center rounded-md text-sm text-muted hover:text-text md:inline-flex">Funkcije</Link>
-            <Link href="/#cenovnik" className="focus-ring hidden min-h-11 min-w-11 items-center rounded-md text-sm text-muted hover:text-text md:inline-flex">{sr.marketing.landing.pricing}</Link>
+            <Link
+              href="/#features"
+              className="focus-ring hidden min-h-11 min-w-11 items-center rounded-md text-sm text-muted hover:text-text md:inline-flex md:w-[50px]"
+            >
+              Funkcije
+            </Link>
+            <Link
+              href="/kako-poceti"
+              className="focus-ring hidden min-h-11 min-w-11 items-center rounded-md text-sm text-muted hover:text-text md:inline-flex md:w-[78px]"
+            >
+              {sr.marketing.landing.footerHow}
+            </Link>
             <Link
               href="/login"
-              className="focus-ring flex min-h-11 min-w-11 items-center rounded-[var(--radius-input)] px-2 text-sm text-muted hover:text-text"
+              prefetch={false}
+              className="focus-ring flex min-h-11 min-w-11 items-center rounded-[var(--radius-input)] px-2 text-sm text-muted hover:text-text md:w-[62px]"
             >
               {sr.marketing.navLogin}
             </Link>
             <Link
               href="/register"
-              className="focus-ring flex min-h-11 min-w-11 items-center rounded-[var(--radius-input)] bg-accent px-3 text-sm font-semibold text-accent-ink hover:bg-accent-hover"
+              prefetch={false}
+              className="focus-ring flex min-h-11 min-w-11 items-center rounded-[var(--radius-input)] bg-accent px-3 text-sm font-semibold text-accent-ink hover:bg-accent-hover md:w-[108px]"
             >
               {sr.marketing.navRegister}
             </Link>

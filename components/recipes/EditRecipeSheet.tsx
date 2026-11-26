@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthField } from "@/components/auth/AuthField";
 import { usePlanUiOptional } from "@/components/plan/PlanProvider";
@@ -53,6 +53,7 @@ export function EditRecipeSheet({
   onUpdated,
 }: EditRecipeSheetProps) {
   const router = useRouter();
+  const formErrorId = useId();
   const online = useOnline(true);
   const { handleError } = usePlanUiOptional();
 
@@ -229,7 +230,7 @@ export function EditRecipeSheet({
 
         {formError ? (
           <div role="alert" className="grid gap-2 text-sm text-danger">
-            <p>{formError}</p>
+            <p id={formErrorId}>{formError}</p>
             {conflict ? (
               <PrimaryButton
                 type="button"
@@ -243,7 +244,7 @@ export function EditRecipeSheet({
           </div>
         ) : null}
 
-        <PrimaryButton type="submit" fullWidth loading={loading} disabled={conflict}>
+        <PrimaryButton type="submit" fullWidth loading={loading} disabled={conflict} aria-describedby={conflict ? formErrorId : undefined}>
           {sr.create.recipe.editSubmit}
         </PrimaryButton>
       </form>

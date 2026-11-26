@@ -273,6 +273,11 @@ export default async function DashboardPage() {
     templates: templateRows,
     initialTemplateCount: templatesRes.error ? null : templatesRes.count ?? templateRows.length,
     loadError: Boolean(recipes.error || ingredientsRes.error || templatesRes.error),
+    onboarding: {
+      hasIngredient: ingredientRows.length > 0,
+      hasPricedIngredient: ingredientRows.some((row) => row.price > 0),
+      hasRecipe: recipes.rows.length > 0,
+    },
   };
   return (
     <Hydrate state={dehydrateQuery(queryKeys.dashboard(venueId), data)}>

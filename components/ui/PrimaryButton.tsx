@@ -60,24 +60,13 @@ export function PrimaryButton({
         className
       )}
     >
-      <span
-        className={cn(
-          "inline-flex items-center justify-center gap-2",
-          loading && "opacity-0"
-        )}
-      >
-        {leftIcon ? <span className="shrink-0">{leftIcon}</span> : null}
-        <span>{children}</span>
-        {rightIcon ? <span className="shrink-0">{rightIcon}</span> : null}
+      <span className="inline-flex items-center justify-center gap-2">
+        {loading ? (
+          <Loader2 className="shrink-0 motion-safe:animate-spin" aria-hidden="true" />
+        ) : leftIcon ? <span className="shrink-0">{leftIcon}</span> : null}
+        <span>{loading ? "Sačekajte…" : children}</span>
+        {!loading && rightIcon ? <span className="shrink-0">{rightIcon}</span> : null}
       </span>
-      {loading && (
-        <span
-          className="pointer-events-none absolute inset-0 flex items-center justify-center"
-          aria-hidden="true"
-        >
-          <Loader2 className="motion-safe:animate-spin" />
-        </span>
-      )}
     </button>
   );
 }

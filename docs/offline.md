@@ -1,5 +1,7 @@
 # Rad bez mreže i sinhronizacija
 
+- **Stranice i statički fajlovi.** Service worker prvo traži javne informativne stranice preko mreže. Kada mreža nije dostupna, prikazuje sačuvanu javnu stranicu ili `/~offline`. Stranice naloga, `/premium`, naplata, deljeni linkovi i API odgovori idu samo preko mreže. Verzije statičkih fajlova sa hešom u nazivu, uključujući Inter, mogu se koristiti iz keša. [Service worker](../app/sw.ts)
+
 - **Keširani prikaz.** IndexedDB čuva skorašnje recepte, sastojke i šablone kontrolnih lista. Keširana cena prikazuje poslednji sačuvani snimak. [Keš](../lib/offline/cache.ts)
 - **Kontrolne liste.** Klik na stavku upisuje delta operaciju sa ID-jem smene, ID-jem stavke i novom oznakom. Supabase upisuje po ključu `(run_id, item_id)`. Poslednji uspešno primenjen upis određuje oznaku te stavke. Završetak smene čuva status i vreme završetka. [Sinhronizacija](../lib/offline/checklist-sync.ts)
 - **Ponovno slanje.** Aplikacija šalje upise pri montiranju i povratku mreže. Svaki zapis ima `attempts` i `last_error`. Replay nastavlja isti prolaz i nakon neuspeha. Ako uspe noviji upis iste stavke, raniji retry stavke se uklanja iz reda. Peti neuspeh premešta zapis u `dead_letter`, a zaglavlje odmah prikazuje upozorenje, dostupno i bez mreže. Ako drugi uređaj već ima aktivnu smenu za isti šablon i nalog, lokalni ID se povezuje sa njenim serverskim ID-jem. [Red upisa](../lib/offline/idb.ts) · [Status sinhronizacije](../components/pwa/OfflineIndicator.tsx)

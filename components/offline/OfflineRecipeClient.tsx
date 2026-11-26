@@ -106,7 +106,12 @@ export function OfflineRecipeClient({
   if (hasServerData) return null;
 
   if (state.status === "loading" || state.status === "idle") {
-    return <p className="text-sm text-muted">{sr.common.loading}</p>;
+    return (
+      <>
+        <h1 className="sr-only">{sr.recipes.title}</h1>
+        <p role="status" className="text-sm text-muted">{sr.common.loading}</p>
+      </>
+    );
   }
 
   if (state.status === "missing") {
@@ -115,7 +120,7 @@ export function OfflineRecipeClient({
         {!online ? (
           <p className="text-sm text-muted">{sr.pwa.offline}</p>
         ) : null}
-        <p className="text-base text-text">{sr.recipes.notFound}</p>
+        <h1 className="text-base text-text">{sr.recipes.notFound}</h1>
         <Link href="/dashboard" className="text-sm text-accent">
           {sr.recipes.backToDashboard}
         </Link>

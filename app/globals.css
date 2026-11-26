@@ -361,6 +361,7 @@
 html {
   color-scheme: dark;
   scroll-padding-top: 88px;
+  scroll-padding-bottom: calc(var(--mobile-nav-offset, 0px) + var(--space-2));
 }
 
 body {
@@ -418,19 +419,17 @@ button:not(:disabled),
 }
 
 :focus-visible {
-  outline: none;
-  box-shadow: var(--focus);
-}
-
-button:focus-visible,
-a:focus-visible,
-.focus-ring:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px !important;
 }
 
 .focus-ring:focus-visible {
   box-shadow: 0 0 0 2px var(--ring-offset);
+}
+
+@keyframes dialog-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 input,
@@ -782,9 +781,9 @@ button.stock-tinted:hover {
 .data-table-check {
   position: sticky;
   left: 0;
-  width: var(--space-11);
-  min-width: var(--space-11);
-  max-width: var(--space-11);
+  width: var(--table-check-width);
+  min-width: var(--table-check-width);
+  max-width: var(--table-check-width);
 }
 
 .data-table-first {
@@ -794,7 +793,7 @@ button.stock-tinted:hover {
 
 .data-table-first-after-check {
   position: sticky;
-  left: var(--space-11);
+  left: var(--table-check-width);
 }
 
 .data-table thead :is(.data-table-check, .data-table-first, .data-table-first-after-check) {
@@ -1523,6 +1522,38 @@ button.attention-chip:hover {
   to { opacity: 1; translate: none; }
 }
 
+/* -------------------------------------------------------------------------- */
+/* Marketing landing — Kitchen Command motion (transform + opacity only)      */
+/* -------------------------------------------------------------------------- */
+
+.landing-gradient-text {
+  background-image: linear-gradient(
+    105deg,
+    var(--text) 0%,
+    var(--accent) 45%,
+    var(--accent-hover) 70%,
+    var(--text) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.landing-feature-card {
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.landing-feature-card:hover,
+.landing-feature-card:focus-visible {
+  transform: translateY(-4px);
+}
+
+.landing-feature-card:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--ring-offset);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1532,8 +1563,15 @@ button.attention-chip:hover {
     scroll-behavior: auto !important;
   }
 
-  [data-motion-surface] {
+  [data-motion-surface],
+  .landing-feature-card {
     opacity: 1 !important;
     transform: none !important;
+  }
+
+  .landing-gradient-text {
+    background-image: none;
+    color: var(--accent);
+    -webkit-text-fill-color: var(--accent);
   }
 }

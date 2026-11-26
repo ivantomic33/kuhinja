@@ -4,13 +4,17 @@ import { APP_NAME } from "@/lib/config/app";
 import { shiftColors, type getSchedulePreview } from "@/lib/schedule/exports-preview";
 import "./schedule-export.css";
 
-export function SchedulePreview({ preview, titleId }: { preview: ReturnType<typeof getSchedulePreview>; titleId: string }) {
+export function SchedulePreview({ preview, titleId, titleAs: Title = "h3" }: {
+  preview: ReturnType<typeof getSchedulePreview>;
+  titleId: string;
+  titleAs?: "h1" | "h3";
+}) {
   return (
     <div className="r-share-prev">
       <div className="sp-head">
         <LogoMark className="size-9" />
         <div className="sp-heading">
-          <strong id={titleId}>{preview.title}</strong>
+          <Title className="sp-title" id={titleId}>{preview.title}</Title>
           <span>{preview.week}</span>
         </div>
         <span className="sp-brand">{APP_NAME}</span>

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: sr.auth.signUp,
   description: sr.auth.registerMetaDescription,
   alternates: { canonical: "/register" },
-  robots: { index: false },
+  robots: { index: false, follow: false },
 };
 
 export default async function RegisterPage({ searchParams }: {

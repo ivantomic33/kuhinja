@@ -19,7 +19,7 @@ vi.mock("@/components/ui/BottomSheet", () => ({
     open ? createElement("div", { role: "dialog", "aria-label": title }, children) : null,
 }));
 
-const kitchenRoutes = ["/dashboard", "/recipes", "/ingredients", "/raspored", "/shift", "/trebovanje", "/scaler"];
+const kitchenRoutes = ["/dashboard", "/recipes", "/ingredients", "/raspored", "/shift", "/trebovanje", "/purchase-orders", "/scaler"];
 const accountRoutes = ["/premium", "/settings"];
 const activeHref = (html: string) =>
   html.match(/<a\b[^>]*aria-current="page"[^>]*>/g)?.map((tag) => tag.match(/href="([^"]+)"/)?.[1]) ?? [];

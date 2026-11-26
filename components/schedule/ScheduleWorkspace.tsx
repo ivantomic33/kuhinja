@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AlertTriangle, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, CreditCard, FileText, Lock, MapPin, MoreHorizontal, Percent, Plus, Printer, Send, Share2, UserRound, Users } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { BentoCard } from "@/components/ui/BentoCard";
@@ -98,6 +98,7 @@ export function ScheduleWorkspace({ data }: { data: ScheduleWeek }) {
   const { toast } = useToast();
   const [preview, setPreview] = useState(false);
   const [previewEmployeeId, setPreviewEmployeeId] = useState("");
+  const previewEmployeeFieldId = useId();
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [focus, setFocus] = useState<{ day: number; employeeId?: string; gap?: "j" | "p"; stamp: number }>();
   const [busy, setBusy] = useState(false);
@@ -244,7 +245,7 @@ export function ScheduleWorkspace({ data }: { data: ScheduleWeek }) {
 
       {!analysis ? <>
         {weekNav}
-        {preview && data.mode === "owner" && data.employees.length > 1 ? <label className="r-preview-select">Zaposleni <select className="field-control" value={employee?.id} onChange={(event) => setPreviewEmployeeId(event.target.value)}>
+        {preview && data.mode === "owner" && data.employees.length > 1 ? <label htmlFor={previewEmployeeFieldId} className="r-preview-select">Zaposleni <select id={previewEmployeeFieldId} className="field-control" value={employee?.id} onChange={(event) => setPreviewEmployeeId(event.target.value)}>
           {data.employees.map((person) => <option key={person.id} value={person.id}>{person.full_name}</option>)}
         </select></label> : null}
         <MySchedule key={`${employee?.id}:${data.monday}`} data={data.mode === "employee" ? data : { ...data, requests: data.requests.filter((item) => item.employee_id === employee?.id) }} employee={employee} onRequest={async (action) => { await mutate(action); toast("Zahtev poslat šefu"); }} />
@@ -311,6 +312,7 @@ function ScheduleSetupSheet({ dialog, pro, team, onClose, onSave }: {
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const fieldId = useId();
   const employee = dialog.type === "employee" ? dialog.employee : undefined;
   const title = dialog.type === "location" ? "Dodaj lokal" : employee ? "Izmeni zaposlenog" : "Dodaj zaposlenog";
 
@@ -330,14 +332,14 @@ function ScheduleSetupSheet({ dialog, pro, team, onClose, onSave }: {
   }
 
   return <BottomSheet open title={title} onClose={() => { if (!saving) onClose(); }}>
-    <form className="r-form" onSubmit={(event) => void submit(event)}>
-      <label>{dialog.type === "location" ? "Naziv lokala" : "Ime i prezime"}<input className="field-control" name="name" required maxLength={120} defaultValue={employee?.full_name} /></label>
+    <form className="r-form" aria-describedby={error ? `${fieldId}-error` : undefined} onSubmit={(event) => void submit(event)}>
+      <label htmlFor={`${fieldId}-name`}>{dialog.type === "location" ? "Naziv lokala" : "Ime i prezime"}<input id={`${fieldId}-name`} className="field-control" name="name" required maxLength={120} defaultValue={employee?.full_name} /></label>
       {dialog.type === "employee" ? <>
-        <label>Uloga<input className="field-control" name="role" required maxLength={100} defaultValue={employee?.role} /></label>
-        {pro ? <label>Satnica (din/h)<input className="field-control" name="rate" type="number" min="0" max="99999999" step="0.01" defaultValue={employee?.hourly_rate_rsd ?? undefined} /></label> : null}
-        {team ? <label>Imejl za prijavu<input className="field-control" name="email" type="email" maxLength={254} defaultValue={employee?.login_email ?? undefined} /></label> : null}
+        <label htmlFor={`${fieldId}-role`}>Uloga<input id={`${fieldId}-role`} className="field-control" name="role" required maxLength={100} defaultValue={employee?.role} /></label>
+        {pro ? <label htmlFor={`${fieldId}-rate`}>Satnica (din/h)<input id={`${fieldId}-rate`} className="field-control" name="rate" type="number" min="0" max="99999999" step="0.01" defaultValue={employee?.hourly_rate_rsd ?? undefined} /></label> : null}
+        {team ? <label htmlFor={`${fieldId}-email`}>Imejl za prijavu<input id={`${fieldId}-email`} className="field-control" name="email" type="email" maxLength={254} defaultValue={employee?.login_email ?? undefined} /></label> : null}
       </> : null}
-      {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
+      {error ? <p id={`${fieldId}-error`} role="alert" className="text-sm text-danger">{error}</p> : null}
       <div className="r-form-actions"><PrimaryButton variant="ghost" disabled={saving} onClick={onClose}>Otkaži</PrimaryButton><PrimaryButton type="submit" loading={saving}>Sačuvaj</PrimaryButton></div>
     </form>
   </BottomSheet>;

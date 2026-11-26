@@ -16,6 +16,7 @@ import type { createClient } from "@/lib/supabase/client";
 export type { RunSnapshot } from "@/lib/shift/run";
 
 type Client = ReturnType<typeof createClient>;
+type ChecklistSyncOp = Exclude<SyncQueueOp, { kind: "waste_entry" }>;
 
 function isOnline() {
   return typeof navigator === "undefined" || navigator.onLine;
@@ -45,11 +46,11 @@ async function ensureRun(supabase: Client, run: ChecklistRunStart) {
   return data.id;
 }
 
-function opRunId(op: SyncQueueOp) {
+function opRunId(op: ChecklistSyncOp) {
   return op.kind === "checklist_item_upsert" ? op.payload.run_id : op.payload.id;
 }
 
-async function pushOp(supabase: Client, op: SyncQueueOp, runId: string) {
+async function pushOp(supabase: Client, op: ChecklistSyncOp, runId: string) {
   if (op.kind === "checklist_item_upsert") {
     const { item_id, checked, ensure_run } = op.payload;
     if (ensure_run) {
@@ -87,7 +88,7 @@ async function pushOp(supabase: Client, op: SyncQueueOp, runId: string) {
 
 async function flushOnce(): Promise<number> {
   if (!isOnline()) return 0;
-  const ops = await listSyncOps();
+  const ops = (await listSyncOps()).filter((op) => op.kind !== "waste_entry");
   if (!ops.length) return 0;
 
   const { createClient } = await import("@/lib/supabase/client");
@@ -148,6 +149,7 @@ export function flushChecklistSyncQueue(): Promise<number> {
 export async function hasPendingChecklistWrites(id: string): Promise<boolean> {
   const runId = await getChecklistRunAlias(id);
   for (const op of await listSyncOps()) {
+    if (op.kind === "waste_entry") continue;
     if (await getChecklistRunAlias(opRunId(op)) === runId) return true;
   }
   return false;

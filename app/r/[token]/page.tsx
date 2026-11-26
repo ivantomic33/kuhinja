@@ -20,8 +20,7 @@ export default async function PublicSchedulePage({ params }: { params: Promise<{
 
   return (
     <main className="r-public">
-      <h1 className="sr-only">Raspored</h1>
-      <SchedulePreview preview={getSchedulePreview(schedule)} titleId="schedule-preview-title" />
+      <SchedulePreview preview={getSchedulePreview(schedule)} titleId="schedule-preview-title" titleAs="h1" />
     </main>
   );
 }

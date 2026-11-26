@@ -46,10 +46,14 @@ export const sr = {
     openSettings: "Otvori podešavanja",
     ingredients: {
       empty: "Još nema sastojaka.",
+      emptyDescription: "Ovde unosiš namirnice, jedinice i nabavne cene.",
+      emptyAction: "Dodaj prvi sastojak",
       error: "Sastojci nisu učitani.",
     },
     recipes: {
       empty: "Još nema recepata.",
+      emptyDescription: "Ovde slažeš jela od sastojaka i vidiš trošak porcije.",
+      emptyAction: "Napravi prvi recept",
       error: "Recepti nisu učitani.",
       description: "Food cost i skaliranje serija.",
     },
@@ -291,6 +295,139 @@ export const sr = {
       unlock: "Pogledaj planove",
       suggestPrice: "Predlog net cene:",
       unread: "Nepročitana upozorenja",
+    },
+  },
+  onboarding: {
+    fieldHelp: {
+      ariaLabel: "Objašnjenje",
+      unit: "Izaberi jedinicu u kojoj kupuješ sastojak, na primer kilogram ili litar.",
+      waste: "Deo sastojka koji se baci pri čišćenju ili pripremi. Upiši procenat, na primer 10 za 10 %.",
+      price: "Cena koju plaćaš dobavljaču za izabranu jedinicu.",
+    },
+    checklist: {
+      title: "Prvi koraci",
+      progress: (done: number, total: number) => `Završeno ${done} od ${total}`,
+      dismissAria: "Sakrij prve korake",
+      doneSr: "(završeno)",
+      todoSr: "(nije završeno)",
+      steps: {
+        ingredient: {
+          title: "Dodaj sastojak",
+          hint: "Unesi barem jednu namirnicu koju koristiš u kuhinji.",
+        },
+        price: {
+          title: "Unesi nabavnu cenu",
+          hint: "Upiši cenu koju plaćaš dobavljaču za taj sastojak.",
+        },
+        recipe: {
+          title: "Napravi recept",
+          hint: "Složi jelo od sastojaka i sačuvaj broj porcija.",
+        },
+        cost: {
+          title: "Pročitaj trošak porcije",
+          hint: "Otvori recept i vidi koliko košta jedna porcija.",
+        },
+      },
+    },
+    guide: {
+      title: "Kako početi sa TreuPlate",
+      description:
+        "Pet kratkih koraka za kuhinju: napravi nalog, unesi sastojke i nabavne cene, sastavi recept, pročitaj trošak porcije, zatim vodi zalihe i smene.",
+      eyebrow: "Vodič za početak",
+      intro:
+        "TreuPlate pomaže kuhinji da vodi sastojke, recepte, zalihe i smene. Prati ove korake redom.",
+      primaryCta: "Počni besplatno",
+      secondaryCta: "Pogledaj pakete",
+      stepsTitle: "Pet koraka za početak",
+      steps: [
+        {
+          title: "Napravi nalog",
+          body: [
+            "Otvori registraciju i unesi e-poštu i lozinku.",
+            "Posle potvrde ulaziš u svoju kuhinju.",
+          ],
+          href: "/register",
+          linkLabel: "Idi na registraciju",
+        },
+        {
+          title: "Dodaj sastojke",
+          body: [
+            "Unesi namirnice koje kupuješ.",
+            "Za svaku dodaj jedinicu i nabavnu cenu.",
+          ],
+          href: "/ingredients",
+          linkLabel: "Otvori sastojke",
+        },
+        {
+          title: "Napravi recept",
+          body: [
+            "Složi jelo od sačuvanih sastojaka.",
+            "Upiši količine i broj porcija.",
+          ],
+          href: "/recipes",
+          linkLabel: "Otvori recepte",
+        },
+        {
+          title: "Pročitaj trošak porcije",
+          body: [
+            "U receptu vidiš koliko košta jedna porcija.",
+            "Broj se računa iz količina, cena i otpada.",
+          ],
+          href: "/recipes",
+          linkLabel: "Pogledaj trošak porcije",
+        },
+        {
+          title: "Vodi zalihe i smene",
+          body: [
+            "Prati koliko imaš na stanju i šta treba naručiti.",
+            "Šabloni smene pomažu ekipi pre servisa.",
+          ],
+          href: "/trebovanje",
+          linkLabel: "Otvori zalihe i trebovanje",
+        },
+      ],
+      glossaryTitle: "Kratak rečnik",
+      glossary: [
+        {
+          term: "Sastojak",
+          definition: "Namirnica koju kupuješ i koristiš u jelima, na primer meso ili brašno.",
+        },
+        {
+          term: "Nabavna cena",
+          definition: "Cena koju plaćaš dobavljaču za izabranu jedinicu sastojka.",
+        },
+        {
+          term: "Porcija",
+          definition: "Jedna servirana količina jela za gosta.",
+        },
+        {
+          term: "Trošak porcije",
+          definition: "Koliko te koštaju sastojci za jednu porciju jela.",
+        },
+        {
+          term: "Otpad",
+          definition: "Deo sastojka koji se baci pri čišćenju ili pripremi, izražen u procentima.",
+        },
+        {
+          term: "Skaliranje",
+          definition: "Preračun količina u receptu za drugi broj porcija.",
+        },
+        {
+          term: "Zaliha",
+          definition: "Količina sastojka koju trenutno imaš na stanju u lokalu.",
+        },
+        {
+          term: "Smena",
+          definition: "Radni period u kuhinji sa listom pripreme koju ekipa prati.",
+        },
+      ],
+      faqTitle: "Česta pitanja",
+      faqMore: "Više odgovora na",
+      faqLink: "stranici čestih pitanja",
+      footerNav: "Podnožje",
+      footerHome: "Početna",
+      footerPremium: "Premium",
+      footerRegister: "Registracija",
     },
   },
   ingredients: {
@@ -610,12 +747,78 @@ export const sr = {
   },
   marketing: {
     landing: {
-      heroTitle: "Tačan trošak svakog jela, bez tabela u Excelu.",
-      heroSubtitle: "TreuPlate vodi sastojke, recepte, nabavne cene, zalihe i smene u jednom alatu koji radi i bez interneta.",
-      trialCta: "Probajte 14 dana besplatno",
+      heroLabel: "Za profesionalne kuhinje",
+      heroTitle: "Znaj tačno koliko košta svaka porcija.",
+      heroSubtitle:
+        "Vodi sastojke, recepte, nabavne cene, zalihe i smene na jednom mestu. Kalkulator računa trošak porcije i skalira količine.",
+      primaryCta: "Započni besplatno",
+      secondaryCta: "Kako da počneš",
+      deviceLine: "Radi u pregledaču i na telefonu. Bez instalacije.",
+      trialCta: "Započni besplatno",
       plansCta: "Pogledajte pakete",
+      exampleBadge: "Primer",
+      exampleTitle: "Pileća supa · 4 porcije",
+      exampleAria: "Primer troška porcije za pileću supu",
+      exampleTotalLabel: "Trošak porcije",
+      exampleMath: "600 din ÷ 4 porcije",
+      examplePortion: "150 din",
       previewCaption: "Primer obračuna u TreuPlate-u",
-      previewAlt: "Recept za pileću supu sa troškom porcije od 200,00 dinara",
+      previewAlt: "Recept za pileću supu sa troškom porcije od 150 dinara",
+      featuresTitle: "Šta dobijate u kuhinji",
+      features: [
+        {
+          title: "Trošak porcije na jednom mestu",
+          body: "Kalkulator sabira nabavne cene i količine iz recepta. Uračunava i škart, pa vidite stvarni trošak porcije.",
+        },
+        {
+          title: "Recepti koji se sami skaliraju",
+          body: "Promenite broj porcija i količine se preračunaju odmah. Pogodno za veću seriju ili manju smenu.",
+        },
+        {
+          title: "Nabavne cene i zalihe",
+          body: "Pratite cene sastojaka i stanje na lageru. Vidite kada je nabavna cena porasla ili pala.",
+        },
+        {
+          title: "Smene i nedeljni raspored",
+          body: "Šabloni pripreme i raspored smena ostaju na jednom mestu. Ekipa vidi šta treba uraditi pre servisa.",
+        },
+      ],
+      howSteps: [
+        {
+          title: "Unesi sastojke",
+          body: "Dodajte naziv, jedinicu, nabavnu cenu i škart za svaki sastojak u lokalu.",
+        },
+        {
+          title: "Napravi recept",
+          body: "Složite sastojke i količine, pa sačuvajte broj porcija i prodajnu cenu.",
+        },
+        {
+          title: "Vidi trošak porcije",
+          body: "Kalkulator odmah pokaže ukupan trošak i cenu jedne porcije.",
+        },
+      ],
+      faq: [
+        {
+          question: "Moram li da znam nešto o tehnologiji?",
+          answer:
+            "Ne. TreuPlate je aplikacija za kuhinju: unosiš sastojke i recepte kao u običnom obrascu. Nije potrebno poznavanje Excela ni posebna instalacija.",
+        },
+        {
+          question: "Mogu li da koristim aplikaciju na telefonu?",
+          answer:
+            "Da. Radi u pregledaču na telefonu i tabletu. Na podržanim uređajima možeš je dodati i na početni ekran.",
+        },
+        {
+          question: "Čiji su podaci u aplikaciji?",
+          answer:
+            "Tvoji. Recepti, cene i zalihe vezani su za tvoj nalog i lokal. Javni linkovi postoje samo tamo gde ih sam uključiš, na primer deljeni raspored.",
+        },
+        {
+          question: "Koliko košta?",
+          answer:
+            "Postoji Free plan bez kartice, sa ograničenim brojem recepata i sastojaka. Plaćeni paketi i aktuelne cene su na stranici Premium.",
+        },
+      ],
       outcomesTitle: "Od nabavne cene do troška porcije",
       outcomes: [
         { title: "Nabavne cene se menjaju", body: "Recept može da ostane isti i kad sastojci poskupe." },
@@ -653,7 +856,10 @@ export const sr = {
       selectPlan: (name: string) => `Izaberite ${name}`,
       socialProof: "Koriste je kuhinje",
       faqLink: "Sva česta pitanja",
-      closingTitle: "Izračunajte trošak prvog recepta",
+      closingTitle: "Spremni da znate trošak svake porcije?",
+      closingBody: "Otvorite nalog i unesite prvi recept. Free plan ne traži karticu.",
+      footerHow: "Kako početi",
+      footerPremium: "Premium",
       checkoutTitle: (name: string) => `Nastavite uz paket ${name}`,
       checkoutContinue: "Nastavi na naplatu",
       trialEligibility: "Besplatni probni period važi za prvu pretplatu.",
@@ -661,13 +867,13 @@ export const sr = {
     },
     metaTitle: "Food cost kalkulator za restorane",
     metaDescription:
-      "Izračunajte trošak porcije, pratite nabavne cene i organizujte pripremu smene u TreuPlate-u.",
+      "TreuPlate prati sastojke, recepte, nabavne cene, zalihe i smene. Računajte trošak porcije, skalirajte recepte i organizujte pripremu kuhinje na jednom mestu.",
     ogAlt: `${APP_NAME} — food cost kalkulator za restorane`,
     ogTagline: "Recepti, troškovi i priprema smene za restorane.",
     navLogin: "Prijava",
     navRegister: "Registracija",
     howLabel: "Kako radi",
-    ctaRegister: "Počni besplatno",
+    ctaRegister: "Započni besplatno",
     faqTitle: "Česta pitanja",
     faq1Q: "Da li mogu bez kartice?",
     faq1A: "Da. Free plan ne traži karticu.",
@@ -722,6 +928,24 @@ export const sr = {
     toast: {
       dismiss: "Zatvori obaveštenje",
     },
+  },
+  allergens: {
+    lockedTitle: "Alergeni su deo Premium plana",
+    lockedBody: "Označavanje alergena i matrica recepta dostupni su na plaćenim paketima.",
+    viewPlans: "Pogledaj pakete",
+    saved: "Alergeni sačuvani",
+    ingredientTitle: "Alergeni sastojka",
+    ingredientHint: "Označite sadrži ili tragove za svaki alergen.",
+    contains: "Sadrži",
+    trace: "Tragovi",
+    recipeTitle: "Matrica alergena",
+    exportPdf: "Izvezi PDF",
+    exportFailed: "Izvoz alergena nije uspeo",
+    ingredientCol: "Sastojak",
+    recipeTotal: "Ukupno recept",
+    containsList: "Sadrži",
+    traceList: "Mogući tragovi",
+    none: "Nema",
   },
   notFound: {
     title: "Stranica nije pronađena",

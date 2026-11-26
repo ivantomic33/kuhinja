@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { PortalButton } from "@/components/billing/PortalButton";
@@ -9,7 +9,7 @@ import { changeBillingPlan } from "@/lib/billing/invoke";
 import type { BillingCatalog } from "@/lib/billing/catalog";
 import { PLANS, type BillingInterval, type PaidPlan } from "@/lib/billing/plans";
 import { ENTITLEMENTS_QUERY_KEY, useEntitlements } from "@/lib/hooks/useEntitlements";
-import { PLAN_QUERY_KEY } from "@/lib/hooks/usePlan";
+import { queryKeys } from "@/lib/query/keys";
 import { formatShortDate } from "@/lib/utils/format";
 import { z } from "zod";
 
@@ -31,6 +31,7 @@ type Props = {
 };
 
 export function ManageSubscription({ plan, periodEnd, trialing, cancelAtPeriodEnd, catalog }: Props) {
+  const formId = useId();
   const router = useRouter();
   const query = useQueryClient();
   const { data: entitlements } = useEntitlements();
@@ -43,10 +44,17 @@ export function ManageSubscription({ plan, periodEnd, trialing, cancelAtPeriodEn
   const [error, setError] = useState("");
   const canceling = cancellation ?? cancelAtPeriodEnd;
   const displayedPlan = entitlements?.plan ?? plan;
+  const changeUnavailable = canceling
+    ? "Poništite zakazano otkazivanje da biste promenili paket."
+    : !interval
+      ? "Izaberite period naplate da biste promenili paket."
+      : !catalog[target][interval]
+        ? "Izaberite period naplate za koji je cena dostupna."
+        : undefined;
 
   function refresh() {
     void query.invalidateQueries({ queryKey: ENTITLEMENTS_QUERY_KEY });
-    void query.invalidateQueries({ queryKey: PLAN_QUERY_KEY });
+    void query.invalidateQueries({ queryKey: queryKeys.plan });
     router.refresh();
   }
 
@@ -106,9 +114,10 @@ export function ManageSubscription({ plan, periodEnd, trialing, cancelAtPeriodEn
         </p>
       </div>
       <form onSubmit={submitChange} className="flex flex-col items-start gap-3">
-        <label className="flex flex-col gap-1">
+        <label htmlFor={`${formId}-plan`} className="flex flex-col gap-1">
           Paket
           <select
+            id={`${formId}-plan`}
             className="focus-ring rounded-lg border border-border bg-surface p-2"
             value={target}
             onChange={(event) => {
@@ -123,9 +132,11 @@ export function ManageSubscription({ plan, periodEnd, trialing, cancelAtPeriodEn
             <option value="advanced">{PLANS.advanced.name}</option>
           </select>
         </label>
-        <label className="flex flex-col gap-1">
+        <label htmlFor={`${formId}-interval`} className="flex flex-col gap-1">
           Period naplate
           <select
+            id={`${formId}-interval`}
+            aria-describedby={changeUnavailable ? `${formId}-hint` : undefined}
             className="focus-ring rounded-lg border border-border bg-surface p-2"
             value={interval}
             onChange={(event) => setInterval(event.target.value === "yearly" ? "yearly" : "monthly")}
@@ -136,7 +147,10 @@ export function ManageSubscription({ plan, periodEnd, trialing, cancelAtPeriodEn
             <option value="yearly" disabled={!catalog[target].yearly}>Godišnje · {catalog[target].yearly?.label ?? "Cena nije dostupna"}</option>
           </select>
         </label>
-        <PrimaryButton type="submit" disabled={pending || canceling || !interval || !catalog[target][interval]}>Promeni paket</PrimaryButton>
+        {changeUnavailable ? <p id={`${formId}-hint`} className="text-sm text-muted">{changeUnavailable}</p> : null}
+        <PrimaryButton type="submit" disabled={pending || Boolean(changeUnavailable)} aria-describedby={changeUnavailable ? `${formId}-hint` : undefined}>
+          Promeni paket
+        </PrimaryButton>
       </form>
       <div className="flex flex-wrap items-start gap-3">
         <PrimaryButton type="button" variant="secondary" disabled={pending} onClick={toggleCancellation}>

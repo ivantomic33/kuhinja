@@ -7,12 +7,6 @@
 import { clear, createStore, del, entries, get, set } from "idb-keyval";
 import type { IngredientUnit } from "@/lib/supabase/database.types";
 import type { ChecklistItemInput } from "@/lib/schemas/domain";
-import {
-  offlineScopeKey,
-  offlineUserPrefix,
-  resolveOfflineWorkspaceId,
-  resetOfflineWorkspaceIdCache,
-} from "@/lib/offline/workspace-scope";
 
 /** IndexedDB database for the offline read cache. */
 export const OFFLINE_CACHE_DB_NAME = "treuplate-cache";

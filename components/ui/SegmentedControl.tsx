@@ -27,6 +27,9 @@ export function SegmentedControl<T extends string>({
   size = "md",
   className,
 }: SegmentedControlProps<T>) {
+  const tabStop = options.find((option) => option.value === value && !option.disabled)
+    ?? options.find((option) => !option.disabled);
+
   return (
     <div
       role="radiogroup"
@@ -41,7 +44,7 @@ export function SegmentedControl<T extends string>({
             type="button"
             role="radio"
             aria-checked={selected}
-            tabIndex={selected ? 0 : -1}
+            tabIndex={option === tabStop ? 0 : -1}
             disabled={option.disabled}
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => {

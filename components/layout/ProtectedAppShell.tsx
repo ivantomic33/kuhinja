@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 import { PaddleCheckout } from "@/components/billing/PaddleCheckout";
 import { AppShell } from "@/components/layout/AppShell";
+import { SiteFooterLinks } from "@/components/legal/SiteFooterLinks";
 import { OfflineSync } from "@/components/pwa/OfflineSync";
 import { MotionProvider } from "@/components/ui/MotionProvider";
 import { requireUser } from "@/lib/auth/require-user";
@@ -67,6 +68,7 @@ export default async function ProtectedAppShell({ children }: { children: ReactN
         displayName={displayName ?? user.email ?? sr.app.name}
         isPremium={premium}
         initialPlan={initialPlan}
+        footer={<SiteFooterLinks />}
         recipeUsage={premium ? null : (
           <Suspense fallback={<RecipeUsage />}>
             <LoadedRecipeUsage />

@@ -47,7 +47,8 @@ export function ScheduleEditor({
   onSave: SaveShift;
 }) {
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ message: string; custom: boolean }>();
+  const fieldId = useId();
   const pending = useRef(false);
   const [desktop, setDesktop] = useState(() => window.matchMedia(desktopQuery).matches);
   const assignment = "employee" in overlay ? overlay.assignment : undefined;
@@ -67,7 +68,7 @@ export function ScheduleEditor({
     if (pending.current) return;
     pending.current = true;
     setSaving(true);
-    setError("");
+    setError(undefined);
     const date = overlay.date;
     try {
       await onSave(code ? {
@@ -79,14 +80,14 @@ export function ScheduleEditor({
       } : null, employeeId, date);
       onClose();
     } catch (failure) {
-      setError(failure instanceof Error && failure.message ? failure.message : "Smena nije sačuvana.");
+      setError({ message: failure instanceof Error && failure.message ? failure.message : "Smena nije sačuvana.", custom: code === "X" });
     } finally {
       pending.current = false;
       setSaving(false);
     }
   }
 
-  const feedback = error ? <p className="rp-error" role="alert">{error}</p> : null;
+  const feedback = error ? <p id={`${fieldId}-error`} className="rp-error" role="alert">{error.message}</p> : null;
 
   if ("gap" in overlay) {
     const code = overlay.gap === "j" ? "J" : "P";
@@ -138,10 +139,10 @@ export function ScheduleEditor({
           <Clock size={16} aria-hidden="true" />Prilagodi vreme<ChevronDown size={16} aria-hidden="true" />
         </button>
         {custom && (
-          <form className="rp-custom" onSubmit={event => { event.preventDefault(); void save(employee.id, "X"); }}>
-            <label>Od<input type="time" step={1800} required value={start} onChange={event => setStart(event.target.value)} /></label>
-            <label>Do<input type="time" step={1800} required value={end} onChange={event => setEnd(event.target.value)} /></label>
-            <PrimaryButton variant="secondary" type="submit">Primeni</PrimaryButton>
+          <form className="rp-custom" aria-describedby={error?.custom ? `${fieldId}-error` : undefined} onSubmit={event => { event.preventDefault(); void save(employee.id, "X"); }}>
+            <label htmlFor={`${fieldId}-start`}>Od<input id={`${fieldId}-start`} type="time" step={1800} required value={start} onChange={event => setStart(event.target.value)} /></label>
+            <label htmlFor={`${fieldId}-end`}>Do<input id={`${fieldId}-end`} type="time" step={1800} required value={end} onChange={event => setEnd(event.target.value)} /></label>
+            <PrimaryButton variant="secondary" type="submit" loading={saving}>Primeni</PrimaryButton>
           </form>
         )}
         <div className="rp-abs">

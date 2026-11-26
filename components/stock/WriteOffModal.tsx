@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useToast } from "@/components/ui/Toast";
@@ -40,7 +40,8 @@ export function WriteOffModal({
   const [reason, setReason] = useState<WriteOffReason>("pokvareno");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; field?: "ingredient" | "qty" } | null>(null);
+  const formId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -57,7 +58,9 @@ export function WriteOffModal({
   async function handleSave() {
     const amount = parseDecimal(qty);
     if (!ingredientId || amount == null || amount <= 0) {
-      setError(sr.auth.errors.required);
+      setError(ingredientId
+        ? { field: "qty", message: "Unesi količinu veću od nule." }
+        : { field: "ingredient", message: "Izaberi sastojak." });
       return;
     }
     setLoading(true);
@@ -76,7 +79,7 @@ export function WriteOffModal({
       onSaved();
       onClose();
     } catch {
-      setError(sr.common.error);
+      setError({ message: sr.common.error });
     } finally {
       setLoading(false);
     }
@@ -104,12 +107,18 @@ export function WriteOffModal({
       }
     >
       <div className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1 text-ui-xs text-text-2">
+        <label htmlFor={`${formId}-ingredient`} className="flex flex-col gap-1 text-ui-xs text-text-2">
           {t.restockIngredient}
           <select
+            id={`${formId}-ingredient`}
             className="field-control"
             value={ingredientId}
-            onChange={(e) => setIngredientId(e.target.value)}
+            aria-invalid={error?.field === "ingredient" || undefined}
+            aria-describedby={error?.field === "ingredient" ? `${formId}-error` : undefined}
+            onChange={(e) => {
+              setIngredientId(e.target.value);
+              if (error?.field === "ingredient") setError(null);
+            }}
           >
             {rows.map((row) => (
               <option key={row.ingredientId} value={row.ingredientId}>
@@ -119,14 +128,20 @@ export function WriteOffModal({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-ui-xs text-text-2">
+        <label htmlFor={`${formId}-qty`} className="flex flex-col gap-1 text-ui-xs text-text-2">
           {t.writeOffQty}
           <div className="flex gap-2">
             <input
+              id={`${formId}-qty`}
               className="field-control flex-1 tabular-nums"
               inputMode="decimal"
               value={qty}
-              onChange={(e) => setQty(e.target.value)}
+              aria-invalid={error?.field === "qty" || undefined}
+              aria-describedby={error?.field === "qty" ? `${formId}-error` : undefined}
+              onChange={(e) => {
+                setQty(e.target.value);
+                if (error?.field === "qty") setError(null);
+              }}
             />
             <span className="flex min-w-12 items-center text-sm text-text-2">
               {selected?.unit ?? ""}
@@ -141,12 +156,14 @@ export function WriteOffModal({
           <div className="grid gap-2 sm:grid-cols-2">
             {REASONS.map((item) => (
               <label
+                htmlFor={`${formId}-${item.value}`}
                 key={item.value}
                 className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface-2 px-3 text-sm text-text"
               >
                 <input
+                  id={`${formId}-${item.value}`}
                   type="radio"
-                  name="writeoff-reason"
+                  name={`${formId}-reason`}
                   checked={reason === item.value}
                   onChange={() => setReason(item.value)}
                 />
@@ -156,9 +173,10 @@ export function WriteOffModal({
           </div>
         </fieldset>
 
-        <label className="flex flex-col gap-1 text-ui-xs text-text-2">
+        <label htmlFor={`${formId}-note`} className="flex flex-col gap-1 text-ui-xs text-text-2">
           {t.writeOffNote}
           <input
+            id={`${formId}-note`}
             className="field-control"
             placeholder={t.writeOffNotePh}
             value={note}
@@ -167,8 +185,8 @@ export function WriteOffModal({
         </label>
 
         {error ? (
-          <p role="alert" className="text-sm text-danger">
-            {error}
+          <p id={`${formId}-error`} role="alert" className="text-sm text-danger">
+            {error.message}
           </p>
         ) : null}
       </div>

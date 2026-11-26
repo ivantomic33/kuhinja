@@ -49,20 +49,23 @@ export function FaqAccordion({
       {searchable ? (
         <div className="mb-6 space-y-4">
           <p className="text-sm text-muted">{sr.legal.faqIntro}</p>
-          <label className="relative block">
-            <span className="sr-only">{sr.common.search}</span>
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={sr.legal.faqSearchPlaceholder}
-              className="focus-ring min-h-11 w-full rounded-[var(--radius-input)] border border-border bg-surface py-2 pl-10 pr-3 text-sm text-text placeholder:text-muted"
-            />
-          </label>
+          <div>
+            <label htmlFor={`${baseId}-search`} className="field-label">{sr.common.search}</label>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+                aria-hidden
+              />
+              <input
+                id={`${baseId}-search`}
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={sr.legal.faqSearchPlaceholder}
+                className="focus-ring min-h-11 w-full rounded-[var(--radius-input)] border border-border bg-surface py-2 pl-10 pr-3 text-sm text-text placeholder:text-muted"
+              />
+            </div>
+          </div>
           <nav
             aria-label={sr.legal.tocLabel}
             className="flex flex-wrap gap-2"

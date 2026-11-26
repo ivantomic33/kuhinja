@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { LogoMark } from "@/components/brand/LogoMark";
-import { SiteFooterLinks } from "@/components/legal/SiteFooterLinks";
 import { InstallHint } from "@/components/pwa/InstallHint";
 import { OfflineIndicator } from "@/components/pwa/OfflineIndicator";
 import { PlanBootstrap } from "@/components/plan/PlanBootstrap";
@@ -22,6 +21,7 @@ export type AppShellProps = {
   email?: string | null;
   displayName?: string | null;
   recipeUsage?: ReactNode;
+  footer: ReactNode;
   isPremium?: boolean;
   /** Server-resolved plan seed for React Query (avoids client waterfall). */
   initialPlan?: PlanQueryResult | null;
@@ -32,6 +32,7 @@ export function AppShell({
   email,
   displayName,
   recipeUsage,
+  footer,
   isPremium = false,
   initialPlan = null,
 }: AppShellProps) {
@@ -136,7 +137,7 @@ export function AppShell({
             </PlanProvider>
             {pathname === "/dashboard" ? <div className="mt-6 empty:hidden"><InstallHint /></div> : null}
             <footer className="mt-8 border-t border-border pt-4">
-              <SiteFooterLinks />
+              {footer}
             </footer>
           </div>
         </main>

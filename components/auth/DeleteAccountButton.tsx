@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { FunctionsHttpError } from "@supabase/supabase-js";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
@@ -13,6 +13,9 @@ import { cn } from "@/lib/utils/cn";
 
 export function DeleteAccountButton() {
   const queryClient = useQueryClient();
+  const confirmId = useId();
+  const hintId = `${confirmId}-hint`;
+  const errorId = `${confirmId}-error`;
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -100,6 +103,7 @@ export function DeleteAccountButton() {
               variant="danger"
               loading={loading}
               disabled={!canDelete}
+              aria-describedby={needsSignIn ? errorId : hintId}
               onClick={() => {
                 void confirmDelete();
               }}
@@ -114,12 +118,14 @@ export function DeleteAccountButton() {
           <ul className="list-disc space-y-1 pl-5 text-sm text-text">
             {sr.auth.deleteAccountData.map((item) => <li key={item}>{item}</li>)}
           </ul>
-          <p className="text-sm text-muted">{sr.settings.deleteConfirmHint}</p>
-          <label className="flex flex-col gap-1">
+          <p id={hintId} className="text-sm text-muted">{sr.settings.deleteConfirmHint}</p>
+          <label htmlFor={confirmId} className="flex flex-col gap-1">
             <span className="text-sm font-medium text-text">
               {sr.settings.deleteConfirmWord}
             </span>
             <input
+              id={confirmId}
+              aria-describedby={hintId}
               value={confirmWord}
               onChange={(e) => setConfirmWord(e.target.value)}
               placeholder={sr.settings.deleteConfirmPlaceholder}
@@ -134,7 +140,7 @@ export function DeleteAccountButton() {
               )}
             />
           </label>
-          {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
+          {error ? <p id={errorId} role="alert" className="text-sm text-danger">{error}</p> : null}
           {needsSignIn ? <SignOutButton /> : null}
         </div>
       </BottomSheet>

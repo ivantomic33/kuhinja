@@ -94,6 +94,7 @@ export function ProfileMenu({
       <button
         ref={triggerRef}
         type="button"
+        aria-label={`${label} · Meni naloga`}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-controls={open ? menuId : undefined}
@@ -114,7 +115,6 @@ export function ProfileMenu({
           compact && "min-h-11 justify-center border-0 bg-transparent p-0"
         )}
       >
-        <span className="sr-only">Meni naloga:</span>
         <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border-strong bg-surface-3 text-sm font-semibold text-text">
           {initials}
         </span>

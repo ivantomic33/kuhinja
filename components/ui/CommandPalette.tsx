@@ -12,7 +12,6 @@ import {
 } from "react";
 import { Search, X } from "lucide-react";
 import { sr } from "@/lib/i18n/sr";
-import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { cn } from "@/lib/utils/cn";
 import { useDialogFocus } from "./useDialogFocus";
 
@@ -41,7 +40,6 @@ export function CommandPalette({
   onOpenChange,
   className,
 }: CommandPaletteProps) {
-  const reduceMotion = usePrefersReducedMotion();
   const isControlled = openProp !== undefined;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = isControlled ? openProp : uncontrolledOpen;
@@ -62,19 +60,6 @@ export function CommandPalette({
   const listRef = useRef<HTMLUListElement>(null);
   const titleId = useId();
   const listboxId = useId();
-  const [motion, setMotion] = useState<typeof import("framer-motion") | null>(null);
-
-  useEffect(() => {
-    if (!open || reduceMotion) return;
-    let cancelled = false;
-    void import("framer-motion").then((mod) => {
-      if (!cancelled) setMotion(mod);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, reduceMotion]);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return items;
@@ -151,35 +136,18 @@ export function CommandPalette({
 
   if (!open) return null;
 
-  const useMotion = Boolean(motion) && !reduceMotion;
-  const Backdrop = useMotion ? motion!.motion.button : "button";
-  const Panel = useMotion ? motion!.motion.div : "div";
-  const fade = { duration: 0.15, ease: "easeOut" as const };
-  const backdropProps = useMotion
-    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: fade }
-    : {};
-  const panelProps = useMotion
-    ? {
-        initial: { opacity: 0, scale: 0.98, y: -8 },
-        animate: { opacity: 1, scale: 1, y: 0 },
-        exit: { opacity: 0, scale: 0.98, y: -8 },
-        transition: fade,
-      }
-    : {};
-
   return (
     <div className="command-palette-position fixed inset-0 z-[60] flex items-start justify-center p-2">
-      <Backdrop
+      <button
         data-motion-surface
         type="button"
         tabIndex={-1}
-        aria-label={sr.ui.commandPalette.closeAria}
-        className="absolute inset-0 border-0 bg-background/60"
+        aria-hidden="true"
+        className="absolute inset-0 border-0 bg-background/60 motion-safe:animate-[dialog-enter_150ms_ease-out]"
         onClick={() => setOpen(false)}
-        {...backdropProps}
       />
 
-      <Panel
+      <div
         data-motion-surface
         ref={panelRef}
         role="dialog"
@@ -187,39 +155,41 @@ export function CommandPalette({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          "relative z-10 flex w-full max-w-lg flex-col overflow-hidden",
+          "relative z-10 flex w-full max-w-lg flex-col overflow-hidden motion-safe:animate-[dialog-enter_150ms_ease-out]",
           "rounded-[var(--radius-card)] border border-border bg-surface text-text shadow-xl",
           className
         )}
-        {...panelProps}
       >
         <div className="flex items-center gap-2 border-b border-border px-2 py-2">
           <Search className="size-5 shrink-0 text-muted" aria-hidden="true" />
           <h2 id={titleId} className="sr-only">
             {sr.ui.commandPalette.title}
           </h2>
-          <input
-            ref={inputRef}
-            type="search"
-            role="combobox"
-            aria-label={sr.ui.commandPalette.placeholder}
-            aria-expanded="true"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onInputKeyDown}
-            placeholder={sr.ui.commandPalette.placeholder}
-            aria-autocomplete="list"
-            aria-controls={listboxId}
-            aria-activedescendant={
-              filtered[activeIndex]
-                ? `${listboxId}-option-${filtered[activeIndex].id}`
-                : undefined
-            }
-            className={cn(
-              "focus-ring min-h-[44px] w-full flex-1 rounded-lg bg-transparent text-base text-text outline-none",
-              "placeholder:text-muted"
-            )}
-          />
+          <div className="min-w-0 flex-1">
+            <label htmlFor={`${titleId}-search`} className="field-label">Pretraži komande</label>
+            <input
+              id={`${titleId}-search`}
+              ref={inputRef}
+              type="search"
+              role="combobox"
+              aria-expanded="true"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={onInputKeyDown}
+              placeholder={sr.ui.commandPalette.placeholder}
+              aria-autocomplete="list"
+              aria-controls={listboxId}
+              aria-activedescendant={
+                filtered[activeIndex]
+                  ? `${listboxId}-option-${filtered[activeIndex].id}`
+                  : undefined
+              }
+              className={cn(
+                "focus-ring min-h-[44px] w-full flex-1 rounded-lg bg-transparent text-base text-text outline-none",
+                "placeholder:text-muted"
+              )}
+            />
+          </div>
           <button
             type="button"
             onClick={() => setOpen(false)}
@@ -280,7 +250,7 @@ export function CommandPalette({
             })
           )}
         </ul>
-      </Panel>
+      </div>
     </div>
   );
 }

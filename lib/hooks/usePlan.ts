@@ -12,8 +12,7 @@ import {
 } from "@/lib/supabase/plan";
 import { entitlementSchema } from "@/lib/billing/entitlements";
 import { getEntitlements } from "@/lib/plan/entitlements";
-
-export const PLAN_QUERY_KEY = ["profile", "plan"] as const;
+import { queryKeys } from "@/lib/query/keys";
 
 export type PlanQueryResult = PlanDetails & {
   accountName: string | null;
@@ -75,12 +74,12 @@ export async function fetchPlanDetails(): Promise<PlanQueryResult> {
  * Returns normalized PlanId (`free` | `starter` | `pro` | `team` | `business`).
  * `isPremium` = pro-tier features (pro+).
  *
- * When AppShell seeds PLAN_QUERY_KEY from the server, the first paint skips a
+ * When AppShell seeds the plan cache from the server, the first paint skips a
  * client round-trip (cache hit + staleTime).
  */
 export function usePlan(enabled = true) {
   const query = useQuery({
-    queryKey: PLAN_QUERY_KEY,
+    queryKey: queryKeys.plan,
     enabled,
     queryFn: fetchPlanDetails,
     staleTime: 60_000,

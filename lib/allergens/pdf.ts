@@ -39,7 +39,7 @@ export async function buildAllergenPdf(
 
   const doc = await PDFDocument.create();
   const fontBytes = await readFile(FONT_PATH);
-  let font;
+  let font: Awaited<ReturnType<typeof doc.embedFont>>;
   try {
     font = await doc.embedFont(fontBytes, { subset: true });
   } catch {
@@ -58,7 +58,6 @@ export async function buildAllergenPdf(
   const bodySize = 8;
   const headerSize = 7;
   const rowHeight = 16;
-  const colCount = 1 + ALLERGEN_CATALOG.length;
   const usableWidth = pageWidth - margin * 2;
   const nameColWidth = 140;
   const allergenColWidth = (usableWidth - nameColWidth) / ALLERGEN_CATALOG.length;
@@ -136,8 +135,8 @@ export async function buildAllergenPdf(
     }
   }
 
-  let page = doc.addPage([pageWidth, pageHeight]);
-  let y = drawHeader(page, pageHeight - margin);
+  const page = doc.addPage([pageWidth, pageHeight]);
+  const y = drawHeader(page, pageHeight - margin);
   const state = { page, y };
 
   if (input.recipes.length === 0) {

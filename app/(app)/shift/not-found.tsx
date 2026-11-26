@@ -3,5 +3,5 @@ import { StateLink } from "@/components/ui/RouteStates";
 import { sr } from "@/lib/i18n/sr";
 
 export default function NotFound() {
-  return <EmptyState title={sr.shift.notFound} action={<StateLink href="/shift">Izaberi šablon</StateLink>} />;
+  return <EmptyState titleAs="h1" title={sr.shift.notFound} action={<StateLink href="/shift">Izaberi šablon</StateLink>} />;
 }

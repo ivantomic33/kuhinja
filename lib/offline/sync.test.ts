@@ -34,18 +34,19 @@ const run: RunSnapshot = {
 it("loads the browser client only when there is a pending checklist write", async () => {
   vi.stubGlobal("navigator", { onLine: true });
   const { syncOfflineQueues } = await import("@/lib/offline/sync");
-  listSyncOps.mockResolvedValueOnce([]).mockResolvedValueOnce([{
+  listSyncOps.mockResolvedValue([]);
+  const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
+  updateRun.mockReturnValue({ update });
+
+  expect(await syncOfflineQueues()).toEqual({ checklistOps: 0, wasteOps: 0 });
+  expect(loadBrowserClient).not.toHaveBeenCalled();
+
+  listSyncOps.mockResolvedValue([{
     id: "pending-1",
     kind: "checklist_run_update",
     payload: { id: "run-1", checked_item_ids: ["task-1"] },
   }]);
-  const update = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
-  updateRun.mockReturnValue({ update });
-
-  expect(await syncOfflineQueues()).toEqual({ checklistOps: 0 });
-  expect(loadBrowserClient).not.toHaveBeenCalled();
-
-  expect(await syncOfflineQueues()).toEqual({ checklistOps: 1 });
+  expect(await syncOfflineQueues()).toEqual({ checklistOps: 1, wasteOps: 0 });
   expect(updateRun).toHaveBeenCalledWith("checklist_runs");
   expect(update).toHaveBeenCalledWith(expect.objectContaining({ checked_item_ids: ["task-1"] }));
   expect(removeSyncOp).toHaveBeenCalledWith("pending-1");
@@ -67,6 +68,17 @@ it("queues only the changed item and saves completion without a checklist snapsh
     kind: "checklist_run_update",
     payload: { id: run.id, status: "completed", completed_at: expect.any(String) },
   });
+});
+
+it("leaves queued waste entries for the waste worker", async () => {
+  vi.stubGlobal("navigator", { onLine: true });
+  const { flushChecklistSyncQueue } = await import("./checklist-sync");
+  listSyncOps.mockResolvedValueOnce([{ id: "waste-1", kind: "waste_entry", payload: {} }]);
+
+  expect(await flushChecklistSyncQueue()).toBe(0);
+  expect(updateRun).not.toHaveBeenCalled();
+  expect(removeSyncOp).not.toHaveBeenCalled();
+  expect(updateSyncOp).not.toHaveBeenCalled();
 });
 
 function delta(id: string, item_id: string, checked: boolean, attempts = 0) {

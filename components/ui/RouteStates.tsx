@@ -14,14 +14,15 @@ const LINK_VARIANT = {
   ghost: "text-text-2 hover:bg-surface-2 hover:text-text",
 } as const;
 
-export function StateLink({ href, children, variant = "primary", fullWidth }: {
+export function StateLink({ href, children, variant = "primary", fullWidth, prefetch }: {
   href: string;
   children: ReactNode;
   variant?: keyof typeof LINK_VARIANT;
   fullWidth?: boolean;
+  prefetch?: boolean;
 }) {
   return (
-    <Link href={href} className={cn(
+    <Link href={href} prefetch={prefetch} className={cn(
       "focus-ring inline-flex min-h-11 items-center justify-center rounded-[10px] px-4 text-sm font-semibold",
       LINK_VARIANT[variant],
       fullWidth && "w-full"

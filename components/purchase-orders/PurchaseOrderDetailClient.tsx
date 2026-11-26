@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import {
   getPurchaseOrderText,
@@ -36,8 +36,10 @@ export function PurchaseOrderDetailClient({
   emailEnabled: boolean;
 }) {
   const router = useRouter();
+  const formId = useId();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [receiveError, setReceiveError] = useState<{ message: string; validation: boolean } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [lines, setLines] = useState(
     () =>
@@ -62,6 +64,7 @@ export function PurchaseOrderDetailClient({
 
   function copyText(markSent: boolean) {
     setError(null);
+    setReceiveError(null);
     setMessage(null);
     startTransition(async () => {
       const textResult = await getPurchaseOrderText({ orderId });
@@ -96,6 +99,7 @@ export function PurchaseOrderDetailClient({
 
   function receive() {
     setError(null);
+    setReceiveError(null);
     setMessage(null);
     if (overReceive) {
       const ok = window.confirm(
@@ -118,7 +122,7 @@ export function PurchaseOrderDetailClient({
           })),
       });
       if ("error" in result) {
-        setError(result.error.message);
+        setReceiveError({ message: result.error.message, validation: result.error.code === "VALIDATION_ERROR" });
         return;
       }
       setMessage(`Prijem sačuvan · status ${result.data.status}`);
@@ -175,7 +179,7 @@ export function PurchaseOrderDetailClient({
           {error}
         </p>
       ) : null}
-      {message ? <p className="text-sm text-text">{message}</p> : null}
+      {message ? <p role="status" className="text-sm text-text">{message}</p> : null}
 
       <div className="overflow-x-auto rounded-xl border border-border bg-surface">
         <table className="min-w-full text-left text-sm">
@@ -196,7 +200,11 @@ export function PurchaseOrderDetailClient({
                 </td>
                 <td className="px-3 py-2 tabular-nums">{line.qtyOrdered}</td>
                 <td className="px-3 py-2">
+                  <label htmlFor={`${formId}-qty-${line.itemId}`} className="field-label">Primljeno</label>
                   <input
+                    id={`${formId}-qty-${line.itemId}`}
+                    aria-label={`Primljeno: ${line.name}`}
+                    aria-describedby={receiveError?.validation ? `${formId}-receive-error` : undefined}
                     type="number"
                     min={0}
                     step="0.0001"
@@ -221,14 +229,17 @@ export function PurchaseOrderDetailClient({
                   />
                 </td>
                 <td className="px-3 py-2">
+                  <label htmlFor={`${formId}-price-${line.itemId}`} className="field-label">Cena / jed. (opciono)</label>
                   <input
+                    id={`${formId}-price-${line.itemId}`}
+                    aria-label={`Cena / jed. (opciono): ${line.name}`}
+                    aria-describedby={receiveError?.validation ? `${formId}-receive-error` : undefined}
                     type="number"
                     min={0}
                     step="0.01"
                     className="w-28 rounded-md border border-border bg-surface-2 px-2 py-1"
                     disabled={!canReceive || line.already || pending}
                     value={line.unitPrice ?? ""}
-                    placeholder="opciono"
                     onChange={(event) => {
                       const raw = event.target.value;
                       setLines((prev) =>
@@ -255,8 +266,15 @@ export function PurchaseOrderDetailClient({
         </table>
       </div>
 
+      {receiveError ? (
+        <p id={`${formId}-receive-error`} role="alert" className="text-sm text-danger-text">{receiveError.message}</p>
+      ) : null}
       {canReceive ? (
-        <PrimaryButton disabled={pending} loading={pending} onClick={receive}>
+        <PrimaryButton
+          loading={pending}
+          onClick={receive}
+          aria-describedby={receiveError ? `${formId}-receive-error` : undefined}
+        >
           Potvrdi prijem
         </PrimaryButton>
       ) : null}
