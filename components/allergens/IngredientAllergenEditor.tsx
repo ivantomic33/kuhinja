@@ -40,7 +40,7 @@ export function IngredientAllergenEditor({
 
   const load = useCallback(async () => {
     setLoading(true);
-    const result = await getIngredientAllergens({ ingredientId });
+    const result = await getIngredientAllergens(ingredientId);
     if ("error" in result) {
       toast(result.error.message, "danger");
       setLoading(false);

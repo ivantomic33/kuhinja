@@ -164,7 +164,11 @@ export function IngredientsWorkspace({
         description={sr.ingredients.subtitle}
         action={!loadError && items.length > 0 ? (
           <>
-            <ExportButtons scope="ingredients" workspaceId={workspaceId} formats={["csv", "xlsx"]} />
+            <ExportButtons
+              scope="ingredients"
+              workspaceId={workspaceId}
+              formats={["csv", "xlsx"]}
+            />
             <PrimaryButton
               type="button"
               leftIcon={<Plus className="size-4" aria-hidden="true" />}

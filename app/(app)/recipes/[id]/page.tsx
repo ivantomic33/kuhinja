@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { RecipeAllergenMatrix } from "@/components/allergens/RecipeAllergenMatrix";
-import { ExportButtons } from "@/components/exports/ExportButtons";
 import {
   FoodCostCalculator,
   type CalculatorIngredient,
@@ -76,7 +74,7 @@ export default async function RecipeFoodCostPage({ params }: RecipePageProps) {
 
   const recipeRes = await supabase
     .from("recipes")
-    .select("id, name, venue_id, workspace_id, portions, selling_price, description, version")
+    .select("id, name, venue_id, portions, selling_price, description, version")
     .eq("id", id)
     .maybeSingle();
 
@@ -85,7 +83,6 @@ export default async function RecipeFoodCostPage({ params }: RecipePageProps) {
     | "id"
     | "name"
     | "venue_id"
-    | "workspace_id"
     | "portions"
     | "selling_price"
     | "description"
@@ -226,15 +223,6 @@ export default async function RecipeFoodCostPage({ params }: RecipePageProps) {
         initialLines={initialLines}
         allowPersist
       />
-
-      <ExportButtons
-        scope="recipes"
-        workspaceId={recipe.workspace_id}
-        recipeId={recipe.id}
-        formats={["pdf"]}
-      />
-
-      <RecipeAllergenMatrix recipeId={recipe.id} />
 
       <Suspense
         fallback={

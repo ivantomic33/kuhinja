@@ -10,7 +10,7 @@ export default async function IngredientsPage() {
   const supabase = await createClient();
 
   const [venuesRes, ingredientsRes, recipesRes, templatesRes] = await Promise.all([
-    supabase.from("venues").select("id, workspace_id").order("created_at", { ascending: true }).limit(1),
+    supabase.from("venues").select("id").order("created_at", { ascending: true }).limit(1),
     supabase
       .from("ingredients")
       .select("id, venue_id, name, unit, price, waste_percent, notes, version")
@@ -24,7 +24,6 @@ export default async function IngredientsPage() {
     supabase.from("checklist_templates").select("id, name, venue_id").order("name", { ascending: true }),
   ]);
   const venueId = venuesRes.data?.[0]?.id ?? null;
-  const workspaceId = venuesRes.data?.[0]?.workspace_id ?? null;
 
   const ingredients = (ingredientsRes.data ?? []) as Pick<
     Ingredient,
@@ -74,7 +73,6 @@ export default async function IngredientsPage() {
       <Hydrate state={dehydrateQuery(queryKeys.ingredients(venueId), ingredientRows)}>
         <IngredientsWorkspace
           venueId={venueId}
-          workspaceId={workspaceId}
           loadError={Boolean(ingredientsRes.error || venuesRes.error)}
         />
       </Hydrate>

@@ -2,10 +2,6 @@
 
 ## Nepublikovano
 
-- Alergeni: normalizovan katalog 14 alergena sa RLS-om, urednik sastojaka, automatska unija alergena u receptu i štampiva tabela jelovnika na `/allergens/print`.
-- Izvoz: CSV/XLSX za sastojke i recepte, PDF kartica recepta sa troškom porcije i ugrađenim Noto Sans fontom.
-- Obaveštenja: RLS po korisniku, promena cene sastojka iznad 10% i promena troška recepta iznad 5%, uz označavanje kao pročitano.
-
 - Faza 1 (bezbednost): CSP je obavezujući, sa nonce-om po zahtevu. Rute su podeljene na public, guest i auth. Open redirect je blokiran. Sesijski kolačić ostaje čitljiv browser klijentu jer `@supabase/ssr` čita sesiju iz `document.cookie`; u produkciji važe `Secure` i `SameSite=Lax`.
 
 - P8 F4: upozorenja o niskim zalihama (`low_stock`), dobavljači, `stock_movements`, narudžbenice po dobavljaču (iz upozorenja / trebovanja), PDF/tekst slanje, atomičan prijem robe (`receive_purchase_order`) koji ažurira zalihe i cene. Plan flagovi `stockAlerts` (Starter+) i `purchaseOrders` (Pro+). E-pošta ostaje isključena dok nema mail providera (Edge Function 501).

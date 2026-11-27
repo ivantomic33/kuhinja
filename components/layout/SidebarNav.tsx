@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useRef, type ReactNode, type RefObject } from "react";
 import {
   BookOpenText,
-  Bell,
   Carrot,
   Crown,
   LayoutDashboard,
@@ -29,7 +28,6 @@ const NAV_GROUPS = [
       { href: "/dashboard", label: "Tabla", icon: LayoutDashboard },
       { href: "/recipes", label: sr.recipes.title, icon: BookOpenText },
       { href: "/ingredients", label: sr.ingredients.title, icon: Carrot },
-      { href: "/notifications", label: sr.notifications.navLabel, icon: Bell },
       ...workspaceLinks,
     ],
   },

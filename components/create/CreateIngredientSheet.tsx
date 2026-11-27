@@ -3,7 +3,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthField } from "@/components/auth/AuthField";
-import { IngredientAllergenEditor } from "@/components/allergens/IngredientAllergenEditor";
 import { usePlanUi } from "@/components/plan/PlanProvider";
 import { BigNumber } from "@/components/ui/BigNumber";
 import { BottomSheet } from "@/components/ui/BottomSheet";
@@ -439,13 +438,6 @@ export function CreateIngredientSheet({
         </div>
         <IngredientPricePreview {...preview} />
       </form>
-      {ingredient ? (
-        <IngredientAllergenEditor
-          ingredientId={ingredient.id}
-          venueId={ingredient.venue_id}
-          className="mt-5 border-t border-border pt-5"
-        />
-      ) : null}
     </BottomSheet>
   );
 }
