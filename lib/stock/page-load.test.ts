@@ -38,18 +38,17 @@ it("loads quantities and recipe items with their parent records for the stock pa
   });
   vi.mocked(createClient).mockResolvedValue(client);
 
-  let page: ReactElement<{ children: [ReactElement, ReactElement<StockWorkspaceProps>] }> | undefined;
-  const rendering = TrebovanjePage().then((result) => { page = result as NonNullable<typeof page>; });
+  const rendering = TrebovanjePage() as Promise<ReactElement<{ children: [ReactElement, ReactElement<StockWorkspaceProps>] }>>;
   try {
+    // Parent reads start together even though load metadata waits for recipes.
     await vi.waitFor(() => {
-      expect(requestPaths).toContain("recipes");
-      expect(page).toBeDefined();
+      expect(requestPaths).toEqual(expect.arrayContaining(["checklist_templates", "ingredients", "recipes", "venues"]));
     });
   } finally {
     releaseRecipes();
-    await rendering;
   }
-  const { initialRows, recipes, venueId } = page!.props.children[1].props;
+  const page = await rendering;
+  const { initialRows, recipes, venueId } = page.props.children[1].props;
 
   expect(venueId).toBe("venue");
   expect(initialRows).toMatchObject([{ ingredientId: "onion", qty: 5, hasLevel: true }]);

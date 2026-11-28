@@ -736,7 +736,7 @@ export const sr = {
     lockedTemplate: "Limit šablona",
     lockedTemplateHint: "Free: samo 1 šablon.",
     lockedTimers: "Limit tajmera",
-    lockedTimersHint: "Free: max 2 tajmera odjednom.",
+    lockedTimersHint: "Za više od dva istovremena tajmera potreban je Pro plan.",
     upgradePro: "Pređi na Premium",
     backToDashboard: "Nazad na tablu",
     notFound: "Šablon nije pronađen",

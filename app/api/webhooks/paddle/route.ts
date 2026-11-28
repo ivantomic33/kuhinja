@@ -48,17 +48,20 @@ export async function POST(request: Request) {
     return new Response(null, { status: 503 });
   }
 
-  let raw: string;
+  let parsed: ReturnType<typeof envelope.safeParse>;
   try {
-    raw = await request.text();
-    await paddleSdk().webhooks.unmarshal(raw, config.PADDLE_WEBHOOK_SECRET, signature);
+    const raw = await request.text();
+    const verified = await paddleSdk().webhooks.isSignatureValid(raw, config.PADDLE_WEBHOOK_SECRET, signature);
+    if (!verified) return new Response(null, { status: 400 });
+    parsed = envelope.safeParse(JSON.parse(raw));
   } catch {
     return new Response(null, { status: 400 });
   }
 
-  const parsed = envelope.safeParse(JSON.parse(raw));
   if (!parsed.success) return new Response(null, { status: 400 });
   const { event_id, event_type, occurred_at, data } = parsed.data;
+  // Paddle subscription events carry the canonical snapshot. A transaction
+  // failure alone does not establish the linked subscription's status.
   if (!lifecycleEvents.has(event_type)) return new Response("ok");
 
   const checked = subscriptionSchema.safeParse(data);

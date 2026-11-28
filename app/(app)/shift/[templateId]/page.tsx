@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import { DeleteTemplateButton } from "@/components/create/DeleteTemplateButton";
 import { OfflineCacheSeeder } from "@/components/offline/OfflineCacheSeeder";
 import { ShiftChecklist } from "@/components/shift/ShiftChecklist";
+import { getEntitlement } from "@/lib/billing/entitlements";
 import { sr } from "@/lib/i18n/sr";
 import { parseChecklistItems } from "@/lib/shift/parse-items";
 import { runFromRow } from "@/lib/shift/run";
-import { getPlan } from "@/lib/supabase/plan-server";
+import { FREE_MAX_PARALLEL_TIMERS } from "@/lib/shift/constants";
 import { createClient, getServerUser } from "@/lib/supabase/server";
 
 type ShiftPageProps = {
@@ -32,8 +33,8 @@ export default async function ShiftChecklistPage({ params }: ShiftPageProps) {
     notFound();
   }
 
-  const [plan, { data: activeRun, error: runError }] = await Promise.all([
-    getPlan(),
+  const [entitlement, { data: activeRun, error: runError }] = await Promise.all([
+    getEntitlement(supabase, user.id).catch(() => null),
     supabase
       .from("checklist_runs")
       .select("id, venue_id, template_id, user_id, status, checked_item_ids, started_at, completed_at, created_at, updated_at")
@@ -92,7 +93,7 @@ export default async function ShiftChecklistPage({ params }: ShiftPageProps) {
         templateName={template.name}
         venueId={template.venue_id}
         userId={user.id}
-        plan={plan}
+        timerLimit={entitlement ? entitlement.limits.timers : FREE_MAX_PARALLEL_TIMERS}
         items={items}
         initialRun={initialRun}
       />

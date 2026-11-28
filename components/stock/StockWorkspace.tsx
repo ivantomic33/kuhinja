@@ -88,12 +88,24 @@ type ModalKind =
   | "inventory"
   | "history";
 
+export type StockLoadMeta = {
+  recipesTruncated: boolean;
+  ingredientsTruncated: boolean;
+  recipesCap: number;
+  ingredientsCap: number;
+  recipesLoaded: number;
+  ingredientsLoaded: number;
+};
+
 export type StockWorkspaceProps = {
   venueId: string | null;
   initialRows: StockRow[];
   recipes: Promise<RecipeForSale[] | null>;
   loadError?: boolean;
   userId?: string | null;
+  saleReport?: "summary" | "details" | null;
+  /** Caps from the server load path; used for truncation warnings. */
+  loadMeta?: StockLoadMeta;
 };
 
 function stockBarTone(
@@ -154,6 +166,8 @@ export function StockWorkspace({
   recipes,
   loadError = false,
   userId = null,
+  saleReport = null,
+  loadMeta,
 }: StockWorkspaceProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -522,6 +536,28 @@ export function StockWorkspace({
       {overStockLimit ? (
         <p className="rounded-[10px] border border-warning/40 bg-[var(--warning-soft)] px-4 py-3 text-sm text-text-2">
           {t.overLimitBanner}
+        </p>
+      ) : null}
+
+      {loadMeta?.recipesTruncated || loadMeta?.ingredientsTruncated ? (
+        <p
+          role="status"
+          className="rounded-[10px] border border-warning/40 bg-[var(--warning-soft)] px-4 py-3 text-sm text-text-2"
+        >
+          {[
+            loadMeta.recipesTruncated
+              ? t.loadTruncatedRecipes
+                  .replace("{loaded}", String(loadMeta.recipesLoaded))
+                  .replace("{cap}", String(loadMeta.recipesCap))
+              : null,
+            loadMeta.ingredientsTruncated
+              ? t.loadTruncatedIngredients
+                  .replace("{loaded}", String(loadMeta.ingredientsLoaded))
+                  .replace("{cap}", String(loadMeta.ingredientsCap))
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
         </p>
       ) : null}
 
@@ -1028,6 +1064,7 @@ export function StockWorkspace({
             recipes={recipes}
             stockRows={rows}
             userId={entitlements.stockMoveAudit ? userId : null}
+            saleReport={saleReport}
             onOpenRestock={() => openRestock()}
             onSaved={() => refreshLiveStock.current()}
           />

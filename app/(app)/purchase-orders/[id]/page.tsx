@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PurchaseOrderDetailClient } from "@/components/purchase-orders/PurchaseOrderDetailClient";
 import { createClient, getServerUser } from "@/lib/supabase/server";
+import { hasWorkspaceFeature } from "@/lib/billing/entitlements-server";
 
 function emailProviderConfigured() {
   return Boolean(
@@ -43,6 +44,7 @@ export default async function PurchaseOrderDetailPage({
     .maybeSingle();
 
   if (!order) notFound();
+  if (!await hasWorkspaceFeature(supabase, order.workspace_id, "stockAlerts")) notFound();
 
   const supplier = Array.isArray(order.suppliers)
     ? order.suppliers[0]

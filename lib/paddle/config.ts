@@ -7,8 +7,8 @@ const paddleConfigSchema = z.object({
   PADDLE_WEBHOOK_SECRET: z.string().trim().min(1),
   NEXT_PUBLIC_PADDLE_CLIENT_TOKEN: z.string().trim().min(1),
   NEXT_PUBLIC_PADDLE_ENVIRONMENT: z.enum(["sandbox", "production"]),
-  NEXT_PUBLIC_PADDLE_PRICE_MONTHLY: paddleId("pri"),
-  NEXT_PUBLIC_PADDLE_PRICE_YEARLY: paddleId("pri"),
+  NEXT_PUBLIC_PADDLE_PRICE_MONTHLY: paddleId("pri").optional(),
+  NEXT_PUBLIC_PADDLE_PRICE_YEARLY: paddleId("pri").optional(),
 }).superRefine((config, ctx) => {
   const prefix = config.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "sandbox" ? "test_" : "live_";
   if (!config.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN.startsWith(prefix)) {

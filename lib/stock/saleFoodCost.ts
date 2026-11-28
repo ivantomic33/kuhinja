@@ -1,5 +1,38 @@
 import { foodCostPercentFromPrices, portionCost } from "@/lib/calc/foodcost";
 import type { RecipeForSale } from "./types";
+import type { Ingredient, Recipe } from "@/lib/supabase/database.types";
+
+export const saleRecipeSelect = "id, name, venue_id, portions, selling_price, description, recipe_items(ingredient_id, quantity, ingredients(name, unit, price, waste_percent))";
+
+type SaleIngredient = Pick<Ingredient, "name" | "unit" | "price" | "waste_percent">;
+export type SaleRecipeRow = Pick<Recipe, "id" | "name" | "portions" | "venue_id" | "selling_price" | "description"> & {
+  recipe_items: {
+    ingredient_id: string;
+    quantity: number;
+    ingredients: SaleIngredient | SaleIngredient[] | null;
+  }[];
+};
+
+export function toSaleRecipe(row: SaleRecipeRow): RecipeForSale {
+  return {
+    id: row.id,
+    name: row.name,
+    portions: Number(row.portions) || 1,
+    sellingPrice: Number(row.selling_price) || 0,
+    items: row.recipe_items.flatMap((item) => {
+      const ingredient = Array.isArray(item.ingredients) ? item.ingredients[0] : item.ingredients;
+      if (!ingredient) return [];
+      return [{
+        ingredientId: item.ingredient_id,
+        name: ingredient.name,
+        unit: ingredient.unit,
+        quantity: Number(item.quantity) || 0,
+        price: Number(ingredient.price) || 0,
+        wastePercent: Number(ingredient.waste_percent) || 0,
+      }];
+    }),
+  };
+}
 
 export function summarizeSaleFoodCost(
   recipes: readonly RecipeForSale[],

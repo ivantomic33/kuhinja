@@ -106,6 +106,13 @@ Deno.serve(async (req) => {
 
     for (const [workspaceId, alerts] of byWorkspace) {
       if (!alerts || alerts.length === 0) continue;
+      const { data: enabled, error: featureError } = await admin.rpc("workspace_has_feature", {
+        p_workspace_id: workspaceId, p_feature: "foodCostAlarm",
+      });
+      if (featureError || enabled !== true) {
+        skipped += 1;
+        continue;
+      }
 
       const { error: claimError } = await admin.from("digest_runs").insert({
         workspace_id: workspaceId,

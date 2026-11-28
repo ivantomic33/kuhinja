@@ -1,4 +1,5 @@
 import withSerwistInit from "@serwist/next";
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD, PHASE_PRODUCTION_SERVER } from "next/constants";
 import { getPaddleConfig } from "./lib/paddle/config";
@@ -21,13 +22,15 @@ const nextConfig: NextConfig = {
     // Allow Server Actions from local dev and VS Code / GitHub HTTPS tunnels.
     serverActions: {
       allowedOrigins: [
-        "localhost:3000",
+        "https://dlztt72p-3000.euw.devtunnels.ms0",
         "127.0.0.1:3000",
         "*.euw.devtunnels.ms",
         "*.devtunnels.ms",
       ],
     },
   },
+  // Silence OpenTelemetry/Sentry "import-in-the-middle" warnings
+  serverExternalPackages: ["@opentelemetry/instrumentation"],
   async redirects() {
     return [{ source: "/podesavanja", destination: "/settings", permanent: false }];
   },

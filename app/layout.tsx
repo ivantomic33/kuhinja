@@ -92,6 +92,11 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased`}>
         <WebVitals />
         {children}
+        <footer className="text-center text-xs text-muted-foreground py-8 border-t">
+          <a href="/terms" className="hover:underline">Uslovi korišćenja</a>
+          {" · "}
+          <a href="/privacy" className="hover:underline">Politika privatnosti</a>
+        </footer>
       </body>
     </html>
   );

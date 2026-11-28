@@ -39,11 +39,7 @@ import {
 import { sr } from "@/lib/i18n/sr";
 import type { ChecklistItemInput } from "@/lib/schemas/domain";
 import { signalTimerEnd } from "@/lib/shift/alerts";
-import {
-  FREE_MAX_PARALLEL_TIMERS,
-  SHIFT_QUERY_KEYS,
-} from "@/lib/shift/constants";
-import { isFree, type Plan } from "@/lib/supabase/plan";
+import { SHIFT_QUERY_KEYS } from "@/lib/shift/constants";
 import { cn } from "@/lib/utils/cn";
 
 export type ShiftChecklistProps = {
@@ -51,7 +47,7 @@ export type ShiftChecklistProps = {
   templateName: string;
   venueId: string;
   userId: string;
-  plan: Plan;
+  timerLimit: number | null;
   items: ChecklistItemInput[];
   initialRun: RunSnapshot | null;
 };
@@ -81,7 +77,7 @@ export function ShiftChecklist({
   templateName,
   venueId,
   userId,
-  plan,
+  timerLimit,
   items,
   initialRun,
 }: ShiftChecklistProps) {
@@ -97,10 +93,7 @@ export function ShiftChecklist({
   const wakeLockRef = useRef<WakeLockSentinelLike | null>(null);
   const { showFreeLimit } = usePlanUiOptional();
 
-  const freePlan = isFree(plan);
-  const maxTimers = freePlan
-    ? FREE_MAX_PARALLEL_TIMERS
-    : Number.POSITIVE_INFINITY;
+  const maxTimers = timerLimit ?? Number.POSITIVE_INFINITY;
 
   const runQuery = useQuery({
     queryKey: SHIFT_QUERY_KEYS.run(templateId),
@@ -297,7 +290,7 @@ export function ShiftChecklist({
       if (!item || !item.minutes) return;
       if (activeTimerIds.has(itemId)) return;
       if (timers.length >= maxTimers) {
-        if (freePlan) showFreeLimit("FREE_LIMIT_TIMERS");
+        showFreeLimit("FREE_LIMIT_TIMERS");
         return;
       }
 
@@ -318,7 +311,6 @@ export function ShiftChecklist({
       activeTimerIds,
       timers.length,
       maxTimers,
-      freePlan,
       showFreeLimit,
     ]
   );
@@ -399,7 +391,7 @@ export function ShiftChecklist({
         </BentoCard>
       ) : null}
 
-      {freePlan && timersAtLimit ? (
+      {timersAtLimit ? (
         <div
           className="flex items-start gap-2 rounded-[var(--radius-card)] border border-border bg-surface-2 p-2"
           role="status"
@@ -444,7 +436,7 @@ export function ShiftChecklist({
                     item={item}
                     checked={checkedSet.has(item.id)}
                     timerActive={activeTimerIds.has(item.id)}
-                    timerLocked={freePlan && timersAtLimit}
+                    timerLocked={timersAtLimit}
                     onToggle={toggleItem}
                     onStartTimer={startTimer}
                   />

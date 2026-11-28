@@ -180,6 +180,27 @@ export async function saveChecklistRunAlias(id: string, canonicalId: string): Pr
   await set(userKey(userId, `${LEGACY_KEYS.runAliasPrefix}${id}`), canonicalId, store);
 }
 
+/** True when payload is the recent-recipes array shape (not a list page object). */
+function isCachedRecipeList(value: unknown): value is CachedRecipe[] {
+  if (!Array.isArray(value)) return false;
+  return value.every((row) => {
+    if (!row || typeof row !== "object") return false;
+    const item = row as Record<string, unknown>;
+    return typeof item.id === "string" && typeof item.name === "string";
+  });
+}
+
+async function readRecentRecipeList(key: string): Promise<CachedRecipe[]> {
+  const raw = await readTimed<unknown>(key);
+  if (raw == null) return [];
+  // Old or foreign shapes (e.g. paged list objects) are a cache miss, not a crash.
+  if (!isCachedRecipeList(raw)) {
+    await del(key, store);
+    return [];
+  }
+  return raw;
+}
+
 export async function saveRecentRecipes(
   recipes: Omit<CachedRecipe, "cachedAt">[]
 ): Promise<void> {
@@ -189,7 +210,7 @@ export async function saveRecentRecipes(
 
   const key = userKey(userId, LEGACY_KEYS.recipes);
   const now = Date.now();
-  const existing = (await readTimed<CachedRecipe[]>(key)) ?? [];
+  const existing = await readRecentRecipeList(key);
   const byId = new Map<string, CachedRecipe>();
 
   for (const row of existing) {
@@ -221,7 +242,7 @@ export async function getRecentRecipes(): Promise<CachedRecipe[]> {
   if (!isBrowser()) return [];
   const userId = await requireUserId();
   if (!userId) return [];
-  return (await readTimed<CachedRecipe[]>(userKey(userId, LEGACY_KEYS.recipes))) ?? [];
+  return readRecentRecipeList(userKey(userId, LEGACY_KEYS.recipes));
 }
 
 export async function getCachedRecipe(

@@ -51,7 +51,7 @@ export default async function PurchaseOrdersPage() {
   let orders: PoListRow[] = [];
   let alerts: LowStockAlert[] = [];
 
-  if (workspaceId && isChef) {
+  if (workspaceId && isChef && canStockAlerts) {
     const { data: orderRows } = await supabase
       .from("purchase_orders")
       .select("id, number, status, created_at, suppliers ( name )")

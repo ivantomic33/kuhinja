@@ -257,4 +257,5 @@ begin
   end;
 end $$;
 
+select 'ok 1 - food cost snapshots, alert thresholds and workspace isolation';
 rollback;

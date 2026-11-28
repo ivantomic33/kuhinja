@@ -10,7 +10,9 @@ const messages: Record<string, string> = {
   CHECKOUT_PROCESSING: "Prethodna naplata je još u toku.",
   BILLING_BUSY: "Naplata je zauzeta. Pokušajte ponovo za nekoliko sekundi.",
   CUSTOMER_CONFLICT: "Nalog za naplatu nije povezan. Kontaktirajte podršku.",
-  PRICE_UNAVAILABLE: "Izabrana cena trenutno nije dostupna.",
+  PRICE_UNAVAILABLE: "Izabrana cena trenutno nije dostupna. Proverite PADDLE_PRICE_PRO_* u .env.local.",
+  CHECKOUT_FAILED: "Greška pri kreiranju naplate. Proverite Paddle konfiguraciju.",
+  CHECKOUT_UNAVAILABLE: "Paddle checkout trenutno nije dostupan.",
 };
 
 export async function requestCheckoutTransaction(plan_key: PaidPlan, interval: BillingInterval):
@@ -42,8 +44,12 @@ export async function startAuthorizedCheckout(plan: PaidPlan, interval: BillingI
     throw new Error(messages[result.error] ?? sr.billing.checkoutError);
   }
 
-  await openOverlayCheckout({
-    transactionId: result.transactionId,
-    settings: { successUrl: checkoutSuccessUrl() },
-  });
+  try {
+    await openOverlayCheckout({
+      transactionId: result.transactionId,
+      settings: { successUrl: checkoutSuccessUrl() },
+    });
+  } catch (err) {
+    throw new Error(sr.billing.checkoutError);
+  }
 }

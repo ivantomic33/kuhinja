@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { hasWorkspaceFeature } from "@/lib/billing/entitlements-server";
 import {
   actionData,
   actionError,
@@ -124,6 +125,9 @@ export async function setStockByInventory(
 
   const denied = await requireChef(auth.supabase, ing.workspace_id as string);
   if (denied) return denied;
+  if (!await hasWorkspaceFeature(auth.supabase, ing.workspace_id, "stockInventory")) {
+    return mapRpcError({ message: "UPGRADE_REQUIRED" });
+  }
 
   const current = Number(ing.current_stock) || 0;
   const delta = parsed.data.counted - current;

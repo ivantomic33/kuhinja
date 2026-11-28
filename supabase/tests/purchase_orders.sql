@@ -130,15 +130,15 @@ begin
 
   v_num := public.allocate_purchase_order_number(v_ws);
   insert into public.purchase_orders (id, workspace_id, supplier_id, number, status, created_by)
-  values ('e1111111-1111-4111-8111-111111111111', v_ws, v_supplier, v_num, 'poslato', 'a1111111-1111-4111-8111-111111111111')
+  values ('e1111111-1111-4111-8111-111111111111', v_ws, v_supplier, v_num, 'nacrt', 'a1111111-1111-4111-8111-111111111111')
   returning id into v_order;
 
   insert into public.purchase_order_items (
     id, purchase_order_id, ingredient_id, ingredient_name_snapshot, unit, qty_ordered
   ) values
     ('f1111111-1111-4111-8111-111111111111', v_order, 'c1111111-1111-4111-8111-111111111111', 'PO Meso', 'kg', 5),
-    ('f2222222-2222-4222-8222-222222222222', v_order, 'c2222222-2222-4222-8222-222222222222', 'PO Ulje', 'l', 2)
-  returning id into v_item;
+    ('f2222222-2222-4222-8222-222222222222', v_order, 'c2222222-2222-4222-8222-222222222222', 'PO Ulje', 'l', 2);
+  perform public.mark_purchase_order_sent(v_order, 'supplier@example.test');
 
   select id into v_item from public.purchase_order_items where purchase_order_id = v_order order by ingredient_name_snapshot limit 1;
   select id into v_item2 from public.purchase_order_items where purchase_order_id = v_order order by ingredient_name_snapshot desc limit 1;
@@ -200,7 +200,7 @@ begin
   -- 9) receive transaction rollback on bad item
   v_num := public.allocate_purchase_order_number(v_ws);
   insert into public.purchase_orders (id, workspace_id, number, status, created_by)
-  values ('e3333333-3333-4333-8333-333333333333', v_ws, v_num, 'poslato', 'a1111111-1111-4111-8111-111111111111');
+  values ('e3333333-3333-4333-8333-333333333333', v_ws, v_num, 'nacrt', 'a1111111-1111-4111-8111-111111111111');
   insert into public.purchase_order_items (
     id, purchase_order_id, ingredient_id, ingredient_name_snapshot, unit, qty_ordered
   ) values (
@@ -209,6 +209,7 @@ begin
     'c1111111-1111-4111-8111-111111111111',
     'PO Meso', 'kg', 1
   );
+  perform public.mark_purchase_order_sent('e3333333-3333-4333-8333-333333333333', 'supplier@example.test');
   select current_stock into v_stock from public.ingredients where id = 'c1111111-1111-4111-8111-111111111111';
   begin
     perform public.receive_purchase_order(
@@ -317,4 +318,5 @@ begin
   reset role;
 end $$;
 
+select 'ok 1 - stock changes, purchase orders and workspace isolation';
 rollback;

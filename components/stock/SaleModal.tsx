@@ -11,10 +11,11 @@ import { useToast } from "@/components/ui/Toast";
 import { usePlan } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
 import { stockSr as t } from "@/lib/i18n/stock";
-import { hasMinPlan, planDisplayName } from "@/lib/plan/entitlements";
+import { planDisplayName } from "@/lib/plan/entitlements";
 import { applySale, undoSale } from "@/lib/stock/actions";
 import { belgradeToday, formatQty, previewSaleDeductions, selectSaleRecipes } from "@/lib/stock/math";
-import { summarizeSaleFoodCost } from "@/lib/stock/saleFoodCost";
+import type { summarizeSaleFoodCost } from "@/lib/stock/saleFoodCost";
+import { loadSaleReport } from "@/lib/stock/sale-report-action";
 import type { RecipeForSale, SaleDeductionLine, StockRow } from "@/lib/stock/types";
 import { cn } from "@/lib/utils/cn";
 
@@ -26,6 +27,7 @@ export type SaleModalProps = {
   recipes: Promise<RecipeForSale[] | null>;
   stockRows: StockRow[];
   userId?: string | null;
+  saleReport: "summary" | "details" | null;
   onOpenRestock: () => void;
   onSaved: () => void;
 };
@@ -34,7 +36,7 @@ type SaleResult = {
   id: string;
   date: string;
   lines: SaleDeductionLine[];
-  foodCost: ReturnType<typeof summarizeSaleFoodCost>;
+  foodCost: ReturnType<typeof summarizeSaleFoodCost> | null;
 };
 
 const emptyRecipes: RecipeForSale[] = [];
@@ -127,6 +129,7 @@ export function SaleModal({
   recipes: recipeData,
   stockRows,
   userId,
+  saleReport,
   onOpenRestock,
   onSaved,
 }: SaleModalProps) {
@@ -135,8 +138,8 @@ export function SaleModal({
   const { toast } = useToast();
   const router = useRouter();
   const { plan } = usePlan();
-  const canSeeFoodCost = hasMinPlan(plan, "starter");
-  const canSeeDishes = hasMinPlan(plan, "pro");
+  const canSeeFoodCost = saleReport !== null;
+  const canSeeDishes = saleReport === "details";
   const [date, setDate] = useState("");
   const [shift, setShift] = useState("");
   const fieldId = useId();
@@ -234,13 +237,13 @@ export function SaleModal({
     setError(null);
     try {
       const saleDate = date || belgradeToday();
-      const foodCost = summarizeSaleFoodCost(selected, portions);
       const { saleId } = await applySale({
         venueId,
         lines,
         userId,
         allowNegative,
       });
+      const foodCost = canSeeFoodCost ? await loadSaleReport({ venueId, portions }).catch(() => null) : null;
       activeResultId.current = saleId;
       setResult({ id: saleId, date: saleDate, foodCost, lines });
       setNegOpen(false);

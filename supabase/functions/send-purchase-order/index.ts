@@ -103,6 +103,10 @@ Deno.serve(async (req) => {
       p_min_role: "chef",
     });
     if (!isChef) return json({ error: "FORBIDDEN" }, 403);
+    const { data: stockAlerts, error: featureError } = await supabase.rpc("workspace_has_feature", {
+      p_workspace_id: order.workspace_id, p_feature: "stockAlerts",
+    });
+    if (featureError || stockAlerts !== true) return json({ error: "UPGRADE_REQUIRED" }, 402);
 
     if (!order.supplier_id) {
       return json({ error: "NO_SUPPLIER_EMAIL" }, 400);

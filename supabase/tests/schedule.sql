@@ -1,4 +1,5 @@
 begin;
+select '1..1';
 
 insert into auth.users (id, email, email_confirmed_at) values
   ('11111111-1111-4111-8111-111111111111', 'schedule-owner@example.test', now()),
@@ -194,4 +195,5 @@ begin
 end;
 $$;
 
+select 'ok 1 - schedule roles, publication, sharing and requests';
 rollback;

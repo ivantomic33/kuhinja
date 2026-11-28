@@ -9,7 +9,7 @@ import PrivacyPage, { metadata as privacy } from "@/app/(legal)/privatnost/page"
 import RefundPage, { metadata as refund } from "@/app/(legal)/povracaj-novca/page";
 import { metadata as home } from "@/app/(marketing)/page";
 import { metadata as kakoPoceti } from "@/app/(marketing)/kako-poceti/page";
-import FaqPage, { metadata as faq } from "@/app/faq/page";
+import { metadata as faq } from "@/app/faq/page";
 import { metadata as premium } from "@/app/premium/page";
 import { metadata as login } from "@/app/(auth)/login/page";
 import { metadata as register } from "@/app/(auth)/register/page";
@@ -54,7 +54,7 @@ it("resolves SITE_URL without throwing and falls back to localhost", () => {
 
   for (const value of [undefined, "", "treuplate.example", origin + "/faq", "ftp://treuplate.example", "https://user@treuplate.example"]) {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", value);
-    expect(getSiteUrl()).toBe("http://localhost:3000");
+    expect(getSiteUrl()).toBe("http://https://dlztt72p-3000.euw.devtunnels.ms0");
   }
 
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", origin + "/");

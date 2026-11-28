@@ -8,8 +8,6 @@ import {
   type ActionError,
   type ActionUserContext,
 } from "@/lib/server/action";
-import { memberLimitFromEntitlements } from "@/lib/billing/member-limits";
-import { entitlementSchema } from "@/lib/billing/entitlements";
 import {
   readActiveWorkspaceCookie,
   writeActiveWorkspaceCookie,
@@ -126,39 +124,10 @@ export async function getWorkspaceMemberLimit(
   ctx: ActionUserContext,
   workspaceId: string,
 ): Promise<number> {
-  const { data: owners } = await ctx.supabase
-    .from("workspace_members")
-    .select("user_id")
-    .eq("workspace_id", workspaceId)
-    .eq("role", "owner")
-    .order("created_at", { ascending: true })
-    .limit(1);
-
-  const ownerId = owners?.[0]?.user_id as string | undefined;
-  if (!ownerId) return 1;
-
-  // Caller's entitlements when they are the owner; otherwise free fallback via RPC only for self.
-  if (ownerId === ctx.user.id) {
-    const { data } = await ctx.supabase.rpc("get_entitlements", {
-      p_user_id: ctx.user.id,
-    });
-    const parsed = entitlementSchema.safeParse(data);
-    if (parsed.success) {
-      return memberLimitFromEntitlements(parsed.data.limits, parsed.data.plan);
-    }
-  }
-
-  // Non-owner path: use seat count RPC + plan from subscriptions table if readable.
-  const { data: sub } = await ctx.supabase
-    .from("subscriptions")
-    .select("plan_key, status")
-    .eq("user_id", ownerId)
-    .in("status", ["active", "trialing"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return memberLimitFromEntitlements(null, sub?.plan_key ?? "free");
+  const { data } = await ctx.supabase.rpc("workspace_member_limit", {
+    p_workspace_id: workspaceId,
+  });
+  return typeof data === "number" && data > 0 ? data : 1;
 }
 
 export async function getWorkspaceSeatCount(

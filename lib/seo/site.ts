@@ -10,7 +10,7 @@ export const SITE_NAME = "TreuPlate";
 export const DEFAULT_DESCRIPTION =
   "TreuPlate prati sastojke, recepte, nabavne cene, zalihe i smene i računa trošak porcije.";
 
-const FALLBACK_SITE_URL = "http://localhost:3000";
+const FALLBACK_SITE_URL = "https://dlztt72p-3000.euw.devtunnels.ms";
 
 /**
  * Absolute public origin without a trailing slash.

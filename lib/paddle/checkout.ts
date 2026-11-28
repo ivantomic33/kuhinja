@@ -1,7 +1,7 @@
 import "server-only";
 import type { z } from "zod";
 import { checkoutIntent } from "@/lib/billing/checkout-intent";
-import { getEntitlement } from "@/lib/billing/entitlements";
+import { hasPremium } from "@/lib/billing/entitlements-server";
 import { BillingConflict, paddleClient, withPlanMutation } from "@/lib/billing/paddle-server";
 import { trialPriceIdFor, priceIdFor } from "@/lib/billing/plans";
 import { hasRequiredConsents } from "@/lib/legal/consent";
@@ -26,7 +26,7 @@ export async function createCheckoutTransaction(
       return { status: 403, error: "CONSENT_REQUIRED" };
     }
     return await withPlanMutation(user.id, async (): Promise<CheckoutResult> => {
-      if ((await getEntitlement(supabase, user.id)).isPremium) {
+      if (await hasPremium(user.id, supabase)) {
         return { status: 409, error: "EXISTING_SUBSCRIPTION" };
       }
 
