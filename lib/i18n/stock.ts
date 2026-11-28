@@ -26,6 +26,10 @@ export const stockSr = {
   kpiUnlimited: "bez limita",
   limitReached: "Dostigli ste limit stanja ({n} stavki). Nadogradite plan za više.",
   overLimitBanner: "Imate više stavki od limita plana. Postojeće ostaju; nove se ne dodaju.",
+  loadTruncatedRecipes:
+    "Prikazano je {loaded} od najviše {cap} recepata. Lista je skraćena.",
+  loadTruncatedIngredients:
+    "Prikazano je {loaded} od najviše {cap} sastojaka. Lista je skraćena.",
   kpiLow: "Nisko / kritično",
   kpiLowFoot: "nisko",
   kpiUsedToday: "Potrošeno danas",
