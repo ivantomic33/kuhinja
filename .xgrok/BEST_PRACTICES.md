@@ -1,20 +1,17 @@
-# Best practices — TypeScript
+# Best practices (project-aware)
 
-## Development
-- One clear responsibility per module/file.
-- Prefer composition over deep inheritance.
-- Name things for the domain, not the implementation.
-- Keep PRs / changes small and reviewable.
+Stack signals: **Node.js, TypeScript, React/Next**  
+Languages: **JavaScript/TypeScript, TypeScript**
 
-## For AI agents (Grok)
-- State assumptions; verify with read_file before large rewrites.
-- Do not regenerate unrelated files.
-- Preserve comments that encode business rules.
-- When adding deps, explain why and pin versions when possible.
+## For humans + Grok
+- Small, reviewable changes.
+- Tests for non-trivial logic.
+- Document public entrypoints and env vars in README.
+- Keep AGENTS.md in sync when layout/commands change.
 
-## Testing
-- Unit-test pure logic; integration-test boundaries.
-- Deterministic tests (no flaky network without mocks).
+## Stack notes
+- Use package.json scripts; lockfile when adding deps.
+- Prefer TypeScript strict if tsconfig exists.
 
-## Docs
-- Update README / AGENTS.md when commands or layout change.
+
+

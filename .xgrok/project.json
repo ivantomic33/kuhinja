@@ -1,8 +1,22 @@
 {
   "version": 1,
-  "setup": "template",
-  "templateId": "typescript-node",
-  "language": "TypeScript",
-  "createdAt": "2026-11-26T21:59:12.565Z",
+  "setup": "integrated",
+  "languages": [
+    "JavaScript/TypeScript",
+    "TypeScript"
+  ],
+  "stacks": [
+    "Node.js",
+    "TypeScript",
+    "React/Next"
+  ],
+  "markers": [
+    "package.json",
+    "tsconfig.json"
+  ],
+  "packageName": "treuplate",
+  "suggestedRun": "npm run dev",
+  "suggestedTest": "npm test",
+  "createdAt": "2026-11-27T20:01:24.796Z",
   "tool": "xgrok"
 }

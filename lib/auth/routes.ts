@@ -27,6 +27,9 @@ const EXACT_ROUTES: Record<string, RouteAccess> = {
   "/privatnost": "public",
   "/povracaj-novca": "public",
   "/auth/callback": "public",
+  "/api/webhooks/paddle": "public",
+  "/api/billing/transaction": "public",
+  "/api/billing/portal": "public",
   "/auth/legal-consent": "auth",
   "/robots.txt": "public",
   "/sitemap.xml": "public",
@@ -35,6 +38,7 @@ const EXACT_ROUTES: Record<string, RouteAccess> = {
   "/ingredients": "auth",
   "/otpad": "auth",
   "/premium/ponuda": "auth",
+  "/premium/success": "auth",
   "/premium/upravljanje": "auth",
   "/purchase-orders": "auth",
   "/raspored": "auth",
@@ -109,4 +113,62 @@ export function isHtmlNavigation(request: {
   const destination = request.headers.get("sec-fetch-dest");
   return destination === "document" || destination === "iframe" ||
     accept.split(",").some((type) => type.split(";")[0].trim() === "text/html");
+}
+
+/**
+ * Pages that belong in sitemap.xml.
+ * Guest home, public pricing, the getting-started guide, FAQ, and legal drafts.
+ * Auth screens, checkout, welcome, and token routes stay out.
+ */
+export const SITEMAP_PATHS = [
+  "/",
+  "/premium",
+  "/kako-poceti",
+  "/faq",
+  "/pravila-koriscenja",
+  "/privatnost",
+  "/povracaj-novca",
+] as const;
+
+/**
+ * robots.txt Disallow rules.
+ * `/premium` itself stays crawlable (public pricing). A trailing slash blocks
+ * only signed-in children such as `/premium/ponuda`.
+ */
+export const ROBOTS_DISALLOW = [
+  "/dashboard",
+  "/settings",
+  "/ingredients",
+  "/recipes",
+  "/scaler",
+  "/shift",
+  "/trebovanje",
+  "/raspored",
+  "/otpad",
+  "/purchase-orders",
+  "/premium/",
+  "/api/",
+  "/auth/",
+] as const;
+
+export function isRobotsDisallowed(pathname: string): boolean {
+  const path = normalizePath(pathname);
+  return ROBOTS_DISALLOW.some((rule) => {
+    if (rule.endsWith("/")) return path.startsWith(rule);
+    return path === rule || path.startsWith(`${rule}/`);
+  });
+}
+
+/** Auth allow-list entries that a crawler is still invited to fetch. */
+export function authRoutesMissingRobotsRule(): string[] {
+  const missing: string[] = [];
+  for (const [path, access] of Object.entries(EXACT_ROUTES)) {
+    if (access === "auth" && !isRobotsDisallowed(path)) missing.push(path);
+  }
+  for (const { prefix, access } of PREFIX_ROUTES) {
+    if (access !== "auth") continue;
+    const sample = prefix.endsWith("/") ? `${prefix}x` : prefix;
+    if (!isRobotsDisallowed(sample)) missing.push(prefix);
+  }
+  return missing;
 }

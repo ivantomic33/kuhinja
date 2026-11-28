@@ -60,7 +60,7 @@ export default async function ProtectedAppShell({ children }: { children: ReactN
   return (
     <AppQueryProvider>
       <OfflineSync />
-      {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "live" && (
+      {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production" && (
         <PaddleCheckout customerId={planDetails.paddleCustomerId} />
       )}
       <AppShell

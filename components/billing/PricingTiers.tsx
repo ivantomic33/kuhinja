@@ -6,7 +6,7 @@ import type { CountryCode } from "@paddle/paddle-js";
 import { previewPrices } from "@/lib/billing/paddle-browser";
 import type { Tier, TierInterval } from "@/lib/billing/tiers";
 import { Badge } from "@/components/ui/Badge";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { CheckoutButton } from "@/components/billing/CheckoutButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StateLink } from "@/components/ui/RouteStates";
 import { cn } from "@/lib/utils/cn";
@@ -21,7 +21,6 @@ type PricingTiersProps = {
   requireAuth?: boolean;
   guest?: boolean;
   signInLabel: string;
-  checkoutErrorLabel: string;
 };
 
 function intervalFromPeriod(period: BillingPeriod): TierInterval {
@@ -34,15 +33,12 @@ export function PricingTiers({
   requireAuth = false,
   guest = false,
   signInLabel,
-  checkoutErrorLabel,
 }: PricingTiersProps) {
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
   const interval = intervalFromPeriod(period);
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [loadingPrices, setLoadingPrices] = useState(true);
   const [priceError, setPriceError] = useState<string | null>(null);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [busyPriceId, setBusyPriceId] = useState<string | null>(null);
 
   const priceIds = useMemo(
     () => tiers.flatMap((tier) => [tier.priceId.month, tier.priceId.year]),
@@ -82,28 +78,6 @@ export function PricingTiers({
     void loadPrices();
   }, [loadPrices]);
 
-  async function subscribe(tier: Tier) {
-    const priceId = tier.priceId[interval];
-    setCheckoutError(null);
-    setBusyPriceId(priceId);
-
-    try {
-      // Authorized server checkout binds the Paddle customer + transaction so
-      // the webhook can grant the paid plan. Never open a bare price-id overlay.
-      const { startAuthorizedCheckout } = await import("@/lib/billing/start-checkout");
-      await startAuthorizedCheckout(
-        tier.key,
-        period === "yearly" ? "yearly" : "monthly",
-      );
-    } catch (error) {
-      setCheckoutError(
-        error instanceof Error ? error.message : checkoutErrorLabel,
-      );
-    } finally {
-      setBusyPriceId(null);
-    }
-  }
-
   return (
     <div className="flex min-w-0 flex-col gap-8">
       <div className="billing mx-auto flex justify-center">
@@ -124,11 +98,6 @@ export function PricingTiers({
           {priceError}
         </p>
       ) : null}
-      {checkoutError ? (
-        <p role="alert" className="mx-auto max-w-xl text-center text-sm text-danger">
-          {checkoutError}
-        </p>
-      ) : null}
 
       <section
         aria-labelledby="pricing-tiers-heading"
@@ -142,7 +111,6 @@ export function PricingTiers({
           const priceId = tier.priceId[interval];
           const formatted = prices[priceId];
           const featured = Boolean(tier.featured);
-          const busy = busyPriceId === priceId;
 
           return (
             <article
@@ -220,17 +188,14 @@ export function PricingTiers({
                     {signInLabel}
                   </StateLink>
                 ) : (
-                  <PrimaryButton
-                    type="button"
-                    fullWidth
-                    className="min-h-[46px]"
+                  <CheckoutButton
+                    planKey={tier.key}
+                    priceTier={period}
                     variant={featured ? "primary" : "secondary"}
-                    loading={busy}
-                    disabled={loadingPrices || !formatted || Boolean(busyPriceId)}
-                    onClick={() => void subscribe(tier)}
+                    disabled={loadingPrices || !formatted}
                   >
                     Pretplati se · {tier.name}
-                  </PrimaryButton>
+                  </CheckoutButton>
                 )}
               </div>
             </article>

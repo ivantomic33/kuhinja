@@ -16,14 +16,17 @@ update public.profiles set plan = 'pro' where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbb
 update public.profiles set paddle_customer_id = 'fixture_customer'
 where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
+insert into public.paddle_checkout_authorizations (transaction_id, user_id, customer_id, price_id)
+values ('fixture_transaction', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'fixture_customer', 'fixture_price');
+
 set local role service_role;
 do $$
 declare
   owner_id constant uuid := 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   payload jsonb := jsonb_build_object(
     'paddle_customer_id', 'fixture_customer', 'paddle_subscription_id', 'fixture_subscription',
-    'paddle_price_id', 'fixture_price', 'plan_key', 'pro', 'status', 'past_due',
-    'cancel_at_period_end', false, 'current_period_end', now() - interval '167 hours'
+    'price_id', 'fixture_price', 'plan_key', 'pro', 'status', 'past_due',
+    'cancel_at_period_end', false, 'current_period_end', now() - interval '71 hours'
   );
 begin
   assert public.apply_paddle_subscription('invented_checkout', now(), 'unknown_transaction', payload)
@@ -58,8 +61,8 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
-    insert into public.subscriptions(user_id, paddle_customer_id, paddle_subscription_id, plan_key, status)
-      values (auth.uid(), 'client_customer', 'client_subscription', 'pro', 'active');
+    insert into public.subscriptions(user_id, paddle_customer_id, paddle_subscription_id, price_id, plan_key, status)
+      values (auth.uid(), 'client_customer', 'client_subscription', 'fixture_price', 'pro', 'active');
     raise exception 'Authenticated subscription insert succeeded';
   exception when insufficient_privilege then null;
   end;
@@ -71,7 +74,7 @@ begin
   update public.profiles set full_name = 'Updated by owner' where id = auth.uid();
   assert found;
   begin
-    perform from public.paddle_events;
+    perform from public.billing_events;
     raise exception 'Authenticated user read event ledger';
   exception when insufficient_privilege then null;
   end;
@@ -92,7 +95,7 @@ do $$ begin
   assert public.get_entitlements(auth.uid()) @> '{"plan":"starter","features":{"priceHistory":false}}';
 end $$;
 reset role;
-update public.subscriptions set status = 'past_due', current_period_end = now() - interval '168 hours';
+update public.subscriptions set status = 'past_due', current_period_end = now() - interval '72 hours';
 set local role authenticated;
 do $$
 begin

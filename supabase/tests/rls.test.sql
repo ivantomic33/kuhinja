@@ -5,9 +5,9 @@ insert into auth.users (id, email, aud, role)
 values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'rls-user-a@example.test', 'authenticated', 'authenticated'),
        ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'rls-user-b@example.test', 'authenticated', 'authenticated');
 
-insert into public.subscriptions (user_id, paddle_customer_id, paddle_subscription_id, plan_key, status)
-values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'rls_a_customer', 'rls_a_subscription', 'pro', 'active'),
-       ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'rls_b_customer', 'rls_b_subscription', 'starter', 'active');
+insert into public.subscriptions (user_id, paddle_customer_id, paddle_subscription_id, price_id, plan_key, status)
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'rls_a_customer', 'rls_a_subscription', 'fixture_price', 'pro', 'active'),
+       ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'rls_b_customer', 'rls_b_subscription', 'fixture_price', 'starter', 'active');
 
 insert into public.venues (id, owner_id, name)
 values ('a1111111-1111-4111-8111-111111111111', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Venue A'),

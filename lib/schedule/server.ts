@@ -3,7 +3,7 @@ import {
   requireActionUser,
   type ActionUserContext,
 } from "@/lib/server/action";
-import { createClient, getServerUser } from "@/lib/supabase/server";
+import { createAnonClient, createClient, getServerUser } from "@/lib/supabase/server";
 import { z } from "zod";
 import { parsePublicSchedule } from "./public-payload";
 import type { Assignment, Employee, PublicSchedule, ScheduleWeek } from "./types";
@@ -44,7 +44,7 @@ export async function loadPublicSchedule(
   token: string
 ): Promise<PublicSchedule | null> {
   if (!uuid.safeParse(token).success) return null;
-  const client = await createClient();
+  const client = createAnonClient();
   const { data, error } = await client.rpc("schedule_public", {
     p_token: token,
   });

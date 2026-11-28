@@ -8,11 +8,11 @@ values
   ('a2222222-2222-4222-8222-222222222222', 'po-cook@example.test', 'authenticated', 'authenticated'),
   ('a3333333-3333-4333-8333-333333333333', 'po-other@example.test', 'authenticated', 'authenticated');
 
-insert into public.subscriptions (user_id, paddle_customer_id, paddle_subscription_id, plan_key, status)
+insert into public.subscriptions (user_id, paddle_customer_id, paddle_subscription_id, price_id, plan_key, status)
 values
-  ('a1111111-1111-4111-8111-111111111111', 'po_owner_cust', 'po_owner_sub', 'pro', 'active'),
-  ('a2222222-2222-4222-8222-222222222222', 'po_cook_cust', 'po_cook_sub', 'pro', 'active'),
-  ('a3333333-3333-4333-8333-333333333333', 'po_other_cust', 'po_other_sub', 'pro', 'active');
+  ('a1111111-1111-4111-8111-111111111111', 'po_owner_cust', 'po_owner_sub', 'fixture_price', 'pro', 'active'),
+  ('a2222222-2222-4222-8222-222222222222', 'po_cook_cust', 'po_cook_sub', 'fixture_price', 'pro', 'active'),
+  ('a3333333-3333-4333-8333-333333333333', 'po_other_cust', 'po_other_sub', 'fixture_price', 'pro', 'active');
 
 insert into public.venues (id, owner_id, name)
 values

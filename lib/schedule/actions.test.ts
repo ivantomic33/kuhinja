@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+import { revalidatePath } from "next/cache";
 import { PLANS } from "@/lib/billing/plans";
 import { loadScheduleReport, updateSchedule } from "./actions";
 
@@ -23,6 +24,7 @@ const otherLocation = "22222222-2222-4222-8222-222222222222";
 beforeEach(() => {
   getUser.mockReset();
   rpc.mockReset();
+  vi.mocked(revalidatePath).mockReset();
 });
 
 it("returns UNAUTHORIZED when updateSchedule has no verified user", async () => {

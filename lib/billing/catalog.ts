@@ -17,8 +17,8 @@ function emptyCatalog(): BillingCatalog {
 
 export const getBillingCatalog = cache(async (): Promise<BillingCatalog> => {
   const catalog = emptyCatalog();
-  const environment = process.env.PADDLE_ENVIRONMENT;
-  if (!process.env.PADDLE_API_KEY || (environment !== "sandbox" && environment !== "live")) {
+  const environment = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT;
+  if (!process.env.PADDLE_API_KEY || (environment !== "sandbox" && environment !== "production")) {
     return catalog;
   }
 

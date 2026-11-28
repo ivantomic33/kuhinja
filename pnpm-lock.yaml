@@ -11,6 +11,9 @@ importers:
       '@paddle/paddle-js':
         specifier: ^1.6.6
         version: 1.6.6
+      '@paddle/paddle-node-sdk':
+        specifier: ^3.12.0
+        version: 3.12.0
       '@pdf-lib/fontkit':
         specifier: ^1.1.1
         version: 1.1.1
@@ -50,6 +53,9 @@ importers:
       react-dom:
         specifier: ^19.3.1
         version: 19.3.1(react@19.3.1)
+      server-only:
+        specifier: ^0.0.1
+        version: 0.0.1
       serwist:
         specifier: ^9.5.15
         version: 9.5.15(browserslist@4.29.6)(typescript@5.9.3)
@@ -660,6 +666,10 @@ packages:
 
   '@paddle/paddle-js@1.6.6':
     resolution: {integrity: sha512-MHkqW4b7DP6F0HvbNG6HnGcSUdX2znwsvENIqJQuMqTtwcRPo6tTg8m1ail02mAODbFu/wsWUcRdsW7a9DVyTQ==}
+
+  '@paddle/paddle-node-sdk@3.12.0':
+    resolution: {integrity: sha512-xys3kymfnx8uhdO/aKuT5oxX+14SKMB2pv9QT/wDXwuzhghb+5POxOP5GdqXQH7pgAhznCz3AYVJaCIoX//FVw==}
+    engines: {node: '>=20'}
 
   '@pdf-lib/fontkit@1.1.1':
     resolution: {integrity: sha512-KjMd7grNapIWS/Dm0gvfHEilSyAmeLvrEGVcqLGi0VYebuqqzTbgF29efCx7tvx+IEbG3zQciRSWl3GkUSvjZg==}
@@ -2848,6 +2858,9 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  server-only@0.0.1:
+    resolution: {integrity: sha512-qepMx2JxAa5jjfzxG79yPPq+8BuFToHd1hm7kI+Z4zAq1ftQiP7HcxMhDDItrbtwVeLg/cY2JnKnrcFkmiswNA==}
+
   serwist@9.5.15:
     resolution: {integrity: sha512-k//vx8zoecklv5d3KIIq1afVJOn91uhyj/k/9loEsAETHw/v3o3W7WdTnBrMGgJHZjC6OHPpOSgENprkROiFQw==}
     peerDependencies:
@@ -3792,6 +3805,8 @@ snapshots:
   '@nolyfill/is-core-module@1.0.39': {}
 
   '@paddle/paddle-js@1.6.6': {}
+
+  '@paddle/paddle-node-sdk@3.12.0': {}
 
   '@pdf-lib/fontkit@1.1.1':
     dependencies:
@@ -6154,6 +6169,8 @@ snapshots:
   semver@7.8.5: {}
 
   semver@7.8.6: {}
+
+  server-only@0.0.1: {}
 
   serwist@9.5.15(browserslist@4.29.6)(typescript@5.9.3):
     dependencies:

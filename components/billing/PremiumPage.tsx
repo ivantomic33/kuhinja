@@ -82,7 +82,6 @@ export default function PremiumPage({
           country={country}
           guest={guest}
           signInLabel={sr.auth.signInForPlan}
-          checkoutErrorLabel={sr.billing.checkoutError}
           // Guests must sign in first so checkout can bind the Paddle customer
           // and authorize the transaction before the webhook grants the plan.
           requireAuth={guest}
@@ -135,7 +134,7 @@ export default function PremiumPage({
             },
             {
               q: "Šta posle uspešne naplate?",
-              a: "Paddle vas vraća na /welcome. Pretplata se aktivira preko webhook-a.",
+              a: "Nakon plaćanja otvara se potvrda pretplate. Pristup se aktivira kada stigne Paddle webhook.",
             },
             {
               q: "Radi li offline?",

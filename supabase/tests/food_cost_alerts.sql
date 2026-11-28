@@ -7,10 +7,10 @@ values
   ('c1111111-1111-4111-8111-111111111111', 'fc-owner@example.test', 'authenticated', 'authenticated'),
   ('c2222222-2222-4222-8222-222222222222', 'fc-other@example.test', 'authenticated', 'authenticated');
 
-insert into public.subscriptions (user_id, paddle_customer_id, paddle_subscription_id, plan_key, status)
+insert into public.subscriptions (user_id, paddle_customer_id, paddle_subscription_id, price_id, plan_key, status)
 values
-  ('c1111111-1111-4111-8111-111111111111', 'fc_owner_cust', 'fc_owner_sub', 'starter', 'active'),
-  ('c2222222-2222-4222-8222-222222222222', 'fc_other_cust', 'fc_other_sub', 'starter', 'active');
+  ('c1111111-1111-4111-8111-111111111111', 'fc_owner_cust', 'fc_owner_sub', 'fixture_price', 'starter', 'active'),
+  ('c2222222-2222-4222-8222-222222222222', 'fc_other_cust', 'fc_other_sub', 'fixture_price', 'starter', 'active');
 
 insert into public.venues (id, owner_id, name)
 values

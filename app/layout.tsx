@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { headers } from "next/headers";
+import { WebVitals } from "@/components/analytics/WebVitals";
 import { APP_SHORT_NAME } from "@/lib/config/app";
 import icons from "@/lib/config/pwa-icons.json";
 import { openGraphCard, twitterCard } from "@/lib/seo/social-card";
@@ -12,7 +12,7 @@ import {
 import "./globals.css";
 
 const inter = Inter({
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"],
   display: "swap",
   variable: "--font-inter",
   weight: ["400", "500", "600", "700"],
@@ -76,17 +76,21 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function RootLayout({
+/**
+ * Keep the root layout free of cookies()/headers() so public routes can stay
+ * static or ISR (landing revalidate=300, /r/[token] revalidate=3600).
+ * Middleware still mints a per-request CSP nonce and forwards it on the
+ * request; Next applies that nonce to its own inline scripts/styles.
+ */
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Dynamic render so Next can stamp this request's CSP nonce on its scripts.
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
-
   return (
-    <html lang="sr" className={inter.variable} suppressHydrationWarning nonce={nonce}>
+    <html lang="sr" className={inter.variable} suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
+        <WebVitals />
         {children}
       </body>
     </html>

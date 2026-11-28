@@ -20,6 +20,7 @@ export type PlanDetails = {
   plan: Plan;
   planExpiresAt: string | null;
   billingStatus?: SubscriptionStatus | null;
+  currentPeriodEnd?: string | null;
   paddleCustomerId: string | null;
   entitlements: PlanEntitlements;
 };

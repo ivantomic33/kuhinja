@@ -8,10 +8,10 @@ import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils/cn";
 
 type CheckoutButtonProps = {
-  /** Paid plan key for authorized create-checkout-session. */
-  planKey: PaidPlan;
+  /** Server-authorized billing plan. */
+  planKey?: PaidPlan;
   /** Billing interval matching the price shown on the page. */
-  interval: BillingInterval;
+  priceTier: BillingInterval;
   disabled?: boolean;
   fullWidth?: boolean;
   leftIcon?: ReactNode;
@@ -25,8 +25,8 @@ type CheckoutButtonProps = {
  * Webhooks only grant plans for authorized TreuPlate transactions.
  */
 export function CheckoutButton({
-  planKey,
-  interval,
+  planKey = "pro",
+  priceTier,
   disabled = false,
   fullWidth = true,
   leftIcon,
@@ -42,7 +42,7 @@ export function CheckoutButton({
     setError(undefined);
 
     try {
-      await startAuthorizedCheckout(planKey, interval);
+      await startAuthorizedCheckout(planKey, priceTier);
     } catch (err) {
       setError(err instanceof Error ? err.message : sr.billing.checkoutError);
     } finally {

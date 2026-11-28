@@ -177,7 +177,7 @@ repozitorijum već sadrži `supabase/config.toml`, uklonite korak `supabase init
    i resetovanje lozinke, sa parametrima iz lokalnog primera.
 3. Podesite Node 22, `pnpm install --frozen-lockfile` i `pnpm build`. Za
    sopstveni Node server koristite `pnpm start`. [Next.js deploy](https://nextjs.org/docs/15/app/getting-started/deploying)
-4. Za naplatu postavite Paddle tajne i objavite odgovarajuće funkcije. [Podešavanje Paddle sandbox-a i provere naplate](docs/billing.md)
+4. Za Paddle Billing primenite migracije i postavite promenljive iz [`.env.example`](.env.example) na Next.js serveru. U Paddle-u registrujte HTTPS odredište `/api/webhooks/paddle` i koristite tajnu tog odredišta. [Sandbox i verifikacija naplate](docs/billing.md)
    [Podešavanje Edge Functions](supabase/functions/README.md)
 
 Znak TreuPlate uređujte u `components/brand/mark.mjs`. Zatim pokrenite

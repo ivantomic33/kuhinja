@@ -1,4 +1,4 @@
-import { belgradeToday } from "../stock/math";
+import { belgradeToday } from "@/lib/stock/math";
 import type { Assignment, Employee, ShiftCode } from "./types";
 
 export { belgradeToday as todayBelgrade };

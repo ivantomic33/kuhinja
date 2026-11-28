@@ -10,7 +10,9 @@ export function configuredPrice(
   interval: BillingInterval,
   trial = false,
 ) {
-  const value = readEnv(
+  const publicPrice = plan === "pro" && !trial
+    ? readEnv(`NEXT_PUBLIC_PADDLE_PRICE_${interval.toUpperCase()}`)?.trim() : undefined;
+  const value = publicPrice || readEnv(
     `PADDLE_PRICE_${plan.toUpperCase()}_${interval.toUpperCase()}${trial ? "_TRIAL" : ""}_ID`,
   )?.trim();
   return value && /^pri_[a-z\d]{26}$/.test(value) ? value : undefined;

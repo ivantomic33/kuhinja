@@ -2,6 +2,8 @@
 
 ## Nepublikovano
 
+- Paddle checkout, portal i webhook rade kroz Next.js. Potvrda uplate čeka serverski status. Pretplata u kašnjenju ima tri dana dodatnog pristupa, a otkazana zadržava pristup do kraja plaćenog perioda.
+
 - Faza 1 (bezbednost): CSP je obavezujući, sa nonce-om po zahtevu. Rute su podeljene na public, guest i auth. Open redirect je blokiran. Sesijski kolačić ostaje čitljiv browser klijentu jer `@supabase/ssr` čita sesiju iz `document.cookie`; u produkciji važe `Secure` i `SameSite=Lax`.
 
 - P8 F4: upozorenja o niskim zalihama (`low_stock`), dobavljači, `stock_movements`, narudžbenice po dobavljaču (iz upozorenja / trebovanja), PDF/tekst slanje, atomičan prijem robe (`receive_purchase_order`) koji ažurira zalihe i cene. Plan flagovi `stockAlerts` (Starter+) i `purchaseOrders` (Pro+). E-pošta ostaje isključena dok nema mail providera (Edge Function 501).

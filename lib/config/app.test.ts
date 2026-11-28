@@ -19,6 +19,7 @@ vi.mock("next/font/google", () => ({
   Inter: () => ({ className: "", variable: "" }),
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 let layout: typeof import("@/app/layout");
 beforeAll(async () => {
@@ -30,7 +31,7 @@ beforeAll(async () => {
   }
 });
 
-it("uses the same brand in the title, Open Graph, and PWA manifest", () => {
+it("uses the same brand in the title, Open Graph, and PWA manifest", async () => {
   const { metadata, viewport } = layout;
   expect(APP_NAME).toBe("TreuPlate");
   expect(metadata.title).toEqual({ default: defaultTitle, template: `%s | ${APP_NAME}` });
@@ -54,7 +55,7 @@ it("uses the same brand in the title, Open Graph, and PWA manifest", () => {
     display: "standalone",
   });
   expect(viewport.themeColor).toBe(manifest.theme_color);
-  expect(renderToStaticMarkup(jsx(layout.default, { children: null }))).toMatch(/^<html lang="sr"/);
+  expect(renderToStaticMarkup(await layout.default({ children: null }))).toMatch(/^<html lang="sr"/);
 });
 
 it("renders the configured name in the sidebar, mobile header, and authentication layout", () => {

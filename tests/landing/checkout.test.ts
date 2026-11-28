@@ -2,12 +2,14 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { createCheckoutSession } from "@/app/checkout/actions";
 import { checkoutReturnPath } from "@/lib/billing/checkout-intent";
 
-const { invoke, getServerUser, hasRequiredConsents } = vi.hoisted(() => ({
-  invoke: vi.fn(),
+const { transact, getUser, getServerUser, hasRequiredConsents } = vi.hoisted(() => ({
+  transact: vi.fn(),
+  getUser: vi.fn(),
   getServerUser: vi.fn(),
   hasRequiredConsents: vi.fn(),
 }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: () => ({ functions: { invoke } }), getServerUser }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: () => ({ auth: { getUser } }), getServerUser }));
+vi.mock("@/lib/paddle/checkout", () => ({ createCheckoutTransaction: transact }));
 vi.mock("@/lib/legal/consent", () => ({ hasRequiredConsents }));
 vi.mock("next/navigation", () => ({ redirect: (path: string) => { throw new Error(path); } }));
 
@@ -28,26 +30,21 @@ it("preserves the plan and interval through login before invoking checkout", asy
   await expect(createCheckoutSession(form())).rejects.toThrow(`/login?next=${encodeURIComponent(path)}`);
   expect(checkoutReturnPath(path)).toBe(path);
   expect(checkoutReturnPath("//example.com/checkout?plan_key=starter&interval=yearly")).toBeUndefined();
-  expect(invoke).not.toHaveBeenCalled();
+  expect(transact).not.toHaveBeenCalled();
 });
 
-it("starts checkout through the Edge function with the chosen plan key and interval", async () => {
-  getServerUser.mockResolvedValue({ id: "user" });
-  const transaction = "txn_" + "a".repeat(26);
-  const url = `https://example.com/checkout?_ptxn=${transaction}`;
-  vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://example.com");
-  try {
-    invoke.mockResolvedValue({ data: { url } });
-    await expect(createCheckoutSession(form())).rejects.toThrow(
-      `/checkout?_ptxn=${encodeURIComponent(transaction)}`,
-    );
-    expect(invoke).toHaveBeenCalledWith("create-checkout-session", {
-      method: "POST",
-      body: { plan_key: "starter", interval: "yearly" },
-    });
-  } finally {
-    vi.unstubAllEnvs();
-  }
+it("starts server checkout with an authenticated user and the chosen price interval", async () => {
+  const user = { id: "user" };
+  getServerUser.mockResolvedValue(user);
+  getUser.mockResolvedValue({ data: { user }, error: null });
+  const transactionId = "txn_" + "a".repeat(26);
+  transact.mockResolvedValue({ transactionId });
+  await expect(createCheckoutSession(form())).rejects.toThrow(
+    `/checkout?_ptxn=${encodeURIComponent(transactionId)}`,
+  );
+  expect(transact).toHaveBeenCalledWith(expect.objectContaining({ user }), {
+    plan_key: "starter", interval: "yearly",
+  });
 });
 
 it("carries the checkout intent through required Google consent", async () => {
@@ -55,10 +52,10 @@ it("carries the checkout intent through required Google consent", async () => {
   hasRequiredConsents.mockResolvedValue(false);
   const next = encodeURIComponent("/checkout?plan_key=starter&interval=yearly");
   await expect(createCheckoutSession(form())).rejects.toThrow(`/auth/legal-consent?next=${next}`);
-  expect(invoke).not.toHaveBeenCalled();
+  expect(transact).not.toHaveBeenCalled();
 });
 
 it("rejects invalid plan selection before checkout", async () => {
   await expect(createCheckoutSession(form("free"))).rejects.toThrow("/#cenovnik");
-  expect(invoke).not.toHaveBeenCalled();
+  expect(transact).not.toHaveBeenCalled();
 });

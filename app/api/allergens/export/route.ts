@@ -95,7 +95,7 @@ export async function GET(request: Request) {
               "Za izvoz alergena potreban je Pro paket vlasnika radnog prostora.",
           },
         },
-        { status: 403 },
+        { status: 402 },
       );
     }
   }

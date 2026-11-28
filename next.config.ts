@@ -1,13 +1,16 @@
 import withSerwistInit from "@serwist/next";
 import type { NextConfig } from "next";
-import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from "next/constants";
+import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD, PHASE_PRODUCTION_SERVER } from "next/constants";
+import { getPaddleConfig } from "./lib/paddle/config";
 import { getSiteUrl } from "./lib/config/env";
 import icons from "./lib/config/pwa-icons.json";
 import { getSecurityHeaders } from "./lib/security/headers";
 
 const iconUrls = Object.values(icons);
 const offlineEntrypoints = ["main-app", "app/layout", "app/~offline/page"];
-const privatePrefixes = ["dashboard", "settings", "ingredients", "recipes", "scaler", "shift", "trebovanje", "raspored", "premium/upravljanje"];
+// Do not add "premium": /premium is the public pricing page. :path* is optional
+// in Next header matchers, so /premium/:path* would noindex that page too.
+const privatePrefixes = ["dashboard", "settings", "ingredients", "recipes", "scaler", "shift", "trebovanje", "raspored", "otpad", "purchase-orders", "premium/upravljanje", "premium/ponuda"];
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -241,6 +244,7 @@ const nextConfig: NextConfig = {
 // there. Production `next build` still uses Webpack and generates it.
 export default async function config(phase: string): Promise<NextConfig> {
   const productionBuild = phase === PHASE_PRODUCTION_BUILD;
+  if (phase === PHASE_DEVELOPMENT_SERVER || phase === PHASE_PRODUCTION_SERVER) getPaddleConfig();
   if (productionBuild) getSiteUrl();
   if (phase === PHASE_DEVELOPMENT_SERVER) return nextConfig;
 

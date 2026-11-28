@@ -118,6 +118,7 @@ export async function updateSchedule(
 
   if (type !== "share") {
     revalidatePath("/raspored");
+    revalidatePath("/r/[token]", "page");
   }
 
   return actionData((data ?? {}) as ScheduleMutationData);

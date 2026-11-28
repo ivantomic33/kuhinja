@@ -9,7 +9,7 @@ import {
   type Environments,
 } from "@paddle/paddle-js";
 
-export type PaddlePublicEnvironment = "sandbox" | "live";
+export type PaddlePublicEnvironment = "sandbox" | "production";
 
 let paddlePromise: Promise<Paddle> | null = null;
 
@@ -21,9 +21,9 @@ function readPublicPaddleConfig(): {
   const environment = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT?.trim();
   const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN?.trim();
 
-  if (environment !== "sandbox" && environment !== "live") {
+  if (environment !== "sandbox" && environment !== "production") {
     throw new Error(
-      'NEXT_PUBLIC_PADDLE_ENVIRONMENT must be set to "sandbox" or "live" (no silent default).',
+      'NEXT_PUBLIC_PADDLE_ENVIRONMENT must be set to "sandbox" or "production" (no silent default).',
     );
   }
   if (!token) {
@@ -36,7 +36,7 @@ function readPublicPaddleConfig(): {
       "Sandbox requires a client token prefixed with test_. Refusing to initialize Paddle.",
     );
   }
-  if (environment === "live" && !token.startsWith("live_")) {
+  if (environment === "production" && !token.startsWith("live_")) {
     throw new Error(
       "Live requires a client token prefixed with live_. Refusing to initialize Paddle.",
     );
@@ -103,5 +103,5 @@ export async function openOverlayCheckout(
 }
 
 export function checkoutSuccessUrl(origin = typeof window !== "undefined" ? window.location.origin : ""): string {
-  return `${origin.replace(/\/$/, "")}/welcome`;
+  return `${origin.replace(/\/$/, "")}/premium/success`;
 }

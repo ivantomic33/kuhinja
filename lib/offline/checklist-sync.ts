@@ -227,7 +227,7 @@ export async function loadChecklistRun(id: string): Promise<RunSnapshot | null> 
   const supabase = createClient();
   const runId = await getChecklistRunAlias(id);
   const [{ data: run, error: runError }, { data: items, error: itemsError }] = await Promise.all([
-    supabase.from("checklist_runs").select("*").eq("id", runId).maybeSingle(),
+    supabase.from("checklist_runs").select("id, venue_id, template_id, user_id, status, checked_item_ids, started_at, completed_at, created_at, updated_at").eq("id", runId).maybeSingle(),
     supabase.from("shift_checklist_items").select("item_id, checked").eq("run_id", runId),
   ]);
   if (runError || itemsError) throw runError ?? itemsError;

@@ -65,7 +65,7 @@ export async function GET(request: Request) {
           message: "Evidencija otpada zahteva Starter ili Pro paket.",
         },
       },
-      { status: 403 },
+      { status: 402 },
     );
   }
 
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
               : "PDF i Excel izvoz otpada zahtevaju Pro paket.",
         },
       },
-      { status: 403 },
+      { status: 402 },
     );
   }
 

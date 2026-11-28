@@ -18,6 +18,10 @@ function hasSupabaseAuthCookie(request: NextRequest) {
   );
 }
 
+/**
+ * Copy every refreshed session cookie onto the outgoing response.
+ * Passing the cookie object keeps path, httpOnly, sameSite, secure, maxAge, and expires.
+ */
 function copySessionCookies(
   response: NextResponse,
   session: NextResponse,
@@ -128,8 +132,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except static assets, images, and PWA files.
-     * sw.js, swe-worker.js, swe-worker-*.js, manifest.json, and icons stay
-     * excluded so they load without a session check.
+     * @serwist/next writes the service worker to public/sw.js (swDest in
+     * next.config.ts). That file is already excluded as sw.js.
+     * swe-worker.js and swe-worker-*.js are not a Serwist output name here:
+     * package.json scripts and public/ only ship sw.js. The pattern is not a
+     * typo for sw.js. It stays so a worker published under that name is not
+     * session-gated. manifest.json and icons stay excluded too.
      */
     "/((?!_next/(?:static|image)(?:/|$)|(?:favicon\\.ico|sw\\.js|swe-worker(?:-[^/]+)?\\.js|manifest\\.json|~offline|opengraph-image|twitter-image)$|icons/|landing/).*)",
   ],

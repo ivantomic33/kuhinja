@@ -53,8 +53,8 @@ begin
   assert not exists (select from public.schedule_locations l where l.owner_id = fixture.owner_id),
     'Free account created a schedule location';
 
-  insert into public.subscriptions (user_id, paddle_customer_id, paddle_subscription_id, plan_key, status)
-    values (owner_id, 'schedule_fixture_customer', 'schedule_fixture_subscription', 'starter', 'active');
+  insert into public.subscriptions (user_id, paddle_customer_id, paddle_subscription_id, price_id, plan_key, status)
+    values (owner_id, 'schedule_fixture_customer', 'schedule_fixture_subscription', 'fixture_price', 'starter', 'active');
   data := public.schedule_load(null, next_monday);
   assert (data->>'monday')::date = next_monday;
   location_id := (data->'venue'->>'id')::uuid;

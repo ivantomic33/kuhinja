@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { entitlementSchema } from "@/lib/billing/entitlements";
+import { getEntitlement } from "@/lib/billing/entitlements";
 import { createClient, getServerUser } from "@/lib/supabase/server";
 import {
   resolvePlanDetails,
@@ -27,18 +27,18 @@ export async function readUserPlan(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
 ): Promise<PlanDetails> {
-  const [{ data: entitlement }, { data: profile }] = await Promise.all([
-    supabase.rpc("get_entitlements", { p_user_id: userId }),
+  const [billing, { data: profile }] = await Promise.all([
+    getEntitlement(supabase, userId).catch(() => null),
     supabase.from("profiles")
       .select("plan_expires_at, paddle_customer_id")
       .eq("id", userId)
       .maybeSingle(),
   ]);
-  const billing = entitlementSchema.safeParse(entitlement).data;
   const plan = billing?.plan ?? "free";
   return {
-    ...resolvePlanDetails(plan, null, profile?.paddle_customer_id),
+    ...resolvePlanDetails(plan, null, billing?.paddleCustomerId ?? profile?.paddle_customer_id),
     planExpiresAt: plan === "free" ? null : profile?.plan_expires_at ?? null,
     billingStatus: billing?.status ?? null,
+    currentPeriodEnd: billing?.currentPeriodEnd ?? null,
   };
 }

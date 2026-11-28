@@ -11,7 +11,7 @@ export default defineConfig({
   esbuild: { jsx: "automatic" },
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts", "tests/**/*.test.ts"],
+    include: ["lib/**/*.test.ts", "app/**/*.test.ts", "tests/**/*.test.ts"],
     server: {
       deps: {
         inline: ["react-dom", "@testing-library/react", "@testing-library/dom"],
@@ -27,6 +27,7 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
     alias: {
       "@": path.resolve(__dirname, "."),
+      "server-only": path.join(path.dirname(require.resolve("server-only")), "empty.js"),
       "react/jsx-dev-runtime": path.join(reactRoot, "jsx-dev-runtime.js"),
       "react/jsx-runtime": path.join(reactRoot, "jsx-runtime.js"),
       "react-dom/client": path.join(reactDomRoot, "client.js"),

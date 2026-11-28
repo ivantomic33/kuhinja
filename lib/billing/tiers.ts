@@ -1,4 +1,4 @@
-import type { PaidPlan } from "@/supabase/functions/_shared/billing-prices";
+import { configuredPrice, type PaidPlan } from "@/supabase/functions/_shared/billing-prices";
 import { STARTER_MAX_STOCK_ITEMS } from "@/lib/plan/entitlements";
 
 /**
@@ -105,8 +105,8 @@ export function loadTiers(): Tier[] {
     features: [...def.features],
     featured: def.featured,
     priceId: {
-      month: readPriceId(def.priceEnv.month),
-      year: readPriceId(def.priceEnv.year),
+      month: configuredPrice((key) => process.env[key], def.key, "monthly") ?? readPriceId(def.priceEnv.month),
+      year: configuredPrice((key) => process.env[key], def.key, "yearly") ?? readPriceId(def.priceEnv.year),
     },
   }));
 }

@@ -30,6 +30,10 @@ or recipe update returns `VERSION_CONFLICT` with HTTP status 409.
 | `lib/legal/actions.ts` | `recordLegalConsent` | verified Google user from `requireActionUser` | consent `user_id` = verified user under RLS | `registerLegalConsentSchema` |
 | `app/api/versioned-update/route.ts` | `PATCH` | yes (`requireActionUser`) | ingredient or recipe RLS | strict Zod envelope and resource-specific patch |
 
+| `app/api/billing/transaction/route.ts` | `POST` | verified user | transaction bound server-side | strict Zod checkout intent |
+| `app/api/billing/portal/route.ts` | `POST` | verified user | customer's active account binding | same-origin request |
+| `app/api/webhooks/paddle/route.ts` | `POST` | verified Paddle signature | customer binding and checkout authorization in SQL | Zod subscription payload |
+
 ## Server-side Supabase helpers / loaders
 
 | File | Function | Auth check | Ownership check | Input validated |
@@ -54,13 +58,10 @@ over time; never trust client-supplied `user_id` / `owner_id`.
 | `lib/domain/saveRecipeItems.ts` | recipe_items replace |
 | `lib/domain/venue.ts` | primary venue read |
 | `lib/offline/checklist-sync.ts` | starting a run uses RLS for `user_id`, venue and template. Item writes use a security-invoker RPC with RLS on the parent run. |
-| `lib/billing/invoke.ts` | edge function invoke with user JWT |
+| `lib/billing/invoke.ts` | Next.js billing routes verify the signed-in user |
 
 ## Edge functions (`supabase/functions`)
 
 | Function | Auth | Notes |
 | --- | --- | --- |
-| `create-checkout-session` | `getUser` via JWT | 401 if missing |
-| `create-portal-session` | `getUser` via JWT | 401 if missing |
 | `delete-account` | `getUser` via JWT and a session created within 5 minutes | Service-role RPC deletes the caller and owned data in one transaction |
-| `paddle-webhook` | Paddle signature | no user session |

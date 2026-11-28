@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { getSupabaseCookieOptions, mergeSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
@@ -34,6 +35,18 @@ export const createClient = cache(async () => {
         },
       },
     }
+  );
+});
+
+/**
+ * Cookie-free anon client for public, token-gated RPCs. Safe to call during
+ * static rendering (ISR) because it never touches `cookies()` or `headers()`.
+ */
+export const createAnonClient = cache(() => {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
   );
 });
 

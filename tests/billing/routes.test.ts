@@ -21,7 +21,7 @@ beforeEach(() => {
 
 it("denies a direct request from an authenticated user without a subscription", async () => {
   const response = await POST(request({ planKey: "pro", interval: "monthly" }));
-  expect(response.status).toBe(403);
+  expect(response.status).toBe(402);
   expect(await response.json()).toMatchObject({ error: { code: "UPGRADE_REQUIRED" } });
   expect(rpc).toHaveBeenCalledWith("get_entitlements", { p_user_id: "verified" });
 });
@@ -31,7 +31,7 @@ it("denies direct access to the price-history action", async () => {
     ingredient_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     price: 10,
   });
-  expect(result).toMatchObject({ error: { code: "UPGRADE_REQUIRED", status: 403 } });
+  expect(result).toMatchObject({ error: { code: "UPGRADE_REQUIRED", status: 402 } });
 });
 
 it("rejects client-supplied Paddle price IDs", async () => {

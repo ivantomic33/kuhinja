@@ -7,7 +7,12 @@ import { configuredPrice } from "@/supabase/functions/_shared/billing-prices";
 import { entitlementPlanId, planFromPriceId, type BillingInterval, type PaidPlan } from "./plans";
 
 export function paddleClient() {
-  return paddleApi((key) => process.env[key]);
+  return paddleApi((key) => {
+    if (key === "PADDLE_ENVIRONMENT" && process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT) {
+      return process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production" ? "live" : process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT;
+    }
+    return process.env[key];
+  });
 }
 
 export class BillingConflict extends Error {}

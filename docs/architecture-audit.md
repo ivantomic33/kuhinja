@@ -8,7 +8,7 @@ Indeksi u tabeli prikazuju korisne prefikse za FK, kombinovane filtere i redosle
 
 | Tabela ili ruta | RLS ili kontrola pristupa | Indeksi | Rizik |
 | --- | --- | --- | --- |
-| `profiles` | Da, forsiran. Pristup sopstvenom profilu po `auth.uid()`. | PK `id` pokriva i FK. Parcijalni `stripe_customer_id`. | Srednji |
+| `profiles` | Da, forsiran. Pristup sopstvenom profilu po `auth.uid()`. | PK `id` pokriva i FK. Jedinstveni `paddle_customer_id`. | Srednji |
 | `venues` | Da, forsiran. `owner_id = auth.uid()`. | `(owner_id, created_at)` za prvi lokal, `(owner_id, updated_at)`. | Srednji |
 | `ingredients` | Da, forsiran. Vlasništvo lokala. | `venue_id`, `(venue_id, name)`, `(venue_id, updated_at)`. | Srednji |
 | `ingredient_price_history` | Da, forsiran. Vlasništvo lokala i Pro+ za čitanje. | `ingredient_id`, `(ingredient_id, recorded_at DESC)`. | Srednji |
@@ -19,7 +19,7 @@ Indeksi u tabeli prikazuju korisne prefikse za FK, kombinovane filtere i redosle
 | `shift_checklist_items` | Da, forsiran. Pristup preko sopstvenog run-a i lokala. | PK `(run_id, item_id)`, `(run_id, updated_at)`, parcijalni `checked_by`. | Srednji |
 | `stock_levels` | Da, forsiran. Vlasništvo lokala. | `venue_id`, `ingredient_id`, `(venue_id, ingredient_id)`, `(venue_id, updated_at)`. | Visok. Količine se računaju na klijentu i potom upisuju. |
 | `stock_moves` | Da, forsiran. Vlasništvo lokala. | `venue_id`, `ingredient_id`, `user_id`, parcijalni `sale_id`, `(venue_id, created_at)`, `(venue_id, ingredient_id, created_at)`. | Srednji |
-| `stripe_webhook_events` | Da, forsiran. Upis servisnom ulogom. | PK `id`. | Srednji |
+| `billing_events` | Da, forsiran. Upis servisnom ulogom. | PK `id`. | Srednji |
 | `legal_consents` | Da, forsiran. Čitanje i upis sopstvenih saglasnosti. | `user_id`, `(user_id, document, accepted_at DESC)`, jedinstven `(user_id, document, version)`. | Srednji |
 | `schedule_locations` | Da, forsiran. Vlasnik ili aktivni član lokacije. | `(owner_id, created_at)`, parcijalni jedinstveni `owner_id` za podrazumevanu lokaciju. | Srednji |
 | `schedule_employees` | Da, forsiran. Vlasnik ili sopstveno aktivno članstvo. | `location_id`, parcijalni `user_id`, `(location_id, id)`, `(location_id, user_id)`, `(location_id, login_email)`. | Srednji |
@@ -68,7 +68,7 @@ Scenario, pragovi i status staging merenja su zabeleženi u [k6 izveštaju](k6-d
 
 ## Kataloška provera
 
-Uvodni SQL nije bio priložen. Upiti ispod potvrđuju da sve 21 javne tabele iz migracija imaju `ENABLE` i `FORCE ROW LEVEL SECURITY`. `stripe_webhook_events` ima nula klijentskih politika i koristi servisnu ulogu. Upit za FK vratio je nula redova. Dodatni indeks `idx_venues_owner_id_created_at` pokriva izbor prvog lokala vidljivog vlasniku.
+Uvodni SQL nije bio priložen. Upiti ispod potvrđuju da sve 21 javne tabele iz migracija imaju `ENABLE` i `FORCE ROW LEVEL SECURITY`. `billing_events` ima nula klijentskih politika i koristi servisnu ulogu. Upit za FK vratio je nula redova. Dodatni indeks `idx_venues_owner_id_created_at` pokriva izbor prvog lokala vidljivog vlasniku.
 
 ```sql
 select c.relname as table_name, c.relrowsecurity as rls, c.relforcerowsecurity as forced,

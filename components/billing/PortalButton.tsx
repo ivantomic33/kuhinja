@@ -36,7 +36,7 @@ export function PortalButton({ disabled = false }: PortalButtonProps) {
         loading={loading}
         onClick={handleClick}
       >
-        {sr.billing.openPortal}
+        Upravljaj pretplatom
       </PrimaryButton>
       {error ? (
         <p role="alert" className="text-sm text-danger">

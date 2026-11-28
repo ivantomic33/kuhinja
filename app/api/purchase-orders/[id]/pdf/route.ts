@@ -56,6 +56,12 @@ export async function GET(
     );
   }
 
+  const feature = await auth.supabase.rpc("workspace_has_feature", {
+    p_workspace_id: order.workspace_id, p_feature: "purchase_orders",
+  });
+  if (feature.error) return Response.json({ error: "INTERNAL_ERROR" }, { status: 500 });
+  if (!feature.data) return Response.json({ error: "UPGRADE_REQUIRED" }, { status: 402 });
+
   const supplier = Array.isArray(order.suppliers) ? order.suppliers[0] : order.suppliers;
   const workspace = Array.isArray(order.workspaces)
     ? order.workspaces[0]

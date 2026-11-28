@@ -18,32 +18,21 @@ export type Plan = "free" | "starter" | "pro" | "premium" | "team" | "business";
 export type BillingSubscription = {
   id: string;
   user_id: string;
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
-  paddle_customer_id: string | null;
-  paddle_subscription_id: string | null;
-  paddle_price_id: string | null;
+  paddle_customer_id: string;
+  paddle_subscription_id: string;
+  price_id: string;
   paddle_event_at: string | null;
-  paid_access_plan: "starter" | "pro" | null;
+  paid_access_plan: "starter" | "pro" | "advanced" | null;
   paid_access_until: string | null;
-  stripe_price_id: string | null;
-  plan_key: "free" | "starter" | "pro";
-  status: "trialing" | "active" | "past_due" | "canceled" | "unpaid" | "incomplete" | "incomplete_expired" | "paused";
+  plan_key: "free" | "starter" | "pro" | "advanced";
+  status: "trialing" | "active" | "past_due" | "canceled" | "paused";
+  canceled_at: string | null;
   current_period_start: string | null;
   current_period_end: string | null;
   trial_end: string | null;
   cancel_at_period_end: boolean;
   created_at: string;
   updated_at: string;
-};
-
-type StripeEvent = {
-  id: string;
-  type: string;
-  received_at: string;
-  processed_at: string | null;
-  payload: Json | null;
-  attempts: number;
 };
 
 export type IngredientUnit = "g" | "kg" | "ml" | "l" | "kom" | "pak";
@@ -56,7 +45,6 @@ export type Database = {
           id: string;
           full_name: string;
           plan: Plan;
-          stripe_customer_id: string | null;
           paddle_customer_id: string | null;
           plan_expires_at: string | null;
           created_at: string;
@@ -66,7 +54,6 @@ export type Database = {
           id: string;
           full_name?: string;
           plan?: Plan;
-          stripe_customer_id?: string | null;
           paddle_customer_id?: string | null;
           plan_expires_at?: string | null;
           created_at?: string;
@@ -76,7 +63,6 @@ export type Database = {
           id?: string;
           full_name?: string;
           plan?: Plan;
-          stripe_customer_id?: string | null;
           paddle_customer_id?: string | null;
           plan_expires_at?: string | null;
           created_at?: string;
@@ -94,33 +80,27 @@ export type Database = {
       };
       subscriptions: {
         Row: BillingSubscription;
-        Insert: Pick<BillingSubscription, "user_id" | "plan_key" | "status"> &
+        Insert: Pick<BillingSubscription, "user_id" | "plan_key" | "status" | "paddle_customer_id" | "paddle_subscription_id"> &
           Partial<BillingSubscription>;
         Update: Partial<BillingSubscription>;
         Relationships: [];
       };
-      stripe_events: {
-        Row: StripeEvent;
-        Insert: Pick<StripeEvent, "id" | "type"> & Partial<StripeEvent>;
-        Update: Partial<StripeEvent>;
+      paddle_checkout_authorizations: {
+        Row: { transaction_id: string; user_id: string; customer_id: string; price_id: string; subscription_id: string | null };
+        Insert: { transaction_id: string; user_id: string; customer_id: string; price_id: string; subscription_id?: string | null };
+        Update: { subscription_id?: string | null };
         Relationships: [];
       };
-      stripe_webhook_events: {
-        Row: {
-          id: string;
-          type: string;
-          processed_at: string;
-        };
-        Insert: {
-          id: string;
-          type: string;
-          processed_at?: string;
-        };
-        Update: {
-          id?: string;
-          type?: string;
-          processed_at?: string;
-        };
+      paddle_released_customers: {
+        Row: { customer_id: string; former_user_id: string };
+        Insert: { customer_id: string; former_user_id: string };
+        Update: { former_user_id?: string };
+        Relationships: [];
+      };
+      billing_events: {
+        Row: { id: string; event_type: string; received_at: string };
+        Insert: { id: string; event_type: string; received_at?: string };
+        Update: never;
         Relationships: [];
       };
       venues: {
@@ -579,6 +559,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      apply_paddle_subscription: {
+        Args: { p_event_id: string; p_occurred_at: string; p_transaction_id: string | null; p_subscription: Json; p_event_type?: string };
+        Returns: string;
+      };
       claim_billing_lock: { Args: { p_key: string; p_token: string }; Returns: boolean };
       release_billing_lock: { Args: { p_key: string; p_token: string }; Returns: undefined };
       record_stock_adjustment: {

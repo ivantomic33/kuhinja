@@ -14,13 +14,14 @@ describe("subscription entitlement", () => {
     expect(effectivePlan("pro", status, now - day, now).plan).toBe(plan);
   });
 
-  it("expires grace exactly seven days after the period ends", () => {
-    expect(effectivePlan("starter", "past_due", now - 7 * day + 1, now))
+  it("expires grace exactly three days after the period ends", () => {
+    expect(effectivePlan("starter", "past_due", now - 3 * day + 1, now))
       .toEqual({ plan: "starter", grace: true });
-    expect(effectivePlan("starter", "past_due", now - 7 * day, now))
+    expect(effectivePlan("starter", "past_due", now - 3 * day, now))
       .toEqual({ plan: "free", grace: false });
     expect(effectivePlan("starter", "past_due", null, now).plan).toBe("free");
-    expect(effectivePlan("starter", "past_due", now + 1, now).plan).toBe("free");
+    expect(effectivePlan("starter", "past_due", now + 1, now).plan).toBe("starter");
+    expect(effectivePlan("starter", "canceled", now + 1, now).plan).toBe("starter");
   });
 
   it("requires a known paid plan even with active status", () => {

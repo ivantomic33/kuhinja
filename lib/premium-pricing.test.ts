@@ -81,7 +81,7 @@ describe("PremiumPage", () => {
     expect(html).toContain("Pretplati se · Starter");
     expect(html).toContain("Pretplati se · Pro");
     expect(html).toContain("Pretplati se · Advanced");
-    expect(html).toContain("Paddle vas vraća na /welcome");
+    expect(html).toContain("Pristup se aktivira kada stigne Paddle webhook");
   });
 
   it("renders guest pricing without inventing a country code", () => {

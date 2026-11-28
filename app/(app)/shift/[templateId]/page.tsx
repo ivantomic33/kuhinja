@@ -36,7 +36,7 @@ export default async function ShiftChecklistPage({ params }: ShiftPageProps) {
     getPlan(),
     supabase
       .from("checklist_runs")
-      .select("*")
+      .select("id, venue_id, template_id, user_id, status, checked_item_ids, started_at, completed_at, created_at, updated_at")
       .eq("template_id", template.id)
       .eq("user_id", user.id)
       .eq("status", "active")
