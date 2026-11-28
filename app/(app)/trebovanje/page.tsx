@@ -1,9 +1,13 @@
 import { Suspense } from "react";
 import { OfflineCacheSeeder } from "@/components/offline/OfflineCacheSeeder";
 import { StockWorkspace } from "@/components/stock/StockWorkspace";
+import { RECENT_RECIPE_LIMIT, type CachedIngredient } from "@/lib/offline/cache";
+import {
+  TREBOVANJE_INGREDIENTS_CAP,
+  TREBOVANJE_RECIPES_CAP,
+} from "@/lib/recipes/list-params";
 import { mergeStockRows } from "@/lib/stock/actions";
 import type { RecipeForSale } from "@/lib/stock/types";
-import type { CachedIngredient } from "@/lib/offline/cache";
 import { createClient, getServerUser } from "@/lib/supabase/server";
 import type {
   Ingredient,
@@ -21,12 +25,21 @@ type RecipeRow = Pick<Recipe, "id" | "name" | "portions" | "venue_id" | "selling
 };
 type VenueRow = { id: string; stock_levels: Pick<StockLevel, "id" | "venue_id" | "ingredient_id" | "qty" | "min_qty" | "used_today" | "used_on">[] };
 
+export type TrebovanjeLoadMeta = {
+  recipesTruncated: boolean;
+  ingredientsTruncated: boolean;
+  recipesCap: number;
+  ingredientsCap: number;
+  recipesLoaded: number;
+  ingredientsLoaded: number;
+};
+
 async function loadRecipes(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data, error } = await supabase
     .from("recipes")
     .select("id, name, venue_id, portions, selling_price, description, recipe_items(ingredient_id, quantity, ingredients(name, unit, price, waste_percent))")
     .order("name", { ascending: true })
-    .limit(100);
+    .limit(TREBOVANJE_RECIPES_CAP);
 
   if (error) return null;
   const recipeRecords = (data ?? []) as RecipeRow[];
@@ -58,7 +71,12 @@ async function loadRecipes(supabase: Awaited<ReturnType<typeof createClient>>) {
     selling_price: Number(row.selling_price) || 0,
   }));
 
-  return { recipes, recipeRows };
+  return {
+    recipes,
+    recipeRows,
+    truncated: recipeRecords.length >= TREBOVANJE_RECIPES_CAP,
+    loaded: recipeRecords.length,
+  };
 }
 
 async function loadTemplates(supabase: Awaited<ReturnType<typeof createClient>>) {
@@ -79,7 +97,9 @@ async function DeferredOfflineCache({
   templates: ReturnType<typeof loadTemplates>;
 }) {
   const [recipes, templateRows] = await Promise.all([recipeData, templates]);
-  return <OfflineCacheSeeder ingredients={ingredients} recipes={recipes?.recipeRows} templates={templateRows} />;
+  // Offline: only recent recipes, never the full trebovanje catalog.
+  const recent = recipes?.recipeRows.slice(0, RECENT_RECIPE_LIMIT);
+  return <OfflineCacheSeeder ingredients={ingredients} recipes={recent} templates={templateRows} />;
 }
 
 export default async function TrebovanjePage() {
@@ -97,7 +117,7 @@ export default async function TrebovanjePage() {
       .from("ingredients")
       .select("id, venue_id, name, unit, price, waste_percent, notes")
       .order("name", { ascending: true })
-      .limit(200),
+      .limit(TREBOVANJE_INGREDIENTS_CAP),
   ]);
   const venue = venuesRes.data?.[0] as VenueRow | undefined;
   const ingredients = (ingredientsRes.data ?? []) as CachedIngredient[];
@@ -111,6 +131,16 @@ export default async function TrebovanjePage() {
     ingredients: ingredientRows,
     levels: venue.stock_levels,
   }) : [];
+
+  const recipesResolved = await recipeData;
+  const loadMeta: TrebovanjeLoadMeta = {
+    recipesTruncated: Boolean(recipesResolved?.truncated),
+    ingredientsTruncated: ingredientRows.length >= TREBOVANJE_INGREDIENTS_CAP,
+    recipesCap: TREBOVANJE_RECIPES_CAP,
+    ingredientsCap: TREBOVANJE_INGREDIENTS_CAP,
+    recipesLoaded: recipesResolved?.loaded ?? 0,
+    ingredientsLoaded: ingredientRows.length,
+  };
 
   return (
     <>
@@ -127,6 +157,7 @@ export default async function TrebovanjePage() {
         recipes={recipeData.then((result) => result?.recipes ?? null)}
         loadError={Boolean(ingredientsRes.error || venuesRes.error)}
         userId={user?.id ?? null}
+        loadMeta={loadMeta}
       />
     </>
   );

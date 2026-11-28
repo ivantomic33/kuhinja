@@ -1,7 +1,12 @@
 "use client";
 
 import { memo, startTransition, useEffect, useId, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+} from "@tanstack/react-query";
 import { BookOpen, Info, Plus, Search } from "lucide-react";
 import {
   CreateRecipeSheet,
@@ -12,7 +17,7 @@ import { RecipeFoodCostDialog } from "@/components/recipes/RecipeFoodCostDialog"
 import { usePlanUi } from "@/components/plan/PlanProvider";
 import { Badge } from "@/components/ui/Badge";
 import { BentoCard } from "@/components/ui/BentoCard";
-import { DataTable, sortTableRows, type DataTableColumn, type DataTableSort } from "@/components/ui/DataTable";
+import { DataTable, type DataTableColumn, type DataTableSort } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FoodCostCell } from "@/components/ui/FoodCostCell";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -20,7 +25,7 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import RouteError from "@/components/ui/RouteError";
 import { useToast } from "@/components/ui/Toast";
 import { UsageStrip } from "@/components/ui/UsageStrip";
-import { useWorkspacePagination, WorkspacePagination } from "@/components/ui/WorkspacePagination";
+import { WorkspacePagination } from "@/components/ui/WorkspacePagination";
 import {
   FOOD_COST_FAR_OVER,
   FOOD_COST_TARGET_LABEL,
@@ -31,11 +36,18 @@ import { usePlan } from "@/lib/hooks/usePlan";
 import { sr } from "@/lib/i18n/sr";
 import { FREE_MAX_RECIPES } from "@/lib/plan/limits";
 import { queryKeys } from "@/lib/query/keys";
-import { useHydratedData } from "@/lib/query/use-hydrated-data";
+import { listRecipesAction } from "@/lib/recipes/actions";
+import {
+  RECIPE_LIST_PAGE_SIZE,
+  isRecipeListSortColumn,
+  type RecipeListSort,
+} from "@/lib/recipes/list-params";
+import type { RecipeListPageResult } from "@/lib/recipes/list-server";
 import { TableMoney } from "@/components/ui/TableMoney";
 import { formatPortions } from "@/lib/utils/portions";
 
 const RecipeFoodCostCell = memo(FoodCostCell);
+const SEARCH_DEBOUNCE_MS = 300;
 
 export type RecipeListItem = {
   id: string;
@@ -52,7 +64,32 @@ export type RecipesWorkspaceProps = {
   canSeeInsights: boolean;
   venueId?: string | null;
   loadError?: boolean;
+  /** SSR dehydrated query key so the first paint reuses server data. */
+  initialListKey?: QueryKey;
 };
+
+function sortFromTable(sort?: DataTableSort): RecipeListSort {
+  if (!sort) return { column: "updated_at", direction: "descending" };
+  const column =
+    sort.column === "price"
+      ? "selling_price"
+      : isRecipeListSortColumn(sort.column)
+        ? sort.column
+        : "updated_at";
+  return { column, direction: sort.direction };
+}
+
+function emptyPage(sort: RecipeListSort): RecipeListPageResult {
+  return {
+    rows: [],
+    totalCount: 0,
+    page: 0,
+    pageSize: RECIPE_LIST_PAGE_SIZE,
+    pageCount: 1,
+    query: "",
+    sort,
+  };
+}
 
 export function RecipesWorkspace({
   canSeeInsights,
@@ -63,17 +100,62 @@ export function RecipesWorkspace({
   const { showFreeLimit } = usePlanUi();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const listKey = queryKeys.recipes(venueId);
-  const recipes = useHydratedData<RecipeListItem[]>(listKey);
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [queryInput, setQueryInput] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [page, setPage] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const searchId = useId();
-  const hasQuery = Boolean(query.trim());
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [sort, setSort] = useState<DataTableSort>();
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const didShowAlert = useRef(false);
+
+  const listSort = useMemo(() => sortFromTable(sort), [sort]);
+  const listKey = queryKeys.recipesList(venueId, {
+    query: debouncedQuery,
+    page,
+    pageSize: RECIPE_LIST_PAGE_SIZE,
+    sort: listSort,
+  });
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      startTransition(() => {
+        setDebouncedQuery(queryInput.trim());
+        setPage(0);
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+  }, [queryInput]);
+
+  const listQuery = useQuery({
+    queryKey: listKey,
+    enabled: Boolean(venueId) && !loadError,
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<RecipeListPageResult> => {
+      if (!venueId) return emptyPage(listSort);
+      const result = await listRecipesAction({
+        venueId,
+        query: debouncedQuery,
+        page,
+        pageSize: RECIPE_LIST_PAGE_SIZE,
+        sort: listSort,
+      });
+      if ("error" in result) {
+        throw new Error(result.error.message);
+      }
+      return result.data;
+    },
+  });
+
+  const listPage = listQuery.data ?? emptyPage(listSort);
+  const recipes = listPage.rows as RecipeListItem[];
+  const totalCount = listPage.totalCount;
+  const pageCount = listPage.pageCount;
+  const hasQuery = Boolean(debouncedQuery);
   const selectedRecipe = recipes.find((recipe) => recipe.id === selectedRecipeId);
+  const showLoadError = loadError || listQuery.isError;
 
   useEffect(() => {
     if (didShowAlert.current) return;
@@ -97,11 +179,15 @@ export function RecipesWorkspace({
     });
   }, [canSeeInsights, recipes, toast]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return recipes;
-    return recipes.filter((row) => row.name.toLowerCase().includes(q));
-  }, [recipes, query]);
+  function goToPage(next: number) {
+    scrollRef.current?.scrollTo({ top: 0 });
+    setPage(next);
+  }
+
+  function invalidateLists() {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.recipesListRoot(venueId) });
+  }
+
   const columns: DataTableColumn<RecipeListItem>[] = [
     {
       id: "name",
@@ -182,10 +268,9 @@ export function RecipesWorkspace({
       },
     },
   ];
-  const { page, pageCount, goToPage, scrollRef, visible } = useWorkspacePagination(sortTableRows(filtered, columns, sort));
 
   function openCreate() {
-    if (isFree && recipes.length >= FREE_MAX_RECIPES) {
+    if (isFree && totalCount >= FREE_MAX_RECIPES) {
       showFreeLimit("FREE_LIMIT_RECIPES");
       return;
     }
@@ -193,14 +278,37 @@ export function RecipesWorkspace({
   }
 
   function handleCreated(recipe: CreatedRecipeSummary) {
-    queryClient.setQueryData<RecipeListItem[]>(listKey, (prev) => [
-      recipe,
-      ...(prev ?? []).filter((row) => row.id !== recipe.id),
-    ]);
+    invalidateLists();
+    if (!debouncedQuery && page === 0) {
+      queryClient.setQueryData<RecipeListPageResult>(listKey, (prev) => {
+        const base = prev ?? emptyPage(listSort);
+        const row: RecipeListItem = {
+          id: recipe.id,
+          name: recipe.name,
+          venue_id: recipe.venue_id,
+          portions: recipe.portions,
+          selling_price: recipe.selling_price,
+          description: recipe.description ?? null,
+        };
+        return {
+          ...base,
+          totalCount: base.totalCount + 1,
+          rows: [row, ...base.rows.filter((r) => r.id !== recipe.id)].slice(0, base.pageSize),
+        };
+      });
+    }
   }
 
   function handleDeleted(recipeId: string) {
-    queryClient.setQueryData<RecipeListItem[]>(listKey, (prev) => prev?.filter((row) => row.id !== recipeId));
+    queryClient.setQueryData<RecipeListPageResult>(listKey, (prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        totalCount: Math.max(0, prev.totalCount - 1),
+        rows: prev.rows.filter((row) => row.id !== recipeId),
+      };
+    });
+    invalidateLists();
   }
 
   return (
@@ -208,7 +316,7 @@ export function RecipesWorkspace({
       <PageHeader
         title={sr.recipes.title}
         description={sr.listStates.recipes.description}
-        action={!loadError && recipes.length > 0 ? (
+        action={!showLoadError && totalCount > 0 ? (
           <PrimaryButton
             type="button"
             leftIcon={<Plus className="size-4" aria-hidden="true" />}
@@ -219,18 +327,18 @@ export function RecipesWorkspace({
         ) : undefined}
       />
 
-      {!loadError ? <UsageStrip
+      {!showLoadError ? <UsageStrip
         label={sr.recipes.title}
-        used={recipes.length}
+        used={totalCount}
         max={FREE_MAX_RECIPES}
         isPremium={isPremium}
       /> : null}
 
-      {loadError ? (
+      {showLoadError ? (
         <RouteError message={sr.listStates.recipes.error} />
       ) : (
         <BentoCard
-          flush={filtered.length > 0}
+          flush={recipes.length > 0}
           bodyClassName="min-w-0"
           header={
             <div className="flex w-full min-w-0 flex-col gap-3">
@@ -242,14 +350,12 @@ export function RecipesWorkspace({
                     id={searchId}
                     ref={searchRef}
                     type="search"
+                    defaultValue={queryInput}
                     onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      startTransition(() => {
-                        setQuery(value);
-                        goToPage(0);
-                      });
+                      setQueryInput(event.currentTarget.value);
                     }}
                     placeholder="Pretraži recepte..."
+                    aria-busy={listQuery.isFetching || undefined}
                   />
                 </div>
               </div>
@@ -257,25 +363,26 @@ export function RecipesWorkspace({
             </div>
           }
           footer={
-            recipes.length > 0 ? (
+            totalCount > 0 || hasQuery ? (
               <>
                 <span>
-                  {filtered.length} od {recipes.length} recepata
+                  {recipes.length} od {totalCount} recepata
                 </span>
                 <span>Cilj food cost-a: {FOOD_COST_TARGET_LABEL}</span>
               </>
             ) : null
           }
         >
-          {filtered.length === 0 ? (
+          {recipes.length === 0 ? (
             <EmptyState
               icon={<BookOpen className="size-7" aria-hidden="true" />}
               title={hasQuery ? sr.listStates.noResults : sr.listStates.recipes.empty}
               description={hasQuery ? undefined : sr.listStates.recipes.emptyDescription}
               actionLabel={hasQuery ? sr.listStates.clearSearch : sr.listStates.recipes.emptyAction}
               onAction={hasQuery ? () => {
-                setQuery("");
-                goToPage(0);
+                setQueryInput("");
+                setDebouncedQuery("");
+                setPage(0);
                 if (searchRef.current) {
                   searchRef.current.value = "";
                   searchRef.current.focus();
@@ -285,7 +392,7 @@ export function RecipesWorkspace({
           ) : (
             <DataTable
               columns={columns}
-              rows={visible}
+              rows={recipes}
               rowKey={recipe => recipe.id}
               rowLabel={recipe => recipe.name}
               label={sr.recipes.title}
@@ -293,7 +400,7 @@ export function RecipesWorkspace({
               sort={sort}
               onSortChange={next => {
                 setSort(next);
-                goToPage(0);
+                setPage(0);
               }}
               onRowClick={recipe => setSelectedRecipeId(recipe.id)}
               selectable
@@ -307,7 +414,7 @@ export function RecipesWorkspace({
         open={open}
         onClose={() => setOpen(false)}
         venueId={venueId}
-        currentCount={recipes.length}
+        currentCount={totalCount}
         onCreated={handleCreated}
       />
       <RecipeFoodCostDialog

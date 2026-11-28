@@ -16,8 +16,15 @@
     "check:pwa-icons": "node scripts/check-pwa-icon-versions.mjs",
     "pkg:install": "pnpm install",
     "pkg:audit": "pnpm audit --audit-level high",
-    "pkg:frozen": "pnpm install --frozen-lockfile"
+    "pkg:frozen": "pnpm install --frozen-lockfile",
+    "perf:bench": "vitest run lib/perf/list-scale.bench.test.ts",
+    "perf:seed": "node scripts/perf/seed.mjs",
+    "perf:browser": "node scripts/perf/browser-harness.mjs",
+    "perf:k6:recipes": "k6 run load/recipes-concurrent.js",
+    "perf:k6:realtime": "k6 run load/realtime.js",
+    "perf:k6:integrity": "k6 run load/concurrency-integrity.js"
   },
+
   "dependencies": {
     "@paddle/paddle-js": "^1.6.6",
     "@paddle/paddle-node-sdk": "^3.12.0",

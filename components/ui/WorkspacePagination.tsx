@@ -3,11 +3,8 @@
 import { useRef, useState } from "react";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
-/** Client page size for long workspace lists (pairs with server range of 50). */
+/** Client page size for long workspace lists (ingredients and similar). */
 export const WORKSPACE_PAGE_SIZE = 50;
-
-/** Virtualize once a page (or short list) exceeds this many mounted rows. */
-export const WORKSPACE_VIRTUALIZE_THRESHOLD = 40;
 
 export function useWorkspacePagination<T>(items: T[], pageSize = WORKSPACE_PAGE_SIZE) {
   const [requestedPage, setRequestedPage] = useState(0);

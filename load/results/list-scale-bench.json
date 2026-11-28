@@ -1,0 +1,124 @@
+{
+  "at": "2026-11-28T10:19:30.696Z",
+  "source": "lib/perf/list-scale.bench.test.ts",
+  "host": "win32",
+  "node": "v24.21.0",
+  "note": "CPU-only; not LCP. App list query still limit(100).",
+  "results": [
+    {
+      "recipes": 100,
+      "costAllWithInsightMs": 1.285,
+      "costAllNoInsightMs": 0.235,
+      "searchCap100CommonMs": 0.103,
+      "searchCap100RareMs": 0.027,
+      "searchFullCommonMs": 0.024,
+      "searchFullRareMs": 0.022,
+      "sortFullMs": 9.421,
+      "pageSliceMs": 0.034,
+      "payloadAllBytes": 195769,
+      "payloadCap100Bytes": 195769,
+      "offlineRecent20Bytes": 3576,
+      "thresholds": {
+        "searchMs": 300,
+        "listCostProxyMs": 2500
+      },
+      "pass": {
+        "searchOnCap100": true,
+        "costAllNoInsightUnderLcpProxy": true,
+        "costAllWithInsightUnderLcpProxy": true
+      }
+    },
+    {
+      "recipes": 1000,
+      "costAllWithInsightMs": 8.947,
+      "costAllNoInsightMs": 1.646,
+      "searchCap100CommonMs": 0.064,
+      "searchCap100RareMs": 0.031,
+      "searchFullCommonMs": 0.457,
+      "searchFullRareMs": 0.147,
+      "sortFullMs": 1.524,
+      "pageSliceMs": 0.002,
+      "payloadAllBytes": 2022498,
+      "payloadCap100Bytes": 195769,
+      "offlineRecent20Bytes": 3576,
+      "thresholds": {
+        "searchMs": 300,
+        "listCostProxyMs": 2500
+      },
+      "pass": {
+        "searchOnCap100": true,
+        "costAllNoInsightUnderLcpProxy": true,
+        "costAllWithInsightUnderLcpProxy": true
+      }
+    },
+    {
+      "recipes": 5000,
+      "costAllWithInsightMs": 28.429,
+      "costAllNoInsightMs": 5.754,
+      "searchCap100CommonMs": 0.062,
+      "searchCap100RareMs": 0.014,
+      "searchFullCommonMs": 1.82,
+      "searchFullRareMs": 0.478,
+      "sortFullMs": 8.187,
+      "pageSliceMs": 0.004,
+      "payloadAllBytes": 10213910,
+      "payloadCap100Bytes": 195769,
+      "offlineRecent20Bytes": 3576,
+      "thresholds": {
+        "searchMs": 300,
+        "listCostProxyMs": 2500
+      },
+      "pass": {
+        "searchOnCap100": true,
+        "costAllNoInsightUnderLcpProxy": true,
+        "costAllWithInsightUnderLcpProxy": true
+      }
+    },
+    {
+      "recipes": 10000,
+      "costAllWithInsightMs": 26.484,
+      "costAllNoInsightMs": 6.909,
+      "searchCap100CommonMs": 0.294,
+      "searchCap100RareMs": 0.052,
+      "searchFullCommonMs": 5.233,
+      "searchFullRareMs": 1.39,
+      "sortFullMs": 32.878,
+      "pageSliceMs": 0.003,
+      "payloadAllBytes": 20450074,
+      "payloadCap100Bytes": 195769,
+      "offlineRecent20Bytes": 3576,
+      "thresholds": {
+        "searchMs": 300,
+        "listCostProxyMs": 2500
+      },
+      "pass": {
+        "searchOnCap100": true,
+        "costAllNoInsightUnderLcpProxy": true,
+        "costAllWithInsightUnderLcpProxy": true
+      }
+    },
+    {
+      "recipes": 25000,
+      "costAllWithInsightMs": 88.93,
+      "costAllNoInsightMs": 24.824,
+      "searchCap100CommonMs": 0.066,
+      "searchCap100RareMs": 0.011,
+      "searchFullCommonMs": 14.08,
+      "searchFullRareMs": 4.123,
+      "sortFullMs": 60.22,
+      "pageSliceMs": 0.004,
+      "payloadAllBytes": 51442981,
+      "payloadCap100Bytes": 195769,
+      "offlineRecent20Bytes": 3576,
+      "thresholds": {
+        "searchMs": 300,
+        "listCostProxyMs": 2500
+      },
+      "pass": {
+        "searchOnCap100": true,
+        "costAllNoInsightUnderLcpProxy": true,
+        "costAllWithInsightUnderLcpProxy": true
+      }
+    }
+  ]
+}
